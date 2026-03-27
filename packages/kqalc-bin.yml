@@ -1,0 +1,4 @@
+name: kqalc-bin
+strategy: github-release
+upstream:
+  project: noctuum/kqalc

@@ -1,0 +1,6 @@
+name: kio-s3-git
+strategy: git-latest
+upstream:
+  type: gitlab
+  host: invent.kde.org
+  project: network/kio-s3
