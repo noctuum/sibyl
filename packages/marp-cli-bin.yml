@@ -2,3 +2,5 @@ name: marp-cli-bin
 strategy: github-release
 upstream:
   project: marp-team/marp-cli
+current: 4.3.1
+last_updated: "2026-03-28"

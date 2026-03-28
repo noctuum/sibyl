@@ -12,7 +12,7 @@ Fork it, drop in your packages, let CI handle the rest.
 ## Packages
 
 <!-- PACKAGES:START -->
-![Check Updates](https://github.com/noctuum/sibyl/actions/workflows/check-updates.yml/badge.svg) ![packages](https://img.shields.io/badge/packages-5%2F5-brightgreen)
+![Check Updates](https://github.com/noctuum/sibyl/actions/workflows/check-updates.yml/badge.svg) ![packages](https://img.shields.io/badge/packages-6%2F6-brightgreen)
 
 | Package | Version | Strategy | Updated | Status |
 |---------|---------|----------|---------|--------|
@@ -20,6 +20,7 @@ Fork it, drop in your packages, let CI handle the rest.
 | `kio-s3` | 1.0.1 | kde-tarball | — | ✅ up to date |
 | `kqalc-bin` | 0.2.1 | github-release | — | ✅ up to date |
 | `liblinear` | 2.50 | webpage-scrape | — | ✅ up to date |
+| `marp-cli-bin` | 4.3.1 | github-release | 2026-03-28 | 🔄 updated to 4.3.1 |
 | `neovim-nightly-bin` | 0.12.0+dev+2720+gf027f41e2c | github-nightly | 2026-03-28 | ✅ up to date |
 <!-- PACKAGES:END -->
 
