@@ -1,4 +1,4 @@
-# aurtomator
+# sibyl
 
 <!-- BADGES:START -->
 [![Lint & Test](https://github.com/noctuum/sibyl/actions/workflows/ci.yml/badge.svg)](https://github.com/noctuum/sibyl/actions/workflows/ci.yml) [![codecov](https://codecov.io/github/noctuum/sibyl/graph/badge.svg)](https://codecov.io/github/noctuum/sibyl) [![Bash](https://img.shields.io/badge/bash-5%2B-green)](https://www.gnu.org/software/bash/) [![AUR](https://img.shields.io/badge/AUR-automation-orange)](https://aur.archlinux.org/) [![License](https://img.shields.io/badge/license-BSD--3--Clause-blue)](LICENSE)
@@ -6,6 +6,8 @@
 
 Automated AUR package updates from a single GitHub repo.
 Fork it, drop in your packages, let CI handle the rest.
+
+![Image](https://github.com/user-attachments/assets/1df374aa-51a4-458e-9e39-3e3a61fdbf38)
 
 ## Packages
 
