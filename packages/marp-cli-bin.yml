@@ -1,0 +1,4 @@
+name: marp-cli-bin
+strategy: github-release
+upstream:
+  project: marp-team/marp-cli
