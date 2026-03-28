@@ -14,7 +14,7 @@ Fork it, drop in your packages, let CI handle the rest.
 
 | Package | Version | Strategy | Updated | Status |
 |---------|---------|----------|---------|--------|
-| `kio-s3-git` | r434.6a767d5 | git-latest | 2026-03-28 | 🔄 updated to r434.6a767d5 |
+| `kio-s3-git` | r434.6a767d5 | git-latest | 2026-03-28 | ✅ up to date |
 | `kio-s3` | 1.0.1 | kde-tarball | — | ✅ up to date |
 | `kqalc-bin` | 0.2.1 | github-release | — | ✅ up to date |
 | `liblinear` | 2.50 | webpage-scrape | — | ✅ up to date |
