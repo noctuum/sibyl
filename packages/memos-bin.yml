@@ -1,0 +1,4 @@
+name: memos-bin
+strategy: github-release
+upstream:
+  project: usememos/memos
