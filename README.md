@@ -23,7 +23,7 @@ Fork it, drop in your packages, let CI handle the rest.
 | [marp-cli-bin](https://aur.archlinux.org/packages/marp-cli-bin) | 4.3.1 | github-release | 2026-03-28 | ✅ up to date |
 | [memos-bin](https://aur.archlinux.org/packages/memos-bin) | 0.26.2 | github-release | — | ✅ up to date |
 | [miniflux-bin](https://aur.archlinux.org/packages/miniflux-bin) | 2.2.18 | github-release | — | ✅ up to date |
-| [neovim-nightly-bin](https://aur.archlinux.org/packages/neovim-nightly-bin) | 0.12.0+dev+2720+gf027f41e2c | github-nightly | 2026-03-28 | ✅ up to date |
+| [neovim-nightly-bin](https://aur.archlinux.org/packages/neovim-nightly-bin) | 0.12.0+dev+2727+gad4bc2d90c | github-nightly | 2026-03-29 | 🔄 updated to 0.12.0+dev+2727+gad4bc2d90c |
 | [wireguard-gui-bin](https://aur.archlinux.org/packages/wireguard-gui-bin) | 0.1.8 | github-release | 2026-03-29 | ✅ up to date |
 <!-- PACKAGES:END -->
 
