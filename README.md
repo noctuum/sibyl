@@ -1,11 +1,13 @@
-# aurtomator
+# sibyl
 
 <!-- BADGES:START -->
 [![Lint & Test](https://github.com/staticwire/aurtomator/actions/workflows/ci.yml/badge.svg)](https://github.com/staticwire/aurtomator/actions/workflows/ci.yml) [![codecov](https://codecov.io/github/staticwire/aurtomator/graph/badge.svg)](https://codecov.io/github/staticwire/aurtomator) [![Bash](https://img.shields.io/badge/bash-5%2B-green)](https://www.gnu.org/software/bash/) [![AUR](https://img.shields.io/badge/AUR-automation-orange)](https://aur.archlinux.org/) [![License](https://img.shields.io/badge/license-BSD--3--Clause-blue)](LICENSE)
 <!-- BADGES:END -->
 
 Automated AUR package updates from a single GitHub repo.
-Fork it, drop in your packages, let CI handle the rest.
+[Fork it](https://github.com/staticwire/aurtomator), drop in your packages, let CI handle the rest.
+
+![sibyl](https://github.com/user-attachments/assets/b75914c2-de99-4a20-a213-0656e1a751fc)
 
 ## Packages
 
