@@ -1,0 +1,5 @@
+name: miniflux-bin
+strategy: github-release
+upstream:
+  project: miniflux/v2
+current: 2.2.18

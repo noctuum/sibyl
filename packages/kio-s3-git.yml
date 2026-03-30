@@ -1,0 +1,8 @@
+name: kio-s3-git
+strategy: git-latest
+upstream:
+  type: gitlab
+  host: invent.kde.org
+  project: network/kio-s3
+current: r434.6a767d5
+last_updated: "2026-03-28"

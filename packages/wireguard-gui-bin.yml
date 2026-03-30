@@ -1,0 +1,7 @@
+name: wireguard-gui-bin
+strategy: github-release
+upstream:
+  project: 0xle0ne/wireguard-gui
+  tag_version_regex: '(.+)-stable'
+current: 0.1.8
+last_updated: "2026-03-29"

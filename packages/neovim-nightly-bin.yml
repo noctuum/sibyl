@@ -1,0 +1,9 @@
+name: neovim-nightly-bin
+strategy: github-nightly
+upstream:
+  project: neovim/neovim
+  nightly_tag: nightly
+  version_source: release_body
+  version_pattern: 'NVIM v\K\S+'
+current: 0.13.0+dev+13+g92a667c07f
+last_updated: "2026-03-30"
