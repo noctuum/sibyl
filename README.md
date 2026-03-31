@@ -16,7 +16,7 @@ Automated AUR package updates from a single GitHub repo.
 
 | Package | Version | Strategy | Updated | Status |
 |---------|---------|----------|---------|--------|
-| [kio-s3-git](https://aur.archlinux.org/packages/kio-s3-git) | r434.6a767d5 | git-latest | 2026-03-28 | ✅ up to date |
+| [kio-s3-git](https://aur.archlinux.org/packages/kio-s3-git) | r435.255ab8f | git-latest | 2026-03-31 | 🔄 updated to r435.255ab8f |
 | [kio-s3](https://aur.archlinux.org/packages/kio-s3) | 1.0.1 | kde-tarball | — | ✅ up to date |
 | [kqalc-bin](https://aur.archlinux.org/packages/kqalc-bin) | 0.2.1 | github-release | — | ✅ up to date |
 | [liblinear](https://aur.archlinux.org/packages/liblinear) | 2.50 | webpage-scrape | — | ✅ up to date |
