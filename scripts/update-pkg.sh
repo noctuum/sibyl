@@ -55,6 +55,22 @@ if [[ ! -f "${aur_dir}/PKGBUILD" ]]; then
   exit 1
 fi
 
+# AUR git-daemon can return HEAD as a detached commit that does not match
+# refs/heads/master. This happens when two pipeline runs push concurrently
+# and the server accepts both without proper locking — HEAD and
+# refs/heads/master diverge. Observed on neovim-nightly-bin 2026-04-12.
+#
+# AUR rejects non-fast-forward pushes via pre-receive hook, so we must base
+# our commit on origin/master (server's refs/heads/master), NOT on the
+# detached HEAD. Any unique content in the detached commit is ignored —
+# a separate concurrency:group in the workflow prevents this race, but we
+# keep the self-healing clause as a safety net.
+if ! git -C "$aur_dir" symbolic-ref -q HEAD >/dev/null; then
+  log_warn "Detached HEAD after clone (remote HEAD != refs/heads/master)"
+  log_info "Re-basing on origin/master to allow fast-forward push"
+  git -C "$aur_dir" checkout -B master origin/master
+fi
+
 warn_maintainer_line "${aur_dir}/PKGBUILD"
 
 # =============================================================================
