@@ -12,14 +12,14 @@ Automated AUR package updates from a single GitHub repo.
 ## Packages
 
 <!-- PACKAGES:START -->
-![Check Updates](https://github.com/noctuum/sibyl/actions/workflows/check-updates.yml/badge.svg) ![packages](https://img.shields.io/badge/packages-8%2F9-red)
+![Check Updates](https://github.com/noctuum/sibyl/actions/workflows/check-updates.yml/badge.svg) ![packages](https://img.shields.io/badge/packages-9%2F9-brightgreen)
 
 | Package | Version | Strategy | Updated | Status |
 |---------|---------|----------|---------|--------|
-| [kio-s3-git](https://aur.archlinux.org/packages/kio-s3-git) | r445.acede1a | git-latest | 2026-04-11 | ✅ up to date |
+| [kio-s3-git](https://aur.archlinux.org/packages/kio-s3-git) | r446.34022e7 | git-latest | 2026-04-13 | 🔄 updated to r446.34022e7 |
 | [kio-s3](https://aur.archlinux.org/packages/kio-s3) | 1.0.1 | kde-tarball | — | ✅ up to date |
 | [kqalc-bin](https://aur.archlinux.org/packages/kqalc-bin) | 0.2.1 | github-release | — | ✅ up to date |
-| [liblinear](https://aur.archlinux.org/packages/liblinear) | 2.50 | webpage-scrape | — | ❌ failed |
+| [liblinear](https://aur.archlinux.org/packages/liblinear) | 2.50 | webpage-scrape | — | ✅ up to date |
 | [marp-cli-bin](https://aur.archlinux.org/packages/marp-cli-bin) | 4.3.1 | github-release | 2026-03-28 | ✅ up to date |
 | [memos-bin](https://aur.archlinux.org/packages/memos-bin) | 0.26.2 | github-release | — | ✅ up to date |
 | [miniflux-bin](https://aur.archlinux.org/packages/miniflux-bin) | 2.2.19 | github-release | 2026-04-05 | ✅ up to date |
