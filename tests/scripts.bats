@@ -1196,6 +1196,134 @@ EOF
   [[ "$output" == *"Generating .SRCINFO"* ]]
 }
 
+@test "update-pkg: re-anchors on origin/master when HEAD is detached after clone" {
+  create_test_package "test-detached" "github-release" "upstream:
+  project: owner/repo
+current: '1.0.0'"
+
+  # Simulate AUR server state after concurrent-push divergence:
+  # working copy has a valid refs/remotes/origin/master but HEAD is detached.
+  bare_dir="$TEST_TMPDIR/aur-bare-test-detached.git"
+  git init --bare -q "$bare_dir"
+
+  aur_dir="$TEST_TMPDIR/aur-test-detached"
+  mkdir -p "$aur_dir"
+  git -C "$aur_dir" init -q -b master
+  git -C "$aur_dir" config user.name "test"
+  git -C "$aur_dir" config user.email "test@test"
+  git -C "$aur_dir" config commit.gpgsign false
+  cat > "$aur_dir/PKGBUILD" <<'EOF'
+# Maintainer: test
+pkgname=test-detached
+pkgver=1.0.0
+pkgrel=1
+pkgdesc="detached HEAD test"
+arch=('x86_64')
+url="https://example.com"
+license=('MIT')
+source=("https://example.com/test-${pkgver}.tar.gz")
+sha256sums=('abc123')
+EOF
+  git -C "$aur_dir" add . && git -C "$aur_dir" commit -q -m "init"
+  git -C "$aur_dir" remote add origin "$bare_dir"
+  git -C "$aur_dir" push -q origin master
+  git -C "$aur_dir" fetch -q origin
+  git -C "$aur_dir" checkout -q --detach master
+
+  cat > "$MOCK_DIR/git" <<MOCKGIT
+#!/usr/bin/env bash
+if [[ "\$1" == "clone" ]]; then
+  cp -r "$aur_dir" "\$3" 2>/dev/null || cp -r "$aur_dir/." "\$3" 2>/dev/null
+  exit 0
+fi
+exec /usr/bin/git "\$@"
+MOCKGIT
+  chmod +x "$MOCK_DIR/git"
+
+  cat > "$MOCK_DIR/curl" <<'MOCKCURL'
+#!/usr/bin/env bash
+if [[ "$1" == "-sIL" ]]; then
+  printf "HTTP/1.1 200 OK\r\ncontent-type: application/octet-stream\r\n"
+  exit 0
+fi
+echo '{}'
+MOCKCURL
+  chmod +x "$MOCK_DIR/curl"
+
+  cat > "$MOCK_DIR/updpkgsums" <<'EOF'
+#!/usr/bin/env bash
+exit 0
+EOF
+  chmod +x "$MOCK_DIR/updpkgsums"
+
+  cat > "$MOCK_DIR/makepkg" <<'EOF'
+#!/usr/bin/env bash
+if [[ "$1" == "--verifysource" ]]; then exit 0; fi
+echo "pkgbase = test-detached"
+echo "pkgname = test-detached"
+EOF
+  chmod +x "$MOCK_DIR/makepkg"
+
+  # Remove namcap mock so the namcap block is skipped gracefully
+  rm -f "$MOCK_DIR/namcap"
+
+  run "$TEST_TMPDIR/scripts/update-pkg.sh" "test-detached" "2.0.0"
+  # Detected + logged
+  [[ "$output" == *"Detached HEAD after clone"* ]]
+  [[ "$output" == *"Re-basing on origin/master"* ]]
+  # Proceeded past the self-heal block (reached later stages)
+  [[ "$output" == *"Updating pkgver"* ]] || [[ "$output" == *"Generating .SRCINFO"* ]]
+}
+
+@test "update-pkg: fails loudly on detached HEAD when origin/master is absent" {
+  create_test_package "test-no-origin" "github-release" "upstream:
+  project: owner/repo
+current: '1.0.0'"
+
+  # Detached HEAD but NO origin remote configured: checkout -B master
+  # origin/master must fail, set -e terminates the script. This verifies
+  # the safety-net is loud, not silently corrupting state.
+  aur_dir="$TEST_TMPDIR/aur-test-no-origin"
+  mkdir -p "$aur_dir"
+  git -C "$aur_dir" init -q -b master
+  git -C "$aur_dir" config user.name "test"
+  git -C "$aur_dir" config user.email "test@test"
+  git -C "$aur_dir" config commit.gpgsign false
+  cat > "$aur_dir/PKGBUILD" <<'EOF'
+# Maintainer: test
+pkgname=test-no-origin
+pkgver=1.0.0
+pkgrel=1
+pkgdesc="detached HEAD no origin/master"
+arch=('x86_64')
+url="https://example.com"
+license=('MIT')
+source=("https://example.com/test-${pkgver}.tar.gz")
+sha256sums=('abc123')
+EOF
+  git -C "$aur_dir" add . && git -C "$aur_dir" commit -q -m "init"
+  git -C "$aur_dir" checkout -q --detach master
+
+  cat > "$MOCK_DIR/git" <<MOCKGIT
+#!/usr/bin/env bash
+if [[ "\$1" == "clone" ]]; then
+  cp -r "$aur_dir" "\$3" 2>/dev/null || cp -r "$aur_dir/." "\$3" 2>/dev/null
+  exit 0
+fi
+exec /usr/bin/git "\$@"
+MOCKGIT
+  chmod +x "$MOCK_DIR/git"
+
+  run "$TEST_TMPDIR/scripts/update-pkg.sh" "test-no-origin" "2.0.0"
+  [ "$status" -ne 0 ]
+  # Detection + attempt logged before the failure
+  [[ "$output" == *"Detached HEAD after clone"* ]]
+  [[ "$output" == *"Re-basing on origin/master"* ]]
+  # Must NOT have proceeded past the self-heal (no pkgver bump, no .SRCINFO)
+  [[ "$output" != *"Updating pkgver"* ]]
+  [[ "$output" != *"Generating .SRCINFO"* ]]
+}
+
 # === validate-pkg.sh ===
 
 @test "validate-pkg: invoked from check pipeline context" {

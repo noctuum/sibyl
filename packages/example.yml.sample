@@ -1,28 +1,167 @@
-# Example package config — copy to packages/<name>.yml and edit
+# Example package config — copy to packages/<name>.yml and edit.
 #
-# Available strategies:
-#   github-release  — GitHub Releases API (upstream.project: owner/repo)
-#   github-tag      — GitHub Tags API (upstream.project, optional upstream.tag_pattern)
-#   github-nightly  — GitHub nightly/prerelease builds (upstream.project, upstream.nightly_tag, upstream.version_source)
-#   gitlab-tag      — GitLab Tags API (upstream.host, upstream.project)
-#   gitea-tag       — Gitea/Forgejo/Codeberg Tags (upstream.host, upstream.project)
-#   git-latest      — bare git clone, rCOUNT.HASH (upstream.type, upstream.project or upstream.url)
-#   pypi            — PyPI registry (upstream.registry)
-#   npm             — npm registry (upstream.registry)
-#   crates          — crates.io registry (upstream.registry)
-#   repology        — Repology API (optional upstream.repology, defaults to name)
-#   archpkg         — Arch official repos (optional upstream.archpkg, defaults to name)
-#   kde-tarball     — download.kde.org tarball listing (uses name)
-#   webpage-scrape  — HTML scraping with regex (upstream.url, upstream.pattern)
+# Required top-level fields:
+#   name       — AUR package name (must match packages/<name>.yml filename)
+#   strategy   — version detection strategy (see list below)
+#   upstream   — strategy-specific config block (see examples below)
 #
-# See docs/WORKFLOW.md for detailed examples of each strategy.
+# Auto-managed fields (don't edit by hand):
+#   current      — last known upstream version, written by update-pkg.sh
+#   last_updated — ISO date of last successful AUR push, written by update-pkg.sh
+#
+# Strategies:
+#   github-release   GitHub Releases API
+#   github-tag       GitHub Tags API
+#   github-nightly   GitHub nightly/prerelease builds (4 patterns)
+#   gitlab-tag       GitLab Tags API (gitlab.com, invent.kde.org, self-hosted)
+#   gitea-tag        Gitea / Forgejo / Codeberg Tags
+#   git-latest       bare git clone, produces rCOUNT.HASH (for -git packages)
+#   pypi             PyPI JSON API
+#   npm              npm registry
+#   crates           crates.io API
+#   repology         Repology API (fallback, 120+ tracked repos)
+#   archpkg          Arch official repos (for rebuild triggers)
+#   kde-tarball      download.kde.org directory listing
+#   webpage-scrape   arbitrary HTTPS page + regex
+#
+# See docs/SUPPORTED-PACKAGES.md for package types, limitations, and safety rules.
+# See docs/WORKFLOW.md for strategy internals and custom strategy authoring.
+
+# =============================================================================
+# MINIMAL EXAMPLE
+# =============================================================================
 
 name: my-package
 strategy: github-release
 upstream:
   project: owner/repo
 
-# Optional: custom tag format (e.g. "MeshLab-2025.07" or "0.1.8-stable")
-# Use an ERE regex with a capture group to extract the version:
-#   tag_version_regex: 'MeshLab-(.*)'
-#   tag_version_regex: '(.+)-stable'
+# =============================================================================
+# PER-STRATEGY EXAMPLES
+# =============================================================================
+
+# --- github-release ---------------------------------------------------------
+# Fetches the latest release from /repos/{project}/releases/latest.
+# Excludes pre-releases automatically (that's what the API returns).
+#
+# strategy: github-release
+# upstream:
+#   project: owner/repo                    # required — "owner/repo" format
+#   tag_version_regex: '(.+)-stable'       # optional — ERE capture group
+
+# --- github-tag -------------------------------------------------------------
+# Fetches up to 100 tags from /repos/{project}/tags. Includes pre-release
+# tags — use tag_pattern or tag_version_regex to filter.
+#
+# strategy: github-tag
+# upstream:
+#   project: owner/repo                    # required
+#   tag_pattern: 'v*'                      # optional — glob filter
+#   tag_version_regex: 'release-(.+)'      # optional — ERE capture group
+
+# --- github-nightly ---------------------------------------------------------
+# Tracks nightly/prerelease builds. Supports four patterns:
+#
+#   A) Fixed tag force-pushed daily (e.g. neovim "nightly"):
+#      nightly_tag: nightly
+#      version_source: release_body
+#      version_pattern: 'NVIM v\K\S+'      # Perl regex
+#
+#   B) Dated tags like "nightly-2026-03-26":
+#      nightly_tag: nightly-
+#      version_source: tag_date             # converts YYYY-MM-DD to YYYY.MM.DD
+#
+#   C) Separate nightly repo (e.g. yt-dlp/yt-dlp-nightly-builds):
+#      project: yt-dlp/yt-dlp-nightly-builds
+#      nightly_tag: latest
+#
+#   D) Channel filter (e.g. brave "Nightly" channel):
+#      channel: Nightly
+#      version_source: tag
+#
+# strategy: github-nightly
+# upstream:
+#   project: owner/repo                    # required
+#   nightly_tag: nightly                   # optional, default "nightly"
+#   version_source: tag                    # optional: tag|release_body|tag_date|published_date
+#   version_pattern: 'NVIM v\K\S+'         # required if version_source=release_body
+#   channel: Nightly                       # optional — filter by release name
+#   tag_version_regex: '(.+)'              # optional
+
+# --- gitlab-tag -------------------------------------------------------------
+# Any GitLab instance (public API only — no auth yet).
+#
+# strategy: gitlab-tag
+# upstream:
+#   host: gitlab.com                       # required — hostname, no protocol
+#   project: group/subgroup/project        # required — full path
+#   tag_pattern: 'v*'                      # optional
+#   tag_version_regex: '(.+)'              # optional
+
+# --- gitea-tag --------------------------------------------------------------
+# Codeberg, self-hosted Gitea/Forgejo. Fetches max 50 tags.
+#
+# strategy: gitea-tag
+# upstream:
+#   host: codeberg.org                     # required
+#   project: owner/repo                    # required
+#   tag_pattern: 'v*'                      # optional
+#   tag_version_regex: '(.+)'              # optional
+
+# --- git-latest -------------------------------------------------------------
+# For -git packages. Produces rCOUNT.HASH format (e.g. r435.abc1234).
+#
+# strategy: git-latest
+# upstream:
+#   type: github                           # required: github|gitlab|git
+#   project: owner/repo                    # required for github|gitlab
+#   host: gitlab.example.com               # required for gitlab
+#   url: https://example.com/repo.git      # required for type=git
+
+# --- pypi / npm / crates ----------------------------------------------------
+# Language registries. PyPI and crates return stable-only (pre-releases
+# filtered by the registry). npm returns the "latest" dist-tag.
+#
+# strategy: pypi
+# upstream:
+#   registry: requests                     # required — PyPI package name
+#
+# strategy: npm
+# upstream:
+#   registry: express                      # required — npm package name
+#
+# strategy: crates
+# upstream:
+#   registry: serde                        # required — crate name
+
+# --- repology ---------------------------------------------------------------
+# Fallback when nothing else fits. Returns newest version from any of 120+
+# tracked repos (filtered by status == "newest").
+#
+# strategy: repology
+# upstream:
+#   repology: project-name                 # optional, defaults to `name` above
+
+# --- archpkg ----------------------------------------------------------------
+# Track versions of packages in Arch official repos. Useful for AUR packages
+# that need a rebuild when a dependency updates.
+#
+# strategy: archpkg
+# upstream:
+#   archpkg: qt6-base                      # optional, defaults to `name` above
+
+# --- kde-tarball ------------------------------------------------------------
+# Scrapes https://download.kde.org/stable/<name>/ for *.tar.xz releases.
+# No upstream config needed — uses `name` directly.
+#
+# strategy: kde-tarball
+# upstream: {}
+
+# --- webpage-scrape ---------------------------------------------------------
+# Generic HTTPS page + regex. Use when no API fits.
+# HTTPS only (HTTP is rejected). Max 5MB, 5 redirects, 30s timeout.
+#
+# strategy: webpage-scrape
+# upstream:
+#   url: https://example.com/downloads/    # required — HTTPS only
+#   pattern: 'app-([0-9]+\.[0-9]+)\.tar\.gz'  # required — ERE, ONE capture group
