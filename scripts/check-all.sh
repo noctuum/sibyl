@@ -15,6 +15,7 @@ set -euo pipefail
 # shellcheck source=lib.sh
 source "$(dirname "${BASH_SOURCE[0]}")/lib.sh"
 require_cmd yq
+require_cmd vercmp
 
 UPDATE=false
 DRY_RUN=""
@@ -72,6 +73,18 @@ for pkg_file in $(printf '%s\n' "${AURTOMATOR_DIR}"/packages/*.yml | sort); do
     continue
   fi
 
+  # Detect downgrade: current from YAML is newer than latest from upstream.
+  # vercmp prints -1/0/1 to stdout, always exits 0.
+  current=$(pkg_get "$pkg_file" '.current // ""')
+  is_downgrade=false
+  if [[ -n "$current" ]]; then
+    cmp=$(vercmp "$current" "$latest")
+    if [[ "$cmp" -gt 0 ]]; then
+      is_downgrade=true
+      log_warn "$pkg_name: DOWNGRADE detected $current → $latest (mirroring upstream)"
+    fi
+  fi
+
   if [[ "$UPDATE" == "true" ]]; then
     log_info "Updating $pkg_name to $latest"
     err_file=$(mktemp)
@@ -83,7 +96,11 @@ for pkg_file in $(printf '%s\n' "${AURTOMATOR_DIR}"/packages/*.yml | sort); do
 
     case "$update_rc" in
       0)
-        echo "updated: ${latest}" >"${STATUS_DIR}/${pkg_name}"
+        if [[ "$is_downgrade" == "true" ]]; then
+          echo "downgrade: ${latest}" >"${STATUS_DIR}/${pkg_name}"
+        else
+          echo "updated: ${latest}" >"${STATUS_DIR}/${pkg_name}"
+        fi
         ((updated++)) || true
         ;;
       2)
@@ -97,7 +114,11 @@ for pkg_file in $(printf '%s\n' "${AURTOMATOR_DIR}"/packages/*.yml | sort); do
         ;;
     esac
   else
-    echo "new_version: ${latest}" >"${STATUS_DIR}/${pkg_name}"
+    if [[ "$is_downgrade" == "true" ]]; then
+      echo "available_downgrade: ${latest}" >"${STATUS_DIR}/${pkg_name}"
+    else
+      echo "new_version: ${latest}" >"${STATUS_DIR}/${pkg_name}"
+    fi
   fi
 done
 

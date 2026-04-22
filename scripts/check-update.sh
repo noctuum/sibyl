@@ -9,6 +9,7 @@ set -euo pipefail
 # shellcheck source=lib.sh
 source "$(dirname "${BASH_SOURCE[0]}")/lib.sh"
 require_cmd yq
+require_cmd vercmp
 
 readonly PKG_NAME="${1:?Usage: check-update.sh <package-name>}"
 PKG_FILE="$(pkg_file "$PKG_NAME")"
@@ -45,7 +46,13 @@ fi
 if [[ -z "$current" ]]; then
   log_warn "$PKG_NAME: no current version set, latest is $latest"
 else
-  log_warn "$PKG_NAME: update available $current → $latest"
+  # vercmp prints -1/0/1 to stdout, always exits 0. Use stdout value.
+  cmp=$(vercmp "$current" "$latest")
+  if [[ "$cmp" -gt 0 ]]; then
+    log_warn "$PKG_NAME: DOWNGRADE $current → $latest"
+  else
+    log_warn "$PKG_NAME: update available $current → $latest"
+  fi
 fi
 
 # Output for scripting: print latest version on stdout
