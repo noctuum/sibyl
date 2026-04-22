@@ -90,6 +90,10 @@ Packages with patches in `source=()` trigger a warning but are not blocked.
 
 See [docs/SUPPORTED-PACKAGES.md](docs/SUPPORTED-PACKAGES.md) for the full breakdown including safe/unsafe failure modes and comparison with other tools.
 
+## Downgrades
+
+aurtomator mirrors upstream blindly. If upstream publishes an older version than the one already tracked (for example, deleting and recreating a tag), aurtomator follows without blocking -- upstream is the source of truth. Downgrades are logged with the literal `DOWNGRADE` keyword (grep `workflow-run.log` to find them) and rendered in the package table with a `⬇️` icon. They count as successful operations, so the badge stays green. See [docs/WORKFLOW.md §4.3](docs/WORKFLOW.md#43-downgrade-behavior) for details.
+
 ## Resource usage
 
 All packages run in a single workflow -- one Arch container, one SSH/GPG setup, one run. A version check is one HTTP request per package. This keeps GitHub Actions minutes usage minimal.

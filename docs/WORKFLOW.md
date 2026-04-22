@@ -752,6 +752,68 @@ yq -i '.current = "<new-version>"' packages/<name>.yml
 This updates the `current` field so the next check knows the package is at this
 version.
 
+### 4.3 Downgrade behavior
+
+Aurtomator **mirrors upstream blindly**. If upstream publishes a version
+`older` than what the package currently tracks, aurtomator follows -- it does
+**not** block the change. The rationale: upstream is the source of truth. If
+they re-published an older release (deleted and recreated a tag, rolled back
+a broken release, etc.), a downstream packager that refuses to follow only
+drifts out of sync.
+
+Downgrades are logged and rendered, but not treated as failures.
+
+#### When does this happen?
+
+- Upstream deletes and recreates a release tag (seen in the wild with
+  memos-bin on 2026-04-19: `v0.27.1 → v0.27.0 → v0.27.1` after the upstream
+  maintainer re-cut the release).
+- Upstream rolls back a broken release and removes the tag.
+- Upstream's "latest" pointer flips to an older semver branch
+  (for example, a 2.x release line is deprecated and 1.x becomes "latest"
+  again temporarily).
+
+#### How to detect downgrades in logs
+
+Every script that performs comparison logs the literal token `DOWNGRADE`
+whenever `vercmp "$current" "$latest"` returns `1` (current is newer).
+Grep for it:
+
+```bash
+grep DOWNGRADE workflow-run.log
+```
+
+Two log lines are emitted for a single downgrade event -- one from
+`check-update.sh` per package:
+
+```text
+! memos-bin: DOWNGRADE 0.27.1 → 0.27.0
+```
+
+and one from `check-all.sh` as it routes the update:
+
+```text
+! memos-bin: DOWNGRADE detected 0.27.1 → 0.27.0 (mirroring upstream)
+```
+
+#### Status values and README icons
+
+`check-all.sh` writes two additional status tokens to `.status/<pkg>`:
+
+| Token                         | Meaning                                           |
+|-------------------------------|---------------------------------------------------|
+| `downgrade: <version>`        | `--update` mode: downgrade was pushed to AUR      |
+| `available_downgrade: <ver>`  | Check-only mode: downgrade available, not applied |
+
+`update-readme.sh` renders these as:
+
+- `downgrade: 0.27.0` → `⬇️ downgraded to 0.27.0`
+- `available_downgrade: 0.27.0` → `⬇️ 0.27.0 available (downgrade)`
+
+Both statuses count toward `pkg_ok`, so the packages badge stays
+`brightgreen`. A downgrade is expected behavior, not a failure -- the red
+badge is reserved for `check_failed` and `update_failed`.
+
 ---
 
 ## 5. CI Workflow: check-updates.yml
