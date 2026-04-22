@@ -1,0 +1,76 @@
+name: Bug report
+description: Report a defect in aurtomator's scripts, workflows, or strategies
+title: "bug: "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Before filing, please confirm:
+
+        - You have read [`docs/SETUP.md`](https://github.com/staticwire/aurtomator/blob/main/docs/SETUP.md) and [`docs/WORKFLOW.md`](https://github.com/staticwire/aurtomator/blob/main/docs/WORKFLOW.md).
+        - You have searched existing issues (open and closed) for a duplicate.
+        - This is **not** a security issue. Security-impacting bugs must be reported privately — see [`SECURITY.md`](https://github.com/staticwire/aurtomator/blob/main/SECURITY.md).
+
+  - type: input
+    id: version
+    attributes:
+      label: aurtomator version or commit SHA
+      description: Tagged release or short SHA of the commit you are running.
+      placeholder: "v0.1.2 or abc1234"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: context
+    attributes:
+      label: Where did the bug occur?
+      options:
+        - CI (GitHub Actions)
+        - Local script run
+        - Both
+    validations:
+      required: true
+
+  - type: input
+    id: workflow-run
+    attributes:
+      label: Workflow run URL
+      description: If this is a CI-related bug, link to the failing workflow run.
+      placeholder: "https://github.com/<you>/<fork>/actions/runs/1234567890"
+
+  - type: input
+    id: strategy
+    attributes:
+      label: Strategy
+      description: Strategy name involved, if the bug relates to a specific package.
+      placeholder: "github-release"
+
+  - type: textarea
+    id: yaml
+    attributes:
+      label: Package YAML
+      description: Contents of the affected `packages/*.yml`. Redact any secrets before pasting.
+      render: yaml
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+      description: What you expected to happen.
+    validations:
+      required: true
+
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual behavior
+      description: What actually happened. Include log output with secrets redacted.
+    validations:
+      required: true
+
+  - type: textarea
+    id: extra
+    attributes:
+      label: Anything else?
+      description: Additional context, screenshots, or notes.

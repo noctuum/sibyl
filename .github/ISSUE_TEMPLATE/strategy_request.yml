@@ -1,0 +1,51 @@
+name: New strategy request
+description: Request a new version-detection strategy (e.g. new hosting platform, new package ecosystem)
+title: "strategy: "
+labels: ["strategy", "enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        aurtomator currently supports 13 strategies — see the strategies table in [`README.md`](https://github.com/staticwire/aurtomator/blob/main/README.md) before opening a request.
+
+        Please confirm that no existing strategy covers your case. In particular, if the upstream can be queried with `repology` or scraped with `webpage-scrape` (the universal fallbacks), use one of those instead of adding a new strategy.
+
+  - type: input
+    id: name
+    attributes:
+      label: Proposed strategy name
+      description: Lowercase, hyphen-separated. Used as the `strategies/<name>.sh` filename.
+      placeholder: "forgejo-tag"
+    validations:
+      required: true
+
+  - type: input
+    id: upstream
+    attributes:
+      label: Example upstream URL
+      description: A representative project hosted on the platform or ecosystem this strategy targets.
+    validations:
+      required: true
+
+  - type: textarea
+    id: api
+    attributes:
+      label: API details
+      description: Which endpoint is queried, which field in the response carries the version, and what the version string looks like in practice (give an example).
+    validations:
+      required: true
+
+  - type: textarea
+    id: existing
+    attributes:
+      label: Why don't existing strategies work?
+      description: List the existing strategies you evaluated (including `repology` and `webpage-scrape`) and explain why each is unsuitable for this case.
+    validations:
+      required: true
+
+  - type: checkboxes
+    id: contrib
+    attributes:
+      label: Contribution
+      options:
+        - label: I'm willing to implement this strategy and submit a PR
