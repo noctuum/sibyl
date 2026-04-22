@@ -74,11 +74,11 @@ case "$url" in
 
   # --- tag_version_regex test patterns (must be before wildcards) ---
 
-  # Custom prefix tag (MeshLab)
+  # Custom prefix tag format
   *api.github.com/repos/custom-prefix/repo/releases/latest)
     echo '{"tag_name": "MeshLab-2025.07"}'
     ;;
-  # Custom suffix tag (wireguard-gui)
+  # Custom suffix tag format
   *api.github.com/repos/custom-suffix/repo/releases/latest)
     echo '{"tag_name": "0.1.8-stable"}'
     ;;

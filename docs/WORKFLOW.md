@@ -221,22 +221,22 @@ Detects versions from GitHub nightly/prerelease builds. Supports 4 patterns:
 **Pattern A: Fixed tag** (default) — a single tag force-pushed daily (neovim, ghostty, yazi):
 
 ```yaml
-name: neovim-nightly-bin
+name: myapp-nightly-bin
 strategy: github-nightly
 upstream:
-  project: neovim/neovim
+  project: owner/repo
   nightly_tag: nightly
   version_source: release_body
-  version_pattern: 'NVIM v\K\S+'
+  version_pattern: 'APP v\K\S+'
 ```
 
 **Pattern B: Dated tags** — tags like `nightly-2026-03-26` (ruffle, servo):
 
 ```yaml
-name: ruffle-nightly-bin
+name: myapp-nightly-bin
 strategy: github-nightly
 upstream:
-  project: nicknisi/ruffle-builds
+  project: owner/repo
   nightly_tag: "nightly-"
   version_source: tag_date
 ```
@@ -244,10 +244,10 @@ upstream:
 **Pattern C: Separate nightly repo** — standard `/releases/latest` on a dedicated build repo (yt-dlp):
 
 ```yaml
-name: yt-dlp-nightly-bin
+name: myapp-nightly-bin
 strategy: github-nightly
 upstream:
-  project: yt-dlp/yt-dlp-nightly-builds
+  project: owner/nightly-builds
   nightly_tag: latest
   version_source: tag
 ```
@@ -255,10 +255,10 @@ upstream:
 **Pattern D: Channel filter** — filter releases by name containing a channel string (brave):
 
 ```yaml
-name: brave-nightly-bin
+name: myapp-nightly-bin
 strategy: github-nightly
 upstream:
-  project: brave/brave-browser
+  project: owner/repo
   channel: Nightly
   version_source: tag
 ```
@@ -755,7 +755,7 @@ version.
 ### 4.3 Downgrade behavior
 
 Aurtomator **mirrors upstream blindly**. If upstream publishes a version
-`older` than what the package currently tracks, aurtomator follows -- it does
+`older` than what the package currently tracks, aurtomator follows — it does
 **not** block the change. The rationale: upstream is the source of truth. If
 they re-published an older release (deleted and recreated a tag, rolled back
 a broken release, etc.), a downstream packager that refuses to follow only
@@ -765,13 +765,14 @@ Downgrades are logged and rendered, but not treated as failures.
 
 #### When does this happen?
 
-- Upstream deletes and recreates a release tag (seen in the wild with
-  memos-bin on 2026-04-19: `v0.27.1 → v0.27.0 → v0.27.1` after the upstream
-  maintainer re-cut the release).
+- Upstream deletes and recreates a release tag. During the gap, GitHub's
+  `/releases/latest` endpoint auto-promotes the previous release, so a single
+  version cycle like `v1.2.1 → v1.2.0 → v1.2.1` can complete within minutes
+  without aurtomator doing anything wrong.
 - Upstream rolls back a broken release and removes the tag.
-- Upstream's "latest" pointer flips to an older semver branch
-  (for example, a 2.x release line is deprecated and 1.x becomes "latest"
-  again temporarily).
+- Upstream's "latest" pointer flips to an older semver branch (for example,
+  a 2.x release line is deprecated and 1.x becomes "latest" again
+  temporarily).
 
 #### How to detect downgrades in logs
 
@@ -783,17 +784,17 @@ Grep for it:
 grep DOWNGRADE workflow-run.log
 ```
 
-Two log lines are emitted for a single downgrade event -- one from
+Two log lines are emitted for a single downgrade event — one from
 `check-update.sh` per package:
 
 ```text
-! memos-bin: DOWNGRADE 0.27.1 → 0.27.0
+! myapp-bin: DOWNGRADE 1.2.1 → 1.2.0
 ```
 
 and one from `check-all.sh` as it routes the update:
 
 ```text
-! memos-bin: DOWNGRADE detected 0.27.1 → 0.27.0 (mirroring upstream)
+! myapp-bin: DOWNGRADE detected 1.2.1 → 1.2.0 (mirroring upstream)
 ```
 
 #### Status values and README icons
@@ -807,11 +808,11 @@ and one from `check-all.sh` as it routes the update:
 
 `update-readme.sh` renders these as:
 
-- `downgrade: 0.27.0` → `⬇️ downgraded to 0.27.0`
-- `available_downgrade: 0.27.0` → `⬇️ 0.27.0 available (downgrade)`
+- `downgrade: 1.2.0` → `⬇️ downgraded to 1.2.0`
+- `available_downgrade: 1.2.0` → `⬇️ 1.2.0 available (downgrade)`
 
 Both statuses count toward `pkg_ok`, so the packages badge stays
-`brightgreen`. A downgrade is expected behavior, not a failure -- the red
+`brightgreen`. A downgrade is expected behavior, not a failure — the red
 badge is reserved for `check_failed` and `update_failed`.
 
 ---

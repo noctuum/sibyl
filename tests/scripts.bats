@@ -174,8 +174,8 @@ EOF
 
 @test "audit_pkgbuild: allows SKIP + real checksums for local files (nightly pattern)" {
   source "$TEST_TMPDIR/scripts/lib.sh"
-  # neovim-nightly-bin pattern: SKIP for remote nightly binary,
-  # real hashes for local files (.vim, .install) in AUR repo
+  # Typical nightly-bin pattern: SKIP for the remote nightly binary,
+  # real hashes for local files (e.g. .vim, .install) shipped in the AUR repo
   cat > "$TEST_TMPDIR/test.PKGBUILD" <<'EOF'
 pkgname=test-nightly
 pkgver=0.13.0
@@ -953,8 +953,8 @@ MOCKGIT
 @test "update-pkg: audit allows pkgver() with git-latest strategy" {
   create_test_package "test-vcs-ok" "git-latest" "upstream:
   type: gitlab
-  host: invent.kde.org
-  project: network/kio-s3
+  host: gitlab.example.com
+  project: group/project
 current: 'r100.abc1234'"
 
   aur_dir="$TEST_TMPDIR/aur-test-vcs-ok"
@@ -1523,4 +1523,44 @@ EOF
   # Downgrades count toward pkg_ok, so the badge stays green.
   grep -q "brightgreen" "$TEST_TMPDIR/README.md"
   ! grep -q "packages-.*-red" "$TEST_TMPDIR/README.md"
+}
+
+@test "update-readme: renders available_downgrade icon with (downgrade) suffix" {
+  create_test_package "pkg-down" "github-release" "upstream:
+  project: owner/repo
+current: '3.0.0'"
+
+  echo "available_downgrade: 1.0.0" >"$TEST_TMPDIR/.status/pkg-down"
+
+  cat >"$TEST_TMPDIR/README.md" <<'EOF'
+<!-- PACKAGES:START -->
+<!-- PACKAGES:END -->
+EOF
+  git -C "$TEST_TMPDIR" init -q
+  "$TEST_TMPDIR/scripts/update-readme.sh" 2>/dev/null
+
+  grep -q "⬇️ 1.0.0 available (downgrade)" "$TEST_TMPDIR/README.md"
+  # Available downgrades also count toward pkg_ok — badge stays green.
+  grep -q "brightgreen" "$TEST_TMPDIR/README.md"
+}
+
+@test "check-all: writes 'updated:' status after --update on normal upgrade (regression)" {
+  # Current 1.0.0 < latest 2.0.0 — normal upgrade path.
+  # Verifies the is_downgrade=false branch of the new status-writing logic.
+  create_test_package "pkg-up" "github-release" "upstream:
+  type: github
+  project: owner/repo
+current: '1.0.0'"
+
+  # Stub update-pkg.sh to always succeed.
+  rm -f "$TEST_TMPDIR/scripts/update-pkg.sh"
+  cat >"$TEST_TMPDIR/scripts/update-pkg.sh" <<'EOF'
+#!/usr/bin/env bash
+exit 0
+EOF
+  chmod +x "$TEST_TMPDIR/scripts/update-pkg.sh"
+
+  "$TEST_TMPDIR/scripts/check-all.sh" --update 2>/dev/null || true
+  [ -f "$TEST_TMPDIR/.status/pkg-up" ]
+  [ "$(cat "$TEST_TMPDIR/.status/pkg-up")" = "updated: 2.0.0" ]
 }

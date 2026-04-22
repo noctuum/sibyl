@@ -58,7 +58,8 @@ fi
 # AUR git-daemon can return HEAD as a detached commit that does not match
 # refs/heads/master. This happens when two pipeline runs push concurrently
 # and the server accepts both without proper locking — HEAD and
-# refs/heads/master diverge. Observed on neovim-nightly-bin 2026-04-12.
+# refs/heads/master end up pointing at different commits with identical
+# content, and subsequent clones land in detached HEAD state.
 #
 # AUR rejects non-fast-forward pushes via pre-receive hook, so we must base
 # our commit on origin/master (server's refs/heads/master), NOT on the
