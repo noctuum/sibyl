@@ -5,7 +5,7 @@
 <!-- BADGES:END -->
 
 Automated AUR package updates from a single GitHub repo.
-[Fork it](https://github.com/staticwire/aurtomator), drop in your packages, let CI handle the rest.
+[Fork it](https://github.com/staticwire/aurtomator/fork), drop in your packages, let CI handle the rest.
 
 ![sibyl](https://github.com/user-attachments/assets/b75914c2-de99-4a20-a213-0656e1a751fc)
 
