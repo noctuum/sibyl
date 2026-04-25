@@ -12,7 +12,7 @@ Automated AUR package updates from a single GitHub repo.
 ## Packages
 
 <!-- PACKAGES:START -->
-![Check Updates](https://github.com/noctuum/sibyl/actions/workflows/check-updates.yml/badge.svg) ![packages](https://img.shields.io/badge/packages-9%2F9-brightgreen)
+![Check Updates](https://github.com/noctuum/sibyl/actions/workflows/check-updates.yml/badge.svg) ![packages](https://img.shields.io/badge/packages-8%2F9-red)
 
 | Package | Version | Strategy | Updated | Status |
 |---------|---------|----------|---------|--------|
@@ -23,7 +23,7 @@ Automated AUR package updates from a single GitHub repo.
 | [marp-cli-bin](https://aur.archlinux.org/packages/marp-cli-bin) | 4.3.1 | github-release | 2026-03-28 | ✅ up to date |
 | [memos-bin](https://aur.archlinux.org/packages/memos-bin) | 0.27.1 | github-release | 2026-04-19 | ✅ up to date |
 | [miniflux-bin](https://aur.archlinux.org/packages/miniflux-bin) | 2.2.19 | github-release | 2026-04-05 | ✅ up to date |
-| [neovim-nightly-bin](https://aur.archlinux.org/packages/neovim-nightly-bin) | 0.13.0+dev+312+gc0e358f7e8 | github-nightly | 2026-04-24 | ✅ up to date |
+| [neovim-nightly-bin](https://aur.archlinux.org/packages/neovim-nightly-bin) | 0.13.0+dev+312+gc0e358f7e8 | github-nightly | 2026-04-24 | ❌ failed |
 | [wireguard-gui-bin](https://aur.archlinux.org/packages/wireguard-gui-bin) | 0.1.8 | github-release | 2026-03-29 | ✅ up to date |
 <!-- PACKAGES:END -->
 
