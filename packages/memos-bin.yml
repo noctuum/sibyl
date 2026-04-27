@@ -2,5 +2,5 @@ name: memos-bin
 strategy: github-release
 upstream:
   project: usememos/memos
-current: 0.27.1
-last_updated: "2026-04-19"
+current: 0.28.0
+last_updated: "2026-04-27"
