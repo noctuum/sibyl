@@ -1,0 +1,6 @@
+name: miniflux-bin
+strategy: github-release
+upstream:
+  project: miniflux/v2
+current: 2.2.19
+last_updated: "2026-04-05"

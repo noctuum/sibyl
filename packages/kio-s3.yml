@@ -1,0 +1,4 @@
+name: kio-s3
+strategy: kde-tarball
+current: 1.0.2
+last_updated: "2026-04-24"
