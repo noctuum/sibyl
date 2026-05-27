@@ -21,7 +21,7 @@ Automated AUR package updates from a single GitHub repo.
 | [kqalc-bin](https://aur.archlinux.org/packages/kqalc-bin) | 0.2.1 | github-release | — | ✅ up to date |
 | [liblinear](https://aur.archlinux.org/packages/liblinear) | 2.50 | webpage-scrape | — | ✅ up to date |
 | [marp-cli-bin](https://aur.archlinux.org/packages/marp-cli-bin) | 4.4.0 | github-release | 2026-05-06 | ✅ up to date |
-| [memos-bin](https://aur.archlinux.org/packages/memos-bin) | 0.29.0 | github-release | 2026-05-27 | 🔄 updated to 0.29.0 |
+| [memos-bin](https://aur.archlinux.org/packages/memos-bin) | 0.29.0 | github-release | 2026-05-27 | ✅ up to date |
 | [miniflux-bin](https://aur.archlinux.org/packages/miniflux-bin) | 2.3.0 | github-release | 2026-05-16 | ✅ up to date |
 | [neovim-nightly-bin](https://aur.archlinux.org/packages/neovim-nightly-bin) | 0.13.0+dev+602+gb3dfa86e02 | github-nightly | 2026-05-27 | ✅ up to date |
 | [wireguard-gui-bin](https://aur.archlinux.org/packages/wireguard-gui-bin) | 0.1.8 | github-release | 2026-03-29 | ✅ up to date |
