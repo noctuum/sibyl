@@ -23,7 +23,7 @@ Automated AUR package updates from a single GitHub repo.
 | [marp-cli-bin](https://aur.archlinux.org/packages/marp-cli-bin) | 4.4.0 | github-release | 2026-05-06 | ✅ up to date |
 | [memos-bin](https://aur.archlinux.org/packages/memos-bin) | 0.29.0 | github-release | 2026-05-27 | ✅ up to date |
 | [miniflux-bin](https://aur.archlinux.org/packages/miniflux-bin) | 2.3.1 | github-release | 2026-05-29 | ✅ up to date |
-| [neovim-nightly-bin](https://aur.archlinux.org/packages/neovim-nightly-bin) | 0.13.0+dev+644+g13b2b14275 | github-nightly | 2026-06-03 | ✅ up to date |
+| [neovim-nightly-bin](https://aur.archlinux.org/packages/neovim-nightly-bin) | 0.13.0+dev+652+g10d0931d44 | github-nightly | 2026-06-04 | 🔄 updated to 0.13.0+dev+652+g10d0931d44 |
 | [wireguard-gui-bin](https://aur.archlinux.org/packages/wireguard-gui-bin) | 0.1.9 | github-release | 2026-05-30 | ✅ up to date |
 <!-- PACKAGES:END -->
 
