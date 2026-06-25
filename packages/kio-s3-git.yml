@@ -4,5 +4,5 @@ upstream:
   type: gitlab
   host: invent.kde.org
   project: network/kio-s3
-current: r470.84d4f99
-last_updated: "2026-06-24"
+current: r471.92c6f58
+last_updated: "2026-06-25"
