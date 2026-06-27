@@ -12,11 +12,11 @@ Automated AUR package updates from a single GitHub repo.
 ## Packages
 
 <!-- PACKAGES:START -->
-![Check Updates](https://github.com/noctuum/sibyl/actions/workflows/check-updates.yml/badge.svg) ![packages](https://img.shields.io/badge/packages-9%2F9-brightgreen)
+![Check Updates](https://github.com/noctuum/sibyl/actions/workflows/check-updates.yml/badge.svg) ![packages](https://img.shields.io/badge/packages-8%2F9-red)
 
 | Package | Version | Strategy | Updated | Status |
 |---------|---------|----------|---------|--------|
-| [kio-s3-git](https://aur.archlinux.org/packages/kio-s3-git) | r473.639aa32 | git-latest | 2026-06-27 | ✅ up to date |
+| [kio-s3-git](https://aur.archlinux.org/packages/kio-s3-git) | r473.639aa32 | git-latest | 2026-06-27 | ❌ failed |
 | [kio-s3](https://aur.archlinux.org/packages/kio-s3) | 1.0.2 | kde-tarball | 2026-04-24 | ✅ up to date |
 | [kqalc-bin](https://aur.archlinux.org/packages/kqalc-bin) | 0.2.1 | github-release | — | ✅ up to date |
 | [liblinear](https://aur.archlinux.org/packages/liblinear) | 2.50 | webpage-scrape | — | ✅ up to date |
