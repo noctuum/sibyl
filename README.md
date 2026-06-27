@@ -16,13 +16,13 @@ Automated AUR package updates from a single GitHub repo.
 
 | Package | Version | Strategy | Updated | Status |
 |---------|---------|----------|---------|--------|
-| [kio-s3-git](https://aur.archlinux.org/packages/kio-s3-git) | r471.92c6f58 | git-latest | 2026-06-25 | ✅ up to date |
+| [kio-s3-git](https://aur.archlinux.org/packages/kio-s3-git) | r472.7f137df | git-latest | 2026-06-27 | 🔄 updated to r472.7f137df |
 | [kio-s3](https://aur.archlinux.org/packages/kio-s3) | 1.0.2 | kde-tarball | 2026-04-24 | ✅ up to date |
 | [kqalc-bin](https://aur.archlinux.org/packages/kqalc-bin) | 0.2.1 | github-release | — | ✅ up to date |
 | [liblinear](https://aur.archlinux.org/packages/liblinear) | 2.50 | webpage-scrape | — | ✅ up to date |
 | [marp-cli-bin](https://aur.archlinux.org/packages/marp-cli-bin) | 4.4.0 | github-release | 2026-05-06 | ✅ up to date |
 | [memos-bin](https://aur.archlinux.org/packages/memos-bin) | 0.29.1 | github-release | 2026-06-05 | ✅ up to date |
-| [miniflux-bin](https://aur.archlinux.org/packages/miniflux-bin) | 2.3.1 | github-release | 2026-05-29 | ✅ up to date |
+| [miniflux-bin](https://aur.archlinux.org/packages/miniflux-bin) | 2.3.2 | github-release | 2026-06-27 | 🔄 updated to 2.3.2 |
 | [neovim-nightly-bin](https://aur.archlinux.org/packages/neovim-nightly-bin) | 0.13.0+dev+823+gb9b1992d9d | github-nightly | 2026-06-26 | ✅ up to date |
 | [wireguard-gui-bin](https://aur.archlinux.org/packages/wireguard-gui-bin) | 0.1.11 | github-release | 2026-06-12 | ✅ up to date |
 <!-- PACKAGES:END -->
