@@ -3,5 +3,5 @@ strategy: github-release
 upstream:
   project: 0xle0ne/wireguard-gui
   tag_version_regex: '(.+)-stable'
-current: 0.1.11
-last_updated: "2026-06-12"
+current: 0.1.12
+last_updated: "2026-07-04"
