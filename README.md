@@ -20,7 +20,7 @@ Automated AUR package updates from a single GitHub repo.
 | [kio-s3](https://aur.archlinux.org/packages/kio-s3) | 1.0.2 | kde-tarball | 2026-04-24 | ✅ up to date |
 | [kqalc-bin](https://aur.archlinux.org/packages/kqalc-bin) | 0.2.1 | github-release | — | ✅ up to date |
 | [liblinear](https://aur.archlinux.org/packages/liblinear) | 2.50 | webpage-scrape | — | ✅ up to date |
-| [marp-cli-bin](https://aur.archlinux.org/packages/marp-cli-bin) | 4.4.1 | github-release | 2026-07-04 | ✅ up to date |
+| [marp-cli-bin](https://aur.archlinux.org/packages/marp-cli-bin) | 4.5.0 | github-release | 2026-07-17 | 🔄 updated to 4.5.0 |
 | [memos-bin](https://aur.archlinux.org/packages/memos-bin) | 0.29.1 | github-release | 2026-06-05 | ✅ up to date |
 | [miniflux-bin](https://aur.archlinux.org/packages/miniflux-bin) | 2.3.2 | github-release | 2026-06-27 | ✅ up to date |
 | [neovim-nightly-bin](https://aur.archlinux.org/packages/neovim-nightly-bin) | 0.13.0+dev+1017+gd36d05cbd5 | github-nightly | 2026-07-17 | ✅ up to date |
