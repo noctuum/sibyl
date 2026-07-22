@@ -1,0 +1,5 @@
+name: ydiskarc
+strategy: pypi
+upstream:
+  registry: ydiskarc
+current: "1.1.0"
