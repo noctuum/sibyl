@@ -12,19 +12,19 @@ Automated AUR package updates from a single GitHub repo.
 ## Packages
 
 <!-- PACKAGES:START -->
-![Check Updates](https://github.com/noctuum/sibyl/actions/workflows/check-updates.yml/badge.svg) ![packages](https://img.shields.io/badge/packages-10%2F10-brightgreen)
+![Check Updates](https://github.com/noctuum/sibyl/actions/workflows/check-updates.yml/badge.svg) ![packages](https://img.shields.io/badge/packages-4%2F10-red)
 
 | Package | Version | Strategy | Updated | Status |
 |---------|---------|----------|---------|--------|
 | [kio-s3-git](https://aur.archlinux.org/packages/kio-s3-git) | r478.14ecede | git-latest | 2026-07-09 | ✅ up to date |
 | [kio-s3](https://aur.archlinux.org/packages/kio-s3) | 1.0.2 | kde-tarball | 2026-04-24 | ✅ up to date |
-| [kqalc-bin](https://aur.archlinux.org/packages/kqalc-bin) | 0.2.1 | github-release | — | ✅ up to date |
+| [kqalc-bin](https://aur.archlinux.org/packages/kqalc-bin) | 0.2.1 | github-release | — | ❌ failed |
 | [liblinear](https://aur.archlinux.org/packages/liblinear) | 2.50 | webpage-scrape | — | ✅ up to date |
-| [marp-cli-bin](https://aur.archlinux.org/packages/marp-cli-bin) | 4.5.0 | github-release | 2026-07-17 | ✅ up to date |
-| [memos-bin](https://aur.archlinux.org/packages/memos-bin) | 0.29.1 | github-release | 2026-06-05 | ✅ up to date |
-| [miniflux-bin](https://aur.archlinux.org/packages/miniflux-bin) | 2.3.2 | github-release | 2026-06-27 | ✅ up to date |
-| [neovim-nightly-bin](https://aur.archlinux.org/packages/neovim-nightly-bin) | 0.13.0+dev+1095+g53cbf66bd2 | github-nightly | 2026-07-23 | ✅ up to date |
-| [wireguard-gui-bin](https://aur.archlinux.org/packages/wireguard-gui-bin) | 0.1.12 | github-release | 2026-07-04 | ✅ up to date |
+| [marp-cli-bin](https://aur.archlinux.org/packages/marp-cli-bin) | 4.5.0 | github-release | 2026-07-17 | ❌ failed |
+| [memos-bin](https://aur.archlinux.org/packages/memos-bin) | 0.29.1 | github-release | 2026-06-05 | ❌ failed |
+| [miniflux-bin](https://aur.archlinux.org/packages/miniflux-bin) | 2.3.2 | github-release | 2026-06-27 | ❌ failed |
+| [neovim-nightly-bin](https://aur.archlinux.org/packages/neovim-nightly-bin) | 0.13.0+dev+1095+g53cbf66bd2 | github-nightly | 2026-07-23 | ❌ failed |
+| [wireguard-gui-bin](https://aur.archlinux.org/packages/wireguard-gui-bin) | 0.1.12 | github-release | 2026-07-04 | ❌ failed |
 | [ydiskarc](https://aur.archlinux.org/packages/ydiskarc) | 1.1.0 | pypi | — | ✅ up to date |
 <!-- PACKAGES:END -->
 
