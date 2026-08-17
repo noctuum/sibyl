@@ -5,5 +5,5 @@ upstream:
   nightly_tag: nightly
   version_source: release_body
   version_pattern: 'NVIM v\K\S+'
-current: 0.13.0+dev+1328+g2edb1c0009
-last_updated: "2026-08-16"
+current: 0.13.0+dev+1336+g8c0bf18374
+last_updated: "2026-08-17"
