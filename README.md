@@ -12,7 +12,7 @@ Automated AUR package updates from a single GitHub repo.
 ## Packages
 
 <!-- PACKAGES:START -->
-![Check Updates](https://github.com/noctuum/sibyl/actions/workflows/check-updates.yml/badge.svg) ![packages](https://img.shields.io/badge/packages-10%2F10-brightgreen)
+![Check Updates](https://github.com/noctuum/sibyl/actions/workflows/check-updates.yml/badge.svg) ![packages](https://img.shields.io/badge/packages-11%2F11-brightgreen)
 
 | Package | Version | Strategy | Updated | Status |
 |---------|---------|----------|---------|--------|
@@ -23,7 +23,8 @@ Automated AUR package updates from a single GitHub repo.
 | [marp-cli-bin](https://aur.archlinux.org/packages/marp-cli-bin) | 4.5.1 | github-release | 2026-09-06 | ✅ up to date |
 | [memos-bin](https://aur.archlinux.org/packages/memos-bin) | 0.31.0 | github-release | 2026-09-19 | ✅ up to date |
 | [miniflux-bin](https://aur.archlinux.org/packages/miniflux-bin) | 2.3.3 | github-release | 2026-07-24 | ✅ up to date |
-| [neovim-nightly-bin](https://aur.archlinux.org/packages/neovim-nightly-bin) | 0.13.0+dev+1840+ga054b698c0 | github-nightly | 2026-10-13 | 🔄 updated to 0.13.0+dev+1840+ga054b698c0 |
+| [neovim-nightly-bin](https://aur.archlinux.org/packages/neovim-nightly-bin) | 0.13.0+dev+1840+ga054b698c0 | github-nightly | 2026-10-13 | ✅ up to date |
+| [sherpa-onnx-bin](https://aur.archlinux.org/packages/sherpa-onnx-bin) | 1.13.8 | github-release | — | ✅ up to date |
 | [wireguard-gui-bin](https://aur.archlinux.org/packages/wireguard-gui-bin) | 0.1.12 | github-release | 2026-07-04 | ✅ up to date |
 | [ydiskarc](https://aur.archlinux.org/packages/ydiskarc) | 1.1.0 | pypi | — | ✅ up to date |
 <!-- PACKAGES:END -->
