@@ -1,0 +1,8 @@
+name: sherpa-onnx-piper-voice-ru-denis
+strategy: github-asset
+upstream:
+  project: k2-fsa/sherpa-onnx
+  tag: tts-models
+  assets:
+    - vits-piper-ru_RU-denis-medium.tar.bz2
+current: "20251202"
