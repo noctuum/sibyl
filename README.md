@@ -12,7 +12,7 @@ Automated AUR package updates from a single GitHub repo.
 ## Packages
 
 <!-- PACKAGES:START -->
-![Check Updates](https://github.com/noctuum/sibyl/actions/workflows/check-updates.yml/badge.svg) ![packages](https://img.shields.io/badge/packages-11%2F11-brightgreen)
+![Check Updates](https://github.com/noctuum/sibyl/actions/workflows/check-updates.yml/badge.svg) ![packages](https://img.shields.io/badge/packages-14%2F14-brightgreen)
 
 | Package | Version | Strategy | Updated | Status |
 |---------|---------|----------|---------|--------|
@@ -25,6 +25,9 @@ Automated AUR package updates from a single GitHub repo.
 | [miniflux-bin](https://aur.archlinux.org/packages/miniflux-bin) | 2.3.3 | github-release | 2026-07-24 | ✅ up to date |
 | [neovim-nightly-bin](https://aur.archlinux.org/packages/neovim-nightly-bin) | 0.13.0+dev+1840+ga054b698c0 | github-nightly | 2026-10-13 | ✅ up to date |
 | [sherpa-onnx-bin](https://aur.archlinux.org/packages/sherpa-onnx-bin) | 1.13.8 | github-release | — | ✅ up to date |
+| [sherpa-onnx-piper-voice-ru-denis](https://aur.archlinux.org/packages/sherpa-onnx-piper-voice-ru-denis) | 20251202 | github-asset | — | ✅ up to date |
+| [sherpa-onnx-piper-voice-ru-dmitri](https://aur.archlinux.org/packages/sherpa-onnx-piper-voice-ru-dmitri) | 20251202 | github-asset | — | ✅ up to date |
+| [sherpa-onnx-piper-voice-ru-ruslan](https://aur.archlinux.org/packages/sherpa-onnx-piper-voice-ru-ruslan) | 20251202 | github-asset | — | ✅ up to date |
 | [wireguard-gui-bin](https://aur.archlinux.org/packages/wireguard-gui-bin) | 0.1.12 | github-release | 2026-07-04 | ✅ up to date |
 | [ydiskarc](https://aur.archlinux.org/packages/ydiskarc) | 1.1.0 | pypi | — | ✅ up to date |
 <!-- PACKAGES:END -->
