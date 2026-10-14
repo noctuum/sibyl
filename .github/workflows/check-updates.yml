@@ -4,20 +4,13 @@ on:
   schedule:
     - cron: "0 * * * *" # every hour
   workflow_dispatch:
-    inputs:
-      force:
-        description: "Skip schedule matching, check all packages now"
-        type: boolean
-        default: true
 
 permissions:
   contents: write
   issues: write
 
-# Serialize runs: prevents two concurrent pipeline instances from pushing
-# divergent commits to the same AUR repo (root cause of the 2026-04-12
-# neovim-nightly-bin HEAD/master divergence incident). A new run will wait
-# for the in-progress run to finish rather than race with it.
+# Serialize runs so that two of them never push divergent commits to the
+# same AUR repo. A new run waits for the running one to finish.
 concurrency:
   group: check-updates
   cancel-in-progress: false
@@ -34,10 +27,11 @@ jobs:
           pacman-key --init
           pacman -Syu --noconfirm --needed sudo git github-cli openssh gnupg namcap jq go-yq pacman-contrib
           useradd -m builder
-          echo "builder ALL=(ALL) NOPASSWD: ALL" >> /etc/sudoers
 
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
 
       - name: Setup workspace
         env:
@@ -57,20 +51,15 @@ jobs:
           mkdir -m 0700 "$SSH_DIR"
           echo "$AUR_SSH_KEY" > "$SSH_DIR/aur"
           chmod 600 "$SSH_DIR/aur"
-          # Populate known_hosts with retry (AUR SSH can be intermittently slow)
-          for attempt in 1 2 3; do
-            if ssh-keyscan -T 10 -t ed25519 aur.archlinux.org >> "$SSH_DIR/known_hosts" 2>/dev/null; then
-              break
-            fi
-            echo "ssh-keyscan attempt $attempt failed, retrying in 5s..."
-            sleep 5
-          done
+          # Host key published at https://aur.archlinux.org as
+          # Ed25519 SHA256:RFzBCUItH9LZS0cKB5UE6ceAYhBD5C8GeOBip8Z11+4
+          echo "aur.archlinux.org ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIEuBKrPzbawxA/k2g6NcyV5jmqwJ2s+zpgZGZ7tpLIcN" > "$SSH_DIR/known_hosts"
 
           printf '%s\n' \
             "Host aur.archlinux.org" \
             "  IdentityFile $SSH_DIR/aur" \
             "  User aur" \
-            "  StrictHostKeyChecking accept-new" \
+            "  StrictHostKeyChecking yes" \
             "  ControlMaster auto" \
             "  ControlPath $SSH_DIR/cm-%r@%h:%p" \
             "  ControlPersist 600" \
@@ -95,9 +84,11 @@ jobs:
         env:
           AUR_GIT_NAME: ${{ secrets.AUR_GIT_NAME }}
           AUR_GIT_EMAIL: ${{ secrets.AUR_GIT_EMAIL }}
+          GITHUB_TOKEN: ${{ github.token }}
         run: |
           sudo -u builder env \
             GPG_KEY_ID="${GPG_KEY_ID:-}" \
+            GITHUB_TOKEN="${GITHUB_TOKEN}" \
             GIT_AUTHOR_NAME="${AUR_GIT_NAME:-aurtomator}" \
             GIT_AUTHOR_EMAIL="${AUR_GIT_EMAIL:-aurtomator@users.noreply.github.com}" \
             ./scripts/check-all.sh --update

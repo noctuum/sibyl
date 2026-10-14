@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #
-# setup.sh — First-time aurtomator configuration
+# setup.sh - First-time aurtomator configuration
 #
 # Usage:
 #   ./scripts/setup.sh              # full setup (all steps)
@@ -147,7 +147,7 @@ setup_ssh() {
     return 1
   fi
 
-  # Validate it's actually a private key
+  # Check that it is a private key
   local key_check
   key_check=$(ssh-keygen -y -f "$AUR_SSH_KEY" -P "" 2>&1) || true
   if [[ "$key_check" == ssh-* ]]; then
@@ -166,10 +166,18 @@ setup_ssh() {
   fi
 }
 
+# Flush the agent cache, then sign without pinentry. Signing fails when the
+# key has a passphrase.
+# Args: $1=key id
+gpg_key_has_passphrase() {
+  gpgconf --kill gpg-agent 2>/dev/null || true
+  ! echo "test" | gpg --batch --pinentry-mode error --sign --local-user "$1" >/dev/null 2>&1
+}
+
 setup_gpg() {
   header "gpg" "Sign AUR commits with GPG (optional)"
 
-  # Yes/no gate — skip unless user explicitly wants GPG or provided --gpg-key
+  # Yes/no gate: skip unless the user wants GPG or passed --gpg-key
   if [[ -z "$GPG_KEY_ID" ]]; then
     if [[ "$NON_INTERACTIVE" == "true" ]]; then
       ok "GPG signing skipped (no --gpg-key provided)"
@@ -201,7 +209,7 @@ setup_gpg() {
   fi
 
   if ! echo "$key_info" | grep -q '\[S'; then
-    warn "Key may not have signing capability — verify manually"
+    warn "Key may not have signing capability, verify manually"
   fi
 
   # Check if master key
@@ -222,10 +230,7 @@ setup_gpg() {
     fi
   fi
 
-  # Check passphrase — flush agent cache, then try signing without pinentry.
-  # If gpg succeeds (exit 0), key has no passphrase. If it fails, passphrase required.
-  gpgconf --kill gpg-agent 2>/dev/null || true
-  if echo "test" | gpg --batch --pinentry-mode error --sign --local-user "$GPG_KEY_ID" >/dev/null 2>&1; then
+  if ! gpg_key_has_passphrase "$GPG_KEY_ID"; then
     ok "GPG key: $GPG_KEY_ID (no passphrase, ready for CI)"
   else
     warn "This key has a passphrase. CI (GitHub Actions) requires a passphrase-free key."
@@ -236,9 +241,9 @@ setup_gpg() {
     fi
     printf "\n  Create a passphrase-free copy for CI? Your original key stays unchanged.\n\n"
     printf "  Three pinentry dialogs will open:\n"
-    printf "    %s1st%s — current passphrase (to export the key)\n" "$BOLD" "$RESET"
-    printf "    %s2nd%s — current passphrase again (isolated copy, separate keyring)\n" "$BOLD" "$RESET"
-    printf "    %s3rd%s — leave empty, press OK (set no passphrase for CI)\n\n" "$BOLD" "$RESET"
+    printf "    %s1st%s: current passphrase (to export the key)\n" "$BOLD" "$RESET"
+    printf "    %s2nd%s: current passphrase again (isolated copy, separate keyring)\n" "$BOLD" "$RESET"
+    printf "    %s3rd%s: leave empty, press OK (set no passphrase for CI)\n\n" "$BOLD" "$RESET"
     local strip
     strip=$(ask "Proceed? (Y/n)")
     if [[ "$strip" == "n" || "$strip" == "N" ]]; then
@@ -294,7 +299,7 @@ setup_gpg() {
       return 0
     fi
 
-    # Export clean key — store for secrets step
+    # Export the clean key for the secrets step
     GPG_CLEAN_KEY=$(gpg --homedir "$tmp_gnupg" --batch --pinentry-mode loopback \
       --passphrase "" --export-secret-subkeys --armor "${GPG_KEY_ID}!" 2>/dev/null) || true
     gpgconf --homedir "$tmp_gnupg" --kill gpg-agent 2>/dev/null || true
@@ -321,7 +326,21 @@ setup_secrets() {
     ok "gh CLI authenticated ($gh_user)"
   else
     warn "gh CLI not available or not authenticated"
-    warn "You'll need to set secrets manually"
+    warn "Set the secrets manually"
+  fi
+
+  # GPG_SIGNING_KEY holds the passphrase-free copy made by the gpg step of
+  # this run, or the key itself when it has no passphrase
+  local gpg_source=""
+  if [[ -n "$GPG_KEY_ID" ]]; then
+    if [[ -n "$GPG_CLEAN_KEY" ]]; then
+      gpg_source="copy"
+    elif gpg_key_has_passphrase "$GPG_KEY_ID"; then
+      warn "GPG key $GPG_KEY_ID has a passphrase, GPG_SIGNING_KEY not set"
+      warn "Run ./scripts/setup.sh gpg secrets to make a passphrase-free copy"
+    else
+      gpg_source="key"
+    fi
   fi
 
   if [[ "$has_gh" == "true" ]]; then
@@ -358,15 +377,14 @@ setup_secrets() {
       fail "AUR_SSH_KEY"
     fi
 
-    if [[ -n "$GPG_KEY_ID" ]]; then
-      # Use passphrase-free copy if available, otherwise export directly
-      if [[ -n "${GPG_CLEAN_KEY:-}" ]]; then
-        if echo "$GPG_CLEAN_KEY" | gh secret set GPG_SIGNING_KEY -R "$gh_repo"; then
-          ok "GPG_SIGNING_KEY (passphrase-free copy)"
-        else
-          fail "GPG_SIGNING_KEY"
-        fi
-      elif gpg --export-secret-subkeys --armor "$GPG_KEY_ID" 2>/dev/null | gh secret set GPG_SIGNING_KEY -R "$gh_repo"; then
+    if [[ "$gpg_source" == "copy" ]]; then
+      if echo "$GPG_CLEAN_KEY" | gh secret set GPG_SIGNING_KEY -R "$gh_repo"; then
+        ok "GPG_SIGNING_KEY (passphrase-free copy)"
+      else
+        fail "GPG_SIGNING_KEY"
+      fi
+    elif [[ "$gpg_source" == "key" ]]; then
+      if gpg --export-secret-subkeys --armor "$GPG_KEY_ID" 2>/dev/null | gh secret set GPG_SIGNING_KEY -R "$gh_repo"; then
         ok "GPG_SIGNING_KEY"
       else
         fail "GPG_SIGNING_KEY"
@@ -384,7 +402,11 @@ setup_secrets() {
     printf "  %sAUR_SSH_KEY%s\n" "$BOLD" "$RESET"
     printf "    Contents of: %s\n\n" "$AUR_SSH_KEY"
 
-    if [[ -n "$GPG_KEY_ID" ]]; then
+    if [[ "$gpg_source" == "copy" ]]; then
+      printf "  %sGPG_SIGNING_KEY%s\n" "$BOLD" "$RESET"
+      printf "    Value, the passphrase-free copy, BEGIN and END lines included:\n\n"
+      printf "%s\n\n" "$GPG_CLEAN_KEY"
+    elif [[ "$gpg_source" == "key" ]]; then
       printf "  %sGPG_SIGNING_KEY%s\n" "$BOLD" "$RESET"
       printf "    Run: gpg --export-secret-subkeys --armor %s\n\n" "$GPG_KEY_ID"
     fi
@@ -464,6 +486,9 @@ verify_all() {
 # ARGUMENT PARSING
 # =============================================================================
 
+# Saved values first, so that flags override them
+load_config
+
 while [[ $# -gt 0 ]]; do
   case "$1" in
     identity | ssh | gpg | secrets | verify)
@@ -511,8 +536,6 @@ fi
 # =============================================================================
 
 printf "%saurtomator setup%s\n" "$BOLD" "$RESET"
-
-load_config
 
 FULL_SETUP=false
 if [[ ${#STEPS[@]} -eq 5 ]]; then

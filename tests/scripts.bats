@@ -233,6 +233,96 @@ EOF
   [ "$status" -eq 0 ]
 }
 
+@test "audit_pkgbuild: blocks mixed SKIP and real checksums in arch-specific arrays" {
+  source "$TEST_TMPDIR/scripts/lib.sh"
+  cat > "$TEST_TMPDIR/test.PKGBUILD" <<'EOF'
+pkgname=test-mixed-arch
+pkgver=1.0.0
+pkgrel=1
+pkgdesc="test"
+arch=('x86_64')
+url="https://example.com"
+license=('MIT')
+source_x86_64=("git+https://example.com/repo.git"
+               "https://example.com/data-${pkgver}.tar.gz")
+sha256sums_x86_64=('SKIP'
+                   'abc123')
+EOF
+  run audit_pkgbuild "$TEST_TMPDIR/test.PKGBUILD" "git-latest"
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"SKIP checksums mixed with real hashes for remote"* ]]
+}
+
+@test "audit_pkgbuild: blocks a real remote hash listed before SKIP" {
+  source "$TEST_TMPDIR/scripts/lib.sh"
+  cat > "$TEST_TMPDIR/test.PKGBUILD" <<'EOF'
+pkgname=test-mixed-order
+pkgver=1.0.0
+pkgrel=1
+pkgdesc="test"
+arch=('x86_64')
+url="https://example.com"
+license=('MIT')
+source=("https://example.com/data-${pkgver}.tar.gz"
+        "git+https://example.com/repo.git")
+sha256sums=('abc123'
+            'SKIP')
+EOF
+  run audit_pkgbuild "$TEST_TMPDIR/test.PKGBUILD" "git-latest"
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"SKIP checksums mixed with real hashes for remote"* ]]
+}
+
+# === has_skip_checksums ===
+
+@test "has_skip_checksums: finds SKIP in arch-specific arrays" {
+  source "$TEST_TMPDIR/scripts/lib.sh"
+  cat > "$TEST_TMPDIR/test.PKGBUILD" <<'EOF'
+pkgname=test-arch-skip
+pkgver=1.0.0
+pkgrel=1
+arch=('x86_64' 'aarch64')
+source_x86_64=("https://example.com/nightly-x86_64.tar.gz")
+source_aarch64=("https://example.com/nightly-aarch64.tar.gz")
+b2sums_x86_64=('SKIP')
+b2sums_aarch64=('SKIP')
+EOF
+  run has_skip_checksums "$TEST_TMPDIR/test.PKGBUILD"
+  [ "$status" -eq 0 ]
+}
+
+@test "has_skip_checksums: finds SKIP after a real hash" {
+  source "$TEST_TMPDIR/scripts/lib.sh"
+  cat > "$TEST_TMPDIR/test.PKGBUILD" <<'EOF'
+pkgname=test-late-skip
+pkgver=1.0.0
+pkgrel=1
+arch=('any')
+source=("app.desktop"
+        "https://example.com/nightly.tar.gz")
+sha256sums=('abc123'
+            'SKIP')
+EOF
+  run has_skip_checksums "$TEST_TMPDIR/test.PKGBUILD"
+  [ "$status" -eq 0 ]
+}
+
+@test "has_skip_checksums: returns 1 without SKIP" {
+  source "$TEST_TMPDIR/scripts/lib.sh"
+  cat > "$TEST_TMPDIR/test.PKGBUILD" <<'EOF'
+pkgname=test-no-skip
+pkgver=1.0.0
+pkgrel=1
+arch=('x86_64')
+source=("https://example.com/app-${pkgver}.tar.gz")
+source_x86_64=("https://example.com/app-${pkgver}-x86_64.tar.gz")
+sha256sums=('abc123')
+sha256sums_x86_64=('def456')
+EOF
+  run has_skip_checksums "$TEST_TMPDIR/test.PKGBUILD"
+  [ "$status" -eq 1 ]
+}
+
 # === check-update.sh ===
 
 @test "check-update: detects new version" {
@@ -578,7 +668,7 @@ EOF
 
 @test "lib.sh: log functions write to stderr" {
   source "$TEST_TMPDIR/scripts/lib.sh"
-  # Capture stderr only — stdout should be empty
+  # Capture stderr only, stdout stays empty
   stdout=$(log_ok "test message" 2>/dev/null)
   [ -z "$stdout" ]
 }
@@ -1370,9 +1460,9 @@ EOF
   project: owner/repo
 current: '1.0.0'"
 
-  # Detached HEAD but NO origin remote configured: checkout -B master
-  # origin/master must fail, set -e terminates the script. This verifies
-  # the safety-net is loud, not silently corrupting state.
+  # Detached HEAD and no origin remote: checkout -B master origin/master
+  # fails and set -e ends the script. The safety net fails loudly and
+  # leaves the state untouched.
   aur_dir="$TEST_TMPDIR/aur-test-no-origin"
   mkdir -p "$aur_dir"
   git -C "$aur_dir" init -q -b master
@@ -1474,7 +1564,7 @@ exec /usr/bin/git "\$@"
 MOCKGIT
   chmod +x "$MOCK_DIR/git"
 
-  # Run update-pkg without updpkgsums — should fail
+  # update-pkg fails without updpkgsums
   run env PATH="$MOCK_DIR:/usr/bin" "$TEST_TMPDIR/scripts/update-pkg.sh" "test-checksums" "2.0.0"
   [ "$status" -ne 0 ]
 }
@@ -1530,6 +1620,54 @@ EOF
   [[ "$output" == *"VCS package, skipping checksums"* ]] || [[ "$output" == *"Generating .SRCINFO"* ]]
 }
 
+@test "update-pkg: skips checksums for arch-specific SKIP arrays" {
+  create_test_package "test-arch-skip" "github-nightly" "upstream:
+  project: owner/repo
+current: '1.0.0'"
+
+  aur_dir="$TEST_TMPDIR/aur-test-arch-skip"
+  mkdir -p "$aur_dir"
+  git -C "$aur_dir" init -q
+  git -C "$aur_dir" config user.name "test"
+  git -C "$aur_dir" config user.email "test@test"
+  git -C "$aur_dir" config commit.gpgsign false
+  cat > "$aur_dir/PKGBUILD" <<'EOF'
+pkgname=test-arch-skip
+pkgver=1.0.0
+pkgrel=1
+pkgdesc="test arch-specific SKIP"
+arch=('x86_64' 'aarch64')
+url="https://example.com"
+license=('MIT')
+source_x86_64=("https://example.com/nightly-x86_64.tar.gz")
+source_aarch64=("https://example.com/nightly-aarch64.tar.gz")
+b2sums_x86_64=('SKIP')
+b2sums_aarch64=('SKIP')
+EOF
+  git -C "$aur_dir" add . && git -C "$aur_dir" commit -q -m "init"
+
+  cat > "$MOCK_DIR/git" <<MOCKGIT
+#!/usr/bin/env bash
+if [[ "\$1" == "clone" ]]; then
+  cp -r "$aur_dir" "\$3" 2>/dev/null || cp -r "$aur_dir/." "\$3" 2>/dev/null
+  exit 0
+fi
+exec /usr/bin/git "\$@"
+MOCKGIT
+  chmod +x "$MOCK_DIR/git"
+
+  cat > "$MOCK_DIR/makepkg" <<'EOF'
+#!/usr/bin/env bash
+echo "pkgbase = test-arch-skip"
+echo "pkgname = test-arch-skip"
+EOF
+  chmod +x "$MOCK_DIR/makepkg"
+
+  run "$TEST_TMPDIR/scripts/update-pkg.sh" "test-arch-skip" "1.0.1"
+  [[ "$output" == *"VCS package, skipping checksums"* ]]
+  [[ "$output" != *"Updating checksums"* ]]
+}
+
 # === downgrade detection (observability only) ===
 
 @test "check-update: detects downgrade when current is newer than latest" {
@@ -1574,9 +1712,8 @@ current: '3.0.0'"
 }
 
 @test "check-all: writes 'downgrade:' status after successful --update causing downgrade" {
-  # We can't easily run a full update-pkg.sh end-to-end here, so we stub the
-  # update-pkg.sh script inside the temp workspace to always succeed. That
-  # isolates the test to check-all.sh's status-writing logic.
+  # A stub update-pkg.sh in the temp workspace always succeeds, so the test
+  # covers only how check-all.sh writes the status.
   create_test_package "pkg-down-upd" "github-release" "upstream:
   type: github
   project: owner/repo
@@ -1630,12 +1767,12 @@ EOF
   "$TEST_TMPDIR/scripts/update-readme.sh" 2>/dev/null
 
   grep -q "⬇️ 1.0.0 available (downgrade)" "$TEST_TMPDIR/README.md"
-  # Available downgrades also count toward pkg_ok — badge stays green.
+  # Available downgrades count toward pkg_ok too, so the badge stays green.
   grep -q "brightgreen" "$TEST_TMPDIR/README.md"
 }
 
 @test "check-all: writes 'updated:' status after --update on normal upgrade (regression)" {
-  # Current 1.0.0 < latest 2.0.0 — normal upgrade path.
+  # Current 1.0.0 < latest 2.0.0: the normal upgrade path.
   # Verifies the is_downgrade=false branch of the new status-writing logic.
   create_test_package "pkg-up" "github-release" "upstream:
   type: github
