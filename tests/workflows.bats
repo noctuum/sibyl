@@ -263,14 +263,76 @@ EOF
   [ "$status" -ne 0 ]
 }
 
-@test "check-updates: publish runs on the check job's decision, also without prepare" {
+@test "check-updates: publish runs on the check job's decision, also after a failed prepare or verify" {
   run yq '.jobs.publish.needs | join(" ")' "$CHECK_UPDATES"
   [[ " $output " == *" check "* ]]
   run yq '.jobs.publish.if' "$CHECK_UPDATES"
-  [[ "$output" == *"!cancelled()"* ]]
-  [[ "$output" == *"needs.check.outputs.work == 'true'"* ]]
-  [[ "$output" == *"needs.prepare.result"* ]]
-  [[ "$output" == *"needs.verify.result"* ]]
+  [ "$output" = "!cancelled() && needs.check.outputs.work == 'true'" ]
+}
+
+# Runs the Hand over step in an empty workspace. builder has uid 1000. ps
+# lists the processes in $PS_LINES until pkill ran and those in
+# $PS_AFTER_KILL after it, as "<uid> <ruid> <state>" separated by commas,
+# with the uid of ps itself, and exits with $PS_RC. pgrep matches any process
+# of builder, zombies included, as the real one does. pkill and sleep only
+# log their calls. A step still running after 20 s fails.
+run_hand_over_step() {
+  local ws="$BATS_TEST_TMPDIR/ws" bin="$BATS_TEST_TMPDIR/bin"
+  mkdir -p "$ws" "$bin"
+  cat >"$bin/ps" <<'EOF'
+#!/usr/bin/env bash
+if [[ -e "$CALLS/pkill" ]]; then lines="$PS_AFTER_KILL"; else lines="$PS_LINES"; fi
+[[ "${PS_RC:-0}" -eq 0 ]] || exit "$PS_RC"
+echo "0 0 R"
+[[ -z "$lines" ]] || tr ',' '\n' <<<"$lines"
+EOF
+  printf '#!/bin/sh\nps | grep -q " 1000 \\| 1000 "\n' >"$bin/pgrep"
+  printf '#!/bin/sh\n[ "$*" = "-u builder" ] && echo 1000\n' >"$bin/id"
+  printf '#!/bin/sh\necho "$*" >>"$CALLS/pkill"\n' >"$bin/pkill"
+  printf '#!/bin/sh\necho x >>"$CALLS/sleep"\n' >"$bin/sleep"
+  chmod +x "$bin/ps" "$bin/pgrep" "$bin/id" "$bin/pkill" "$bin/sleep"
+  CALLS="$BATS_TEST_TMPDIR/calls"
+  mkdir -p "$CALLS"
+  step_run prepare "Hand over" >"$BATS_TEST_TMPDIR/step.sh"
+  run timeout 20 env -C "$ws" PATH="$bin:$PATH" CALLS="$CALLS" PS_LINES="${PS_LINES:-}" \
+    PS_AFTER_KILL="${PS_AFTER_KILL:-}" PS_RC="${PS_RC:-0}" sh -e "$BATS_TEST_TMPDIR/step.sh"
+}
+
+@test "check-updates: Hand over goes on when builder runs nothing" {
+  PS_LINES="0 0 S" run_hand_over_step
+  [ "$status" -eq 0 ]
+  [ ! -e "$CALLS/pkill" ]
+}
+
+@test "check-updates: Hand over kills builder and goes on when its processes end" {
+  PS_LINES="1000 1000 S,1000 1000 R" PS_AFTER_KILL="" run_hand_over_step
+  [ "$status" -eq 0 ]
+  grep -qx -- "-KILL -u builder" "$CALLS/pkill"
+  grep -qx -- "-KILL -U builder" "$CALLS/pkill"
+}
+
+@test "check-updates: Hand over does not wait for zombies" {
+  PS_LINES="1000 1000 S" PS_AFTER_KILL="1000 1000 Z,1000 1000 Z+" run_hand_over_step
+  [ "$status" -eq 0 ]
+}
+
+@test "check-updates: Hand over fails when a process of builder survives" {
+  PS_LINES="1000 1000 S" PS_AFTER_KILL="1000 1000 Z,1000 1000 D" run_hand_over_step
+  [ "$status" -ne 0 ]
+  [[ "$output" == *"::error::"* ]]
+  [ "$(wc -l <"$CALLS/sleep")" -le 30 ]
+}
+
+@test "check-updates: Hand over counts a process whose real user is builder" {
+  PS_LINES="0 1000 S" PS_AFTER_KILL="0 1000 S" run_hand_over_step
+  [ "$status" -ne 0 ]
+  [[ "$output" == *"::error::"* ]]
+}
+
+@test "check-updates: Hand over fails when the process list cannot be read" {
+  PS_RC=1 run_hand_over_step
+  [ "$status" -ne 0 ]
+  [[ "$output" == *"::error::"* ]]
 }
 
 @test "check-updates: publish takes the statuses from the check job" {

@@ -139,9 +139,31 @@ jobs:
       - name: Hand over
         run: |
           # A process started by a PKGBUILD can outlive its step. Stop all
-          # of them before root reads anything builder wrote.
-          pkill -KILL -u builder || true
-          while pgrep -u builder >/dev/null; do sleep 1; done
+          # of them before root reads anything builder wrote. A zombie runs
+          # nothing, and pid 1 of a job container never reaps one, so only
+          # the other processes count, by effective or real user. live exits
+          # with 0 for a running process, 1 for none and 2 when the list
+          # fails, and only 1 lets the step go on.
+          uid=$(id -u builder)
+          live() {
+            procs=$(ps -e -o uid=,ruid=,stat=) || return 2
+            printf '%s\n' "$procs" |
+              awk -v u="$uid" '($1 == u || $2 == u) && $3 !~ /^Z/ { n++ } END { exit !n }'
+          }
+          for _ in $(seq 30); do
+            rc=0
+            live || rc=$?
+            [ "$rc" -eq 1 ] && break
+            pkill -KILL -u builder || true
+            pkill -KILL -U builder || true
+            sleep 1
+          done
+          rc=0
+          live || rc=$?
+          if [ "$rc" -ne 1 ]; then
+            echo "::error::A process of builder is still running, or the process list failed"
+            exit 1
+          fi
 
           # Copy regular files from the expected paths only, and nothing
           # else gets uploaded. find does not follow symlinks; -print0,
@@ -211,16 +233,14 @@ jobs:
           retention-days: 1
 
   # Pushes what verify passed on and records the statuses of the check job.
-  # Runs also when prepare is skipped, for a change in the status table.
-  # Nothing here executes a PKGBUILD: publish-pkg.sh checks the prepared
-  # files against the AUR copy.
+  # Runs also when prepare is skipped, for a change in the status table, and
+  # when prepare or verify failed: then it publishes nothing, and every
+  # package with a new version gets update_failed and an issue. Nothing here
+  # executes a PKGBUILD: publish-pkg.sh checks the prepared files against
+  # the AUR copy.
   publish:
     needs: [image, check, prepare, verify]
-    if: >-
-      !cancelled() &&
-      needs.check.outputs.work == 'true' &&
-      contains(fromJSON('["success", "skipped"]'), needs.prepare.result) &&
-      contains(fromJSON('["success", "skipped"]'), needs.verify.result)
+    if: "!cancelled() && needs.check.outputs.work == 'true'"
     runs-on: ubuntu-latest
     container: ${{ needs.image.outputs.ref }}
     timeout-minutes: 30
