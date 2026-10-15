@@ -10,6 +10,31 @@ permissions:
   contents: read
 
 jobs:
+  # Reads the pinned Arch image from .github/ci-image/Dockerfile, where
+  # Dependabot updates its digest
+  image:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      ref: ${{ steps.read.outputs.ref }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          sparse-checkout: .github/ci-image
+
+      - name: Read image
+        id: read
+        run: |
+          ref=$(sed -n 's/^FROM //p' .github/ci-image/Dockerfile)
+          if [[ ! "$ref" =~ ^archlinux:base-devel@sha256:[0-9a-f]{64}$ ]]; then
+            echo "::error::.github/ci-image/Dockerfile must pin archlinux:base-devel by digest"
+            exit 1
+          fi
+          echo "ref=$ref" >>"$GITHUB_OUTPUT"
+
   lint:
     runs-on: ubuntu-latest
     timeout-minutes: 5
@@ -22,7 +47,7 @@ jobs:
         run: |
           sudo apt-get update -qq
           sudo apt-get install -y -qq shellcheck
-          go install mvdan.cc/sh/v3/cmd/shfmt@latest
+          go install mvdan.cc/sh/v3/cmd/shfmt@v3.14.1
           echo "$HOME/go/bin" >> "$GITHUB_PATH"
 
       - name: shellcheck
@@ -32,14 +57,16 @@ jobs:
         run: shfmt -d -i 2 -ci scripts/*.sh strategies/*.sh
 
   test:
+    needs: image
     runs-on: ubuntu-latest
-    container: archlinux:base-devel
+    container: ${{ needs.image.outputs.ref }}
     timeout-minutes: 15
     steps:
       - name: Install dependencies
         run: |
-          pacman -Syu --noconfirm --needed bash bats git go-yq curl openssh ruby ruby-erb
-          gem install bashcov simplecov-cobertura --no-document
+          pacman -Sy --noconfirm --needed archlinux-keyring
+          pacman -Su --noconfirm --needed bash bats git go-yq curl openssh ruby ruby-erb
+          gem install bashcov:4.0.0 simplecov-cobertura:4.0.0 --no-document
           echo "$(ruby -e 'puts Gem.user_dir')/bin" >> "$GITHUB_PATH"
 
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -65,3 +92,35 @@ jobs:
         with:
           files: coverage/coverage.xml
           fail_ci_if_error: false
+
+  # Merges a Dependabot pull request that changes only the CI image, after
+  # lint and test passed. Off unless the repository variable
+  # CI_IMAGE_AUTO_MERGE is true.
+  merge-image:
+    needs: [lint, test]
+    if: >-
+      vars.CI_IMAGE_AUTO_MERGE == 'true' &&
+      github.event_name == 'pull_request' &&
+      github.actor == 'dependabot[bot]' &&
+      github.event.pull_request.user.login == 'dependabot[bot]'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: write
+      pull-requests: write
+
+    steps:
+      - name: Merge image update
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          PR: ${{ github.event.pull_request.number }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          files=$(gh api "repos/$REPO/pulls/$PR/files" --paginate --jq '.[].filename')
+          if [[ "$files" != ".github/ci-image/Dockerfile" ]]; then
+            echo "::notice::#$PR changes more than .github/ci-image/Dockerfile and stays open"
+            exit 0
+          fi
+          # Merges nothing when the branch moved after lint and test
+          gh pr merge "$PR" -R "$REPO" --squash --match-head-commit "$HEAD_SHA"

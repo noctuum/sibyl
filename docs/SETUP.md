@@ -34,6 +34,8 @@ sudo pacman -S --needed git openssh go-yq curl pacman-contrib namcap github-cli 
 
 ### Recommended
 
+- **Enable Dependabot version updates**: Settings > Advanced Security, then Enable next to "Dependabot version updates". GitHub leaves them off on forks. Dependabot then opens pull requests for new action versions and for the digest of the Arch image the workflows run in.
+- **Merge Arch image updates automatically** (optional): Settings > Secrets and variables > Actions > Variables > New repository variable, with the name `CI_IMAGE_AUTO_MERGE` and the value `true`. A new image then reaches the jobs with the secrets after the tests and without a review, see [WORKFLOW.md](WORKFLOW.md#63-ci-image-updates).
 - Set repository topics if your fork is public.
 
 ### Badges
@@ -109,7 +111,7 @@ With GPG signing, also create:
 
 | Secret name       | Value                                                      |
 |-------------------|------------------------------------------------------------|
-| `GPG_SIGNING_KEY` | Output of `gpg --export-secret-subkeys --armor <key-id>`   |
+| `GPG_SIGNING_KEY` | Output of `gpg --export-secret-subkeys --armor '<subkey-id>!'` |
 
 That output works in CI only for a key without a passphrase. For a key with one, `./scripts/setup.sh gpg secrets` prints a passphrase-free copy, see [Passphrase stripping](#passphrase-stripping-3-pinentry-dialogs).
 
@@ -123,7 +125,7 @@ It checks identity, SSH access, GPG signing when configured, and the secrets whe
 
 ## GPG signing (optional)
 
-aurtomator works without GPG. With it, every AUR commit is signed with your key, and AUR users can check the signature with `git log --show-signature`. The signing key is stored as a CI secret, so a leak of the CI secrets exposes it as well. A dedicated subkey limits the damage: you revoke the subkey and keep your master key.
+aurtomator works without GPG. With it, every AUR commit is signed with your key, and AUR users can check the signature with `git log --show-signature`. The signing key is stored as a CI secret, so a leak of the CI secrets exposes it as well. A dedicated subkey limits the damage: you revoke the subkey and keep your master key. The setup script accepts only a signing subkey and refuses a master key, which certifies the others and stays on your machine.
 
 ### Create a dedicated signing subkey
 
@@ -144,8 +146,10 @@ gpg --list-keys --keyid-format long your-email@example.com
 With `gh`, the setup script does this. By hand, for a key without a passphrase:
 
 ```bash
-gpg --export-secret-subkeys --armor <subkey-id>
+gpg --export-secret-subkeys --armor '<subkey-id>!'
 ```
+
+The `!` exports that subkey alone. Without it, gpg exports every secret subkey of the key, an encryption subkey included.
 
 Paste the full output, including the `-----BEGIN PGP PRIVATE KEY BLOCK-----` and `-----END PGP PRIVATE KEY BLOCK-----` lines, as the `GPG_SIGNING_KEY` secret.
 
@@ -175,7 +179,7 @@ CI needs a key without a passphrase. When your subkey has one, the setup script 
 
 The second dialog asks again because the temporary keyring runs its own GPG agent, and that agent has not cached the passphrase. The passphrase only goes through pinentry: it never appears in shell variables, command arguments, environment variables or pipes.
 
-Your original key is not modified. With `gh`, the copy is stored as the `GPG_SIGNING_KEY` secret. Without `gh`, the script prints the copy for you to paste as that secret. The temporary keyring is deleted right after.
+Your original key is not modified. With `gh`, the copy is stored as the `GPG_SIGNING_KEY` secret. Without `gh`, the script prints the copy for you to paste as that secret. The temporary keyring is deleted right after, and also when the script stops early: on an error, on `Ctrl-C` or when its terminal closes.
 
 The copy exists only while the script runs, so the `gpg` and `secrets` steps have to run together: `./scripts/setup.sh gpg secrets`. Run alone, `secrets` does not set `GPG_SIGNING_KEY` for a key with a passphrase and prints that command.
 

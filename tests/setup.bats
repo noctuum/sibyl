@@ -8,12 +8,14 @@ setup() {
   # Create mock GPG key list output
   MOCK_DIR="$TEST_TMPDIR/mock-bin"
 
-  # Mock gpg: accepts specific key IDs
+  # Mock gpg: accepts specific key IDs, with or without "!", and logs its
+  # arguments to $TEST_TMPDIR/gpg.args
   cat > "$MOCK_DIR/gpg" <<'MOCKEOF'
 #!/usr/bin/env bash
+echo "$*" >>"$TEST_TMPDIR/gpg.args"
 for arg in "$@"; do
   case "$arg" in
-    VALIDKEY123|SUBKEY002)
+    VALIDKEY123|SUBKEY002|VALIDKEY123!|SUBKEY002!)
       if [[ "$*" == *"--list-secret-keys"* ]]; then
         echo "sec   ed25519/MASTERAAA 2026-01-01 [SC]"
         echo "      ABCDEF1234567890"
@@ -35,7 +37,12 @@ for arg in "$@"; do
       fi
       exit 0
       ;;
-    MASTERKEY001)
+    MASTERKEY001|FFFFFFFFFFFFFFFFFFFFFFFFMASTERKEY001)
+      if [[ "$*" == *"--list-secret-keys"* && "$*" == *"--with-colons"* ]]; then
+        echo "sec:u:255:22:MASTERKEY001:1767225600:::u:::scESC:::+:::23::0:"
+        echo "fpr:::::::::FFFFFFFFFFFFFFFFFFFFFFFFMASTERKEY001:"
+        exit 0
+      fi
       if [[ "$*" == *"--list-secret-keys"* ]]; then
         echo "sec   ed25519/MASTERKEY001 2026-01-01 [SC]"
         echo "      1234567890ABCDEF"
@@ -291,11 +298,18 @@ EOF
   [[ "$output" == *"no passphrase, ready for CI"* ]]
 }
 
-@test "setup gpg: master key warns in non-interactive" {
+@test "setup gpg: refuses a primary key" {
   run "$TEST_TMPDIR/scripts/setup.sh" gpg --gpg-key MASTERKEY001 --non-interactive
-  [ "$status" -eq 0 ]
-  [[ "$output" == *"master key"* ]]
-  [[ "$output" == *"Continuing with master key"* ]]
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"MASTERKEY001 is a primary key"* ]]
+  [[ "$output" == *"gpg --quick-add-key"* ]]
+  ! grep -q 'export-secret' "$TEST_TMPDIR/gpg.args"
+}
+
+@test "setup gpg: refuses a primary key given by its fingerprint" {
+  run "$TEST_TMPDIR/scripts/setup.sh" gpg --gpg-key FFFFFFFFFFFFFFFFFFFFFFFFMASTERKEY001 --non-interactive
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"is a primary key"* ]]
 }
 
 @test "setup gpg: passphrase key skips GPG in non-interactive" {
@@ -442,6 +456,15 @@ EOF
   [[ "$output" == *"AUR_SSH_KEY"* ]]
 }
 
+@test "setup secrets: names the GitHub secrets page as GitHub does" {
+  mock_gh_unavailable
+  write_full_config ""
+
+  run "$TEST_TMPDIR/scripts/setup.sh" secrets --non-interactive
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"Settings → Secrets and variables → Actions"* ]]
+}
+
 @test "setup secrets: skips GPG_SIGNING_KEY for a passphrase key without a copy" {
   write_full_config "PASSKEY003"
 
@@ -468,8 +491,87 @@ EOF
 
   run "$TEST_TMPDIR/scripts/setup.sh" secrets --non-interactive
   [ "$status" -eq 0 ]
-  [[ "$output" == *"gpg --export-secret-subkeys --armor VALIDKEY123"* ]]
+  [[ "$output" == *"gpg --export-secret-subkeys --armor 'VALIDKEY123!'"* ]]
   [[ "$output" != *"has a passphrase"* ]]
+}
+
+@test "setup secrets: gh stores only the signing subkey" {
+  write_full_config "VALIDKEY123"
+  cat >"$TEST_TMPDIR/mock-bin/gh" <<EOF
+#!/usr/bin/env bash
+case "\$1" in
+  api) echo "testuser" ;;
+  secret) cat >"$TEST_TMPDIR/secret-\$3" ;;
+esac
+exit 0
+EOF
+  chmod +x "$TEST_TMPDIR/mock-bin/gh"
+
+  run "$TEST_TMPDIR/scripts/setup.sh" secrets --non-interactive
+  [ "$status" -eq 0 ]
+  grep -q 'mocked-clean' "$TEST_TMPDIR/secret-GPG_SIGNING_KEY"
+  grep -q -- '--export-secret-subkeys --armor VALIDKEY123!$' "$TEST_TMPDIR/gpg.args"
+}
+
+@test "setup secrets: stores no empty GPG_SIGNING_KEY" {
+  write_full_config "VALIDKEY123"
+  # gpg that signs, so the key has no passphrase, and exports nothing
+  cat >"$TEST_TMPDIR/mock-bin/gpg" <<'EOF'
+#!/usr/bin/env bash
+[[ "$*" == *--export-secret-subkeys* ]] && exit 0
+[[ "$*" == *--sign* ]] && echo "signature"
+exit 0
+EOF
+  cat >"$TEST_TMPDIR/mock-bin/gh" <<EOF
+#!/usr/bin/env bash
+case "\$1" in
+  api) echo "testuser" ;;
+  secret) cat >"$TEST_TMPDIR/secret-\$3" ;;
+esac
+exit 0
+EOF
+  chmod +x "$TEST_TMPDIR/mock-bin/gh"
+
+  run "$TEST_TMPDIR/scripts/setup.sh" secrets --non-interactive
+  [[ "$output" == *"GPG_SIGNING_KEY"* ]]
+  [ -f "$TEST_TMPDIR/secret-AUR_SSH_KEY" ]
+  [ ! -e "$TEST_TMPDIR/secret-GPG_SIGNING_KEY" ]
+}
+
+@test "setup gpg: removes the temporary keyring after the passphrase-free copy" {
+  mock_gh_unavailable
+  mock_gpg_strip_flow
+  write_full_config "PASSKEY003"
+  mkdir -p "$TEST_TMPDIR/tmp"
+
+  TMPDIR="$TEST_TMPDIR/tmp" run "$TEST_TMPDIR/scripts/setup.sh" gpg <<<"y"
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"passphrase-free copy created for CI"* ]]
+  [ -z "$(ls -A "$TEST_TMPDIR/tmp")" ]
+}
+
+@test "setup gpg: removes the temporary keyring when the terminal closes after the passphrase is gone" {
+  mock_gh_unavailable
+  mock_gpg_strip_flow
+  write_full_config "PASSKEY003"
+  mkdir -p "$TEST_TMPDIR/tmp"
+  # gpg-connect-agent that removes the passphrase, then the terminal of
+  # setup.sh closes. The signal goes to the topmost setup.sh process, not
+  # to the subshell of the command substitution.
+  cat >"$TEST_TMPDIR/mock-bin/gpg-connect-agent" <<'EOF'
+#!/usr/bin/env bash
+echo "OK"
+pid=$PPID
+while [[ "$pid" -gt 1 ]] && ps -o args= -p "$pid" | grep -q 'scripts/setup.sh'; do
+  target=$pid
+  pid=$(ps -o ppid= -p "$pid" | tr -d ' ')
+done
+kill -HUP "$target"
+EOF
+
+  TMPDIR="$TEST_TMPDIR/tmp" run "$TEST_TMPDIR/scripts/setup.sh" gpg <<<"y"
+  [ "$status" -eq 129 ]
+  [ -z "$(ls -A "$TEST_TMPDIR/tmp")" ]
 }
 
 @test "setup gpg secrets: manual path prints the passphrase-free copy" {
@@ -569,6 +671,14 @@ EOF
     --non-interactive
   [ "$status" -eq 0 ]
   [[ "$output" == *"ensure it is added to"* ]]
+}
+
+@test "setup ssh: names the AUR key field as aurweb does" {
+  run "$TEST_TMPDIR/scripts/setup.sh" ssh \
+    --ssh-key "$TEST_TMPDIR/ssh/aur.pem" \
+    --non-interactive
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"My Account → SSH Public Key"* ]]
 }
 
 # === Unknown option help hint ===

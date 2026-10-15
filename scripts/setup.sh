@@ -161,7 +161,7 @@ setup_ssh() {
 
   local pubkey="${AUR_SSH_KEY}.pub"
   if [[ -f "$pubkey" ]]; then
-    printf "\n  Public key (ensure it is added to https://aur.archlinux.org → My Account → SSH Keys):\n"
+    printf "\n  Public key (ensure it is added to https://aur.archlinux.org → My Account → SSH Public Key):\n"
     printf "    %s\n" "$(cat "$pubkey")"
   fi
 }
@@ -172,6 +172,27 @@ setup_ssh() {
 gpg_key_has_passphrase() {
   gpgconf --kill gpg-agent 2>/dev/null || true
   ! echo "test" | gpg --batch --pinentry-mode error --sign --local-user "$1" >/dev/null 2>&1
+}
+
+# A key ID, long or short, or a fingerprint names the primary key when the
+# fingerprint of the primary key ends with it
+# Args: $1=key id
+gpg_is_primary_key() {
+  local id="${1#0x}" fpr
+  fpr=$(gpg --list-secret-keys --with-colons "$1" 2>/dev/null |
+    awk -F: '$1 == "fpr" { print $10; exit }')
+  [[ -n "$fpr" && "${fpr^^}" == *"${id^^}" ]]
+}
+
+# The temporary keyring of setup_gpg holds the signing subkey without a
+# passphrase once gpg-agent has removed it. setup_gpg sets this function as
+# the EXIT trap, so Ctrl-C or a closed terminal does not leave it on disk.
+TMP_GNUPG=""
+remove_tmp_gnupg() {
+  [[ -n "$TMP_GNUPG" ]] || return 0
+  gpgconf --homedir "$TMP_GNUPG" --kill gpg-agent 2>/dev/null || true
+  rm -rf "$TMP_GNUPG"
+  TMP_GNUPG=""
 }
 
 setup_gpg() {
@@ -212,22 +233,13 @@ setup_gpg() {
     warn "Key may not have signing capability, verify manually"
   fi
 
-  # Check if master key
-  if echo "$key_info" | grep -q "^sec.*${GPG_KEY_ID}"; then
-    warn "This is a master key. Recommended: create a dedicated signing subkey."
-    if [[ "$NON_INTERACTIVE" == "true" ]]; then
-      warn "Continuing with master key (--non-interactive)"
-    else
-      local cont
-      cont=$(ask "Continue with master key? (y/N)")
-      if [[ "$cont" != "y" && "$cont" != "Y" ]]; then
-        printf "\n  Create a signing subkey:\n"
-        printf "    gpg --quick-add-key <fingerprint> ed25519 sign 1y\n\n"
-        GPG_KEY_ID=""
-        ok "GPG signing skipped"
-        return 0
-      fi
-    fi
+  # CI gets the signing subkey alone. The primary key certifies the others
+  # and never leaves this machine.
+  if gpg_is_primary_key "$GPG_KEY_ID"; then
+    fail "$GPG_KEY_ID is a primary key. CI signs with a signing subkey."
+    printf "\n  Create a signing subkey and pass its ID:\n"
+    printf "    gpg --quick-add-key <fingerprint> ed25519 sign 1y\n\n"
+    return 1
   fi
 
   if ! gpg_key_has_passphrase "$GPG_KEY_ID"; then
@@ -253,10 +265,10 @@ setup_gpg() {
     fi
 
     # Strip passphrase via temp keyring (only the signing subkey, not all subkeys)
-    local tmp_gnupg
-    tmp_gnupg=$(mktemp -d)
-    chmod 700 "$tmp_gnupg"
-    echo "pinentry-program /usr/bin/pinentry" >"$tmp_gnupg/gpg-agent.conf"
+    TMP_GNUPG=$(mktemp -d)
+    trap remove_tmp_gnupg EXIT
+    chmod 700 "$TMP_GNUPG"
+    echo "pinentry-program /usr/bin/pinentry" >"$TMP_GNUPG/gpg-agent.conf"
 
     # Export ONLY the signing subkey (! suffix = exact key) from real keyring
     # Pinentry will ask for passphrase once
@@ -264,46 +276,44 @@ setup_gpg() {
     exported_key=$(gpg --export-secret-subkeys --armor "${GPG_KEY_ID}!" 2>/dev/null) || true
     if [[ -z "$exported_key" ]]; then
       fail "Failed to export key (wrong passphrase or cancelled)"
-      rm -rf "$tmp_gnupg"
+      remove_tmp_gnupg
       GPG_KEY_ID=""
       return 0
     fi
 
     # Import into temp keyring
-    if ! echo "$exported_key" | gpg --homedir "$tmp_gnupg" --batch --import 2>/dev/null; then
+    if ! echo "$exported_key" | gpg --homedir "$TMP_GNUPG" --batch --import 2>/dev/null; then
       fail "Failed to import key into temporary keyring"
-      rm -rf "$tmp_gnupg"
+      remove_tmp_gnupg
       GPG_KEY_ID=""
       return 0
     fi
 
     # Remove passphrase via gpg-agent in isolated temp keyring
     local keygrip
-    keygrip=$(gpg --homedir "$tmp_gnupg" --list-secret-keys --with-keygrip 2>/dev/null |
+    keygrip=$(gpg --homedir "$TMP_GNUPG" --list-secret-keys --with-keygrip 2>/dev/null |
       grep -A1 "\[S\]" | grep Keygrip | awk '{print $3}' || true)
 
     if [[ -z "$keygrip" ]]; then
       fail "Could not determine keygrip for signing subkey"
-      rm -rf "$tmp_gnupg"
+      remove_tmp_gnupg
       GPG_KEY_ID=""
       return 0
     fi
 
     local passwd_out passwd_rc=0
-    passwd_out=$(gpg-connect-agent --homedir "$tmp_gnupg" "PASSWD $keygrip" /bye 2>&1) || passwd_rc=$?
+    passwd_out=$(gpg-connect-agent --homedir "$TMP_GNUPG" "PASSWD $keygrip" /bye 2>&1) || passwd_rc=$?
     if [[ "$passwd_rc" -ne 0 ]] || [[ "$passwd_out" == *"ERR"* ]]; then
       fail "Failed to remove passphrase (cancelled or timed out)"
-      gpgconf --homedir "$tmp_gnupg" --kill gpg-agent 2>/dev/null || true
-      rm -rf "$tmp_gnupg"
+      remove_tmp_gnupg
       GPG_KEY_ID=""
       return 0
     fi
 
     # Export the clean key for the secrets step
-    GPG_CLEAN_KEY=$(gpg --homedir "$tmp_gnupg" --batch --pinentry-mode loopback \
+    GPG_CLEAN_KEY=$(gpg --homedir "$TMP_GNUPG" --batch --pinentry-mode loopback \
       --passphrase "" --export-secret-subkeys --armor "${GPG_KEY_ID}!" 2>/dev/null) || true
-    gpgconf --homedir "$tmp_gnupg" --kill gpg-agent 2>/dev/null || true
-    rm -rf "$tmp_gnupg"
+    remove_tmp_gnupg
 
     if [[ -z "$GPG_CLEAN_KEY" ]]; then
       fail "Failed to export passphrase-free key"
@@ -384,14 +394,17 @@ setup_secrets() {
         fail "GPG_SIGNING_KEY"
       fi
     elif [[ "$gpg_source" == "key" ]]; then
-      if gpg --export-secret-subkeys --armor "$GPG_KEY_ID" 2>/dev/null | gh secret set GPG_SIGNING_KEY -R "$gh_repo"; then
+      # "!" exports this subkey alone, without the other secret subkeys
+      local signing_key
+      signing_key=$(gpg --export-secret-subkeys --armor "${GPG_KEY_ID}!" 2>/dev/null) || signing_key=""
+      if [[ -n "$signing_key" ]] && echo "$signing_key" | gh secret set GPG_SIGNING_KEY -R "$gh_repo"; then
         ok "GPG_SIGNING_KEY"
       else
         fail "GPG_SIGNING_KEY"
       fi
     fi
   else
-    printf "\n  Set these secrets in GitHub → Settings → Secrets → Actions:\n\n"
+    printf "\n  Set these secrets in GitHub → Settings → Secrets and variables → Actions:\n\n"
 
     printf "  %sAUR_GIT_NAME%s\n" "$BOLD" "$RESET"
     printf "    Value: %s\n\n" "$GIT_AUTHOR_NAME"
@@ -408,7 +421,7 @@ setup_secrets() {
       printf "%s\n\n" "$GPG_CLEAN_KEY"
     elif [[ "$gpg_source" == "key" ]]; then
       printf "  %sGPG_SIGNING_KEY%s\n" "$BOLD" "$RESET"
-      printf "    Run: gpg --export-secret-subkeys --armor %s\n\n" "$GPG_KEY_ID"
+      printf "    Run: gpg --export-secret-subkeys --armor '%s!'\n\n" "$GPG_KEY_ID"
     fi
   fi
 }

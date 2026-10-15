@@ -79,6 +79,22 @@ warn_maintainer_line() {
 }
 
 # =============================================================================
+# GITHUB API
+# =============================================================================
+
+# GET a GitHub API URL, with GITHUB_TOKEN when it is set. curl reads the
+# header from stdin: as an argument, the token is visible in ps to every
+# local user.
+# Usage: github_api https://api.github.com/repos/owner/repo/tags
+github_api() {
+  local auth=()
+  if [[ -n "${GITHUB_TOKEN:-}" ]]; then
+    auth=(-H @-)
+  fi
+  curl -sfL --max-time 30 "${auth[@]}" "$1" <<<"Authorization: Bearer ${GITHUB_TOKEN:-}"
+}
+
+# =============================================================================
 # VERSION VALIDATION
 # =============================================================================
 
@@ -338,11 +354,12 @@ _has_nul() {
   [[ "$(tr -d '\000' <"$1" | wc -c)" -ne "$(wc -c <"$1")" ]]
 }
 
-# Split a PKGBUILD into lines of four kinds, without executing it:
+# Split a PKGBUILD into lines of five kinds, without executing it:
 #   SKEL<TAB>line          every line, with pkgver=, pkgrel= and each
 #                          top-level checksum array replaced by a placeholder
 #   PKGVER|PKGREL<TAB>val  the value of a pkgver= or pkgrel= line
 #   SUM<TAB>array<TAB>index<TAB>HASH|SKIP  one line per checksum
+#   SUMVAL<TAB>array<TAB>value  the same checksum with its value
 #   BAD<TAB>text           anything in a checksum array but a quoted checksum
 # Args: $1=pkgbuild path
 _pkgbuild_parts() {
@@ -357,6 +374,7 @@ _pkgbuild_parts() {
           continue
         }
         print "SUM\t" name "\t" idx++ "\t" (t ~ /SKIP/ ? "SKIP" : "HASH")
+        print "SUMVAL\t" name "\t" substr(t, 2, length(t) - 2)
       }
     }
     function body(text,   end) {
@@ -427,9 +445,58 @@ check_prepared_pkgbuild() {
   return 0
 }
 
+# Replace the old version in a line with the new one, and also the forms a
+# PKGBUILD derives from pkgver: dots turned into underscores, the part
+# before the first +, and the version without its last component, such as
+# ${pkgver%.*} in the frameworks/6.19/ directory of KDE Frameworks. That
+# last form counts only while it keeps a dot, as a lone major version is
+# too common in other text. One pass from left to right, longest form
+# first, so a replaced part is not matched again: with 5.1.0 -> 5.10.0 the
+# 5.1 at the start of 5.10.0 stays.
+# Args: $1=line, $2=old version, $3=new version
+_bump_version() {
+  local rest="$1" old="$2" new="$3" out="" i matched
+  if [[ -z "$old" ]]; then
+    printf '%s\n' "$rest"
+    return 0
+  fi
+  local -a olds=("$old") news=("$new")
+  if [[ "$old" == *.* ]]; then
+    olds+=("${old//./_}")
+    news+=("${new//./_}")
+  fi
+  if [[ "$old" == *+* ]]; then
+    olds+=("${old%%+*}")
+    news+=("${new%%+*}")
+  fi
+  old="${old%%+*}"
+  new="${new%%+*}"
+  if [[ "${old%.*}" == *.* ]]; then
+    olds+=("${old%.*}")
+    news+=("${new%.*}")
+  fi
+
+  while [[ -n "$rest" ]]; do
+    matched=false
+    for i in "${!olds[@]}"; do
+      if [[ "$rest" == "${olds[$i]}"* ]]; then
+        out+="${news[$i]}"
+        rest="${rest:${#olds[$i]}}"
+        matched=true
+        break
+      fi
+    done
+    if [[ "$matched" == false ]]; then
+      out+="${rest:0:1}"
+      rest="${rest:1}"
+    fi
+  done
+  printf '%s\n' "$out"
+}
+
 # A .SRCINFO is generated, so line N of the prepared file must be line N of
-# the AUR file with the old version replaced by the new one. pkgrel and the
-# checksum values are the exceptions.
+# the AUR file with the old version replaced by the new one, see
+# _bump_version. pkgrel and the checksum values are the exceptions.
 # Args: $1=AUR .SRCINFO, $2=prepared .SRCINFO, $3=expected version
 # Returns: 0 when that holds, 1 otherwise (reason on stderr)
 check_prepared_srcinfo() {
@@ -494,7 +561,7 @@ check_prepared_srcinfo() {
         fi
         ;;
       *)
-        if [[ "$new" != "${old//"$old_ver"/"$version"}" ]]; then
+        if [[ "$new" != "$(_bump_version "$old" "$old_ver" "$version")" ]]; then
           log_err "Prepared .SRCINFO line $((i + 1)) changes more than the version: $new"
           return 1
         fi
@@ -502,6 +569,258 @@ check_prepared_srcinfo() {
     esac
   done
   return 0
+}
+
+# Check the layout of a prepared directory and print its base, the AUR
+# commit the update was prepared from
+# Args: $1=prepared dir
+# Returns: 0 when the layout holds, 1 otherwise (reason on stderr)
+prepared_base() {
+  local f base
+  if [[ -L "$1" || ! -d "$1" ]]; then
+    log_err "Prepared directory is missing or a symlink: $1"
+    return 1
+  fi
+  for f in PKGBUILD .SRCINFO base; do
+    if [[ ! -f "$1/$f" || -L "$1/$f" ]]; then
+      log_err "Prepared $f is missing or not a regular file"
+      return 1
+    fi
+  done
+  base=$(<"$1/base")
+  if [[ ! "$base" =~ ^[0-9a-f]{40}$ ]]; then
+    log_err "Prepared base is not a commit id"
+    return 1
+  fi
+  echo "$base"
+}
+
+# Check a prepared PKGBUILD and .SRCINFO against the AUR repo at their base
+# Args: $1=AUR repo, $2=prepared dir, $3=expected version
+# Returns: 0 when both files pass, 1 otherwise (reason on stderr)
+check_prepared_files() {
+  local f
+  # git keeps symlinks, and cp writes through one
+  for f in PKGBUILD .SRCINFO; do
+    if [[ -L "$1/$f" || ! -f "$1/$f" ]]; then
+      log_err "$f in the AUR repo is missing, a symlink or not a regular file"
+      return 1
+    fi
+  done
+  check_prepared_pkgbuild "$1/PKGBUILD" "$2/PKGBUILD" "$3" &&
+    check_prepared_srcinfo "$1/.SRCINFO" "$2/.SRCINFO" "$3"
+}
+
+# =============================================================================
+# SOURCE CHECKSUMS
+# =============================================================================
+
+# Print the path of the file makepkg hashes for a source, following
+# get_protocol, get_filename and download_file of makepkg. A source that
+# makepkg would handle another way is refused, never guessed at.
+# Args: $1=source entry of a .SRCINFO, $2=AUR repo, $3=download directory
+_source_file() {
+  local entry="$1" url="${1#*::}" name file
+  if [[ "$entry" == *::* ]]; then
+    name="${entry%%::*}"
+  else
+    name="${entry##*/}"
+  fi
+  # makepkg reads lp: without :// as a bzr source
+  if [[ -z "$name" || "$name" == */* || "$name" == . || "$name" == .. ]] ||
+    [[ "$entry" == *://* && ! "${url%%://*}" =~ ^(http|https|ftp)$ ]] ||
+    [[ "$entry" != *://* && "$entry" == *lp:* ]]; then
+    log_err "Cannot check the checksum of $entry: only local files, http, https and ftp downloads and git sources are checked"
+    return 1
+  fi
+
+  # makepkg takes a file of that name next to the PKGBUILD before it
+  # downloads anything
+  file="${2}/${name}"
+  if [[ -e "$file" || -L "$file" ]]; then
+    if [[ -L "$file" || ! -f "$file" ]]; then
+      log_err "Source $entry is a symlink or not a regular file in the AUR repo"
+      return 1
+    fi
+  elif [[ "$entry" != *://* ]]; then
+    log_err "Local source $entry is missing from the AUR repo"
+    return 1
+  else
+    file="${3}/$(printf '%s' "$url" | sha256sum | cut -d' ' -f1)"
+    # Retried as makepkg does. Redirects may only lead to the protocols above.
+    if [[ ! -f "$file" ]] &&
+      ! curl -qgfsSL --retry 3 --retry-delay 3 --proto '=http,https,ftp' \
+        --proto-redir '=http,https,ftp' -o "$file" "$url"; then
+      rm -f "$file"
+      log_err "Could not download $url"
+      return 1
+    fi
+  fi
+  printf '%s\n' "$file"
+}
+
+# Print the checksum makepkg computes for a git source, following
+# download_git and calc_checksum_git of makepkg: the tar archive of the tag
+# or commit, from a mirror clone with export-subst and export-ignore turned
+# off. makepkg gives any other git source SKIP, so a checksum never matches.
+# Args: $1=source entry of a .SRCINFO, $2=algorithm, $3=AUR repo,
+#       $4=download directory
+_git_source_sum() {
+  local entry="$1" url="${1#*::}" name fragment="" ref dir sum
+  local -x GIT_CONFIG_GLOBAL=/dev/null GIT_CONFIG_SYSTEM=/etc/makepkg.d/gitconfig
+  url="${url#git+}"
+  if [[ "$url" == *#* ]]; then
+    fragment="${url#*#}"
+    fragment="${fragment%\?*}"
+  fi
+  url="${url%%#*}"
+  url="${url%%\?*}"
+  ref="${fragment##*=}"
+  if [[ "$entry" == *::* ]]; then
+    name="${entry%%::*}"
+  else
+    name="${url%/}"
+    name="${name##*/}"
+    name="${name%%.git*}"
+  fi
+
+  if [[ ! "${url%%://*}" =~ ^(http|https)$ ]]; then
+    log_err "Cannot check the checksum of $entry: git sources are cloned over https or http only"
+    return 1
+  fi
+  if [[ ! "${fragment%%=*}" =~ ^(tag|commit)$ || -z "$ref" || "$ref" == -* ]]; then
+    log_err "Cannot check the checksum of $entry: makepkg hashes a git source only at a tag or commit"
+    return 1
+  fi
+  if [[ -z "$name" || "$name" == */* || "$name" == . || "$name" == .. ]]; then
+    log_err "Cannot check the checksum of $entry"
+    return 1
+  fi
+  if [[ -e "${3}/${name}" || -L "${3}/${name}" ]]; then
+    log_err "Cannot check the checksum of $entry: ${name} in the AUR repo takes the place of the clone in makepkg"
+    return 1
+  fi
+
+  dir="${4}/$(printf '%s' "$url" | sha256sum | cut -d' ' -f1).git"
+  if [[ ! -d "$dir" ]]; then
+    if ! GIT_ALLOW_PROTOCOL=http:https git clone -q --origin=origin --mirror "$url" "$dir"; then
+      rm -rf "$dir"
+      log_err "Could not clone $url"
+      return 1
+    fi
+    mkdir -p "${dir}/info"
+    echo "* -export-subst -export-ignore" >"${dir}/info/attributes"
+  fi
+  if ! sum=$(git -c core.abbrev=no -C "$dir" archive --format tar "$ref" | "${2}sum"); then
+    log_err "Could not archive $ref of $url"
+    return 1
+  fi
+  printf '%s\n' "${sum%% *}"
+}
+
+# Print the checksum makepkg computes for a source
+# Args: $1=source entry of a .SRCINFO, $2=algorithm, $3=AUR repo,
+#       $4=download directory
+_source_sum() {
+  local proto="${1#*::}" file sum
+  proto="${proto%%://*}"
+  if [[ "$1" == *://* && "${proto%%+*}" == git ]]; then
+    _git_source_sum "$@"
+    return
+  fi
+  file=$(_source_file "$1" "$3" "$4") || return 1
+  sum=$("${2}sum" "$file")
+  printf '%s\n' "${sum%% *}"
+}
+
+# check_prepared_pkgbuild lets checksum values change, and the code of one
+# PKGBUILD runs where the updates of all packages are prepared. So each
+# value must match its source, hashed the way makepkg does. The sources
+# come from the prepared .SRCINFO, which check_prepared_srcinfo ties to the
+# AUR copy. Run check_prepared_files first.
+# Args: $1=AUR repo, $2=prepared dir, $3=empty directory for the downloads
+# Returns: 0 when every checksum matches, 1 otherwise (reason on stderr)
+verify_prepared_sums() {
+  local aur_dir="$1" prepared="$2" downloads="$3"
+  local -A srcinfo=() pkgbuild=()
+  local -a lines=() keys=() sums=() sources=()
+  local line key value algo i actual
+
+  # mapfile, as check_prepared_srcinfo reads it: a last line without a
+  # newline counts
+  mapfile -t lines <"${prepared}/.SRCINFO"
+  for line in "${lines[@]}"; do
+    [[ "$line" == *" = "* ]] || continue
+    key="${line%% = *}"
+    key="${key#"${key%%[![:space:]]*}"}"
+    if [[ "$key" =~ ^source(_[A-Za-z0-9_]+)?$ ||
+      "$key" =~ ^(ck|md5|sha1|sha224|sha256|sha384|sha512|b2)sums(_[A-Za-z0-9_]+)?$ ]]; then
+      srcinfo[$key]+="${line#* = }"$'\n'
+    fi
+  done
+
+  while IFS=$'\t' read -r _ key value; do
+    [[ -n "${pkgbuild[$key]+set}" ]] || keys+=("$key")
+    pkgbuild[$key]+="${value}"$'\n'
+  done < <(_pkgbuild_parts "${prepared}/PKGBUILD" | grep $'^SUMVAL\t')
+
+  for key in "${!srcinfo[@]}"; do
+    if [[ "$key" == *sums* && -z "${pkgbuild[$key]+set}" ]]; then
+      log_err "Prepared .SRCINFO lists ${key}, the PKGBUILD does not"
+      return 1
+    fi
+  done
+
+  for key in "${keys[@]}"; do
+    if [[ "${srcinfo[$key]:-}" != "${pkgbuild[$key]}" ]]; then
+      log_err "Prepared PKGBUILD and .SRCINFO differ in ${key}"
+      return 1
+    fi
+    algo="${key%%sums*}"
+    mapfile -t sums < <(printf '%s' "${pkgbuild[$key]}")
+    mapfile -t sources < <(printf '%s' "${srcinfo[source${key#*sums}]:-}")
+    if [[ "${#sums[@]}" -ne "${#sources[@]}" ]]; then
+      log_err "Prepared .SRCINFO has ${#sums[@]} ${key} for ${#sources[@]} sources"
+      return 1
+    fi
+    for i in "${!sums[@]}"; do
+      [[ "${sums[$i]}" != "SKIP" ]] || continue
+      actual=$(_source_sum "${sources[$i]}" "$algo" "$aur_dir" "$downloads") || return 1
+      if [[ "${sums[$i],,}" != "$actual" ]]; then
+        log_err "${key} of ${sources[$i]} is ${sums[$i]}, the source has ${actual}"
+        return 1
+      fi
+    done
+  done
+  return 0
+}
+
+# =============================================================================
+# FAILURE ISSUES
+# =============================================================================
+
+# Body of the issue opened for a failed package. The error holds text from
+# upstream, such as a rejected tag name, so it goes into a code block,
+# where links, images and mentions do not render. The fence is longer than
+# any run of backticks in the error, so the error cannot close it. The
+# error is cut to its last 4000 characters, where the cause usually is.
+# Args: $1=status file in .status/, named after the package, holding
+#       check_failed: ... or update_failed: ...; $2=URL of the run
+failure_issue_body() {
+  local status kind error fence='```' limit=4000
+  status=$(<"$1")
+  kind="${status%%:*}"
+  error="${status#*: }"
+  if ((${#error} > limit)); then
+    error="[first $((${#error} - limit)) characters cut]"$'\n'"${error:${#error}-limit}"
+  fi
+  while [[ "$error" == *"$fence"* ]]; do
+    fence+='`'
+  done
+  # The backticks are Markdown code around the package name
+  # shellcheck disable=SC2016
+  printf 'Package: `%s`\nStatus: %s\nRun: %s\n\n%s\n%s\n%s\n\nAuto-created by update workflow. Close after fixing.\n' \
+    "${1##*/}" "${kind//_/ }" "$2" "$fence" "$error" "$fence"
 }
 
 # =============================================================================

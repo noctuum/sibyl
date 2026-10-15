@@ -19,30 +19,41 @@ aurtomator bumps the version of AUR packages you already maintain. It does **not
 
 ```mermaid
 flowchart TD
-    A[Schedule / manual trigger] --> B[check-all.sh]
+    A[Schedule / manual trigger] --> P[prepare job: no secrets]
+    P --> B[check-all.sh with the read-only token]
     B --> C{for each package}
     C --> D[check-update.sh]
     D --> E[run strategy script]
     E --> F{version changed?}
     F -->|same| G[write up_to_date]
-    F -->|new version| H[update-pkg.sh]
-    H --> H1[clone AUR repo via SSH]
+    F -->|new version| G2[write new_version]
+    C -->|all done| B2[check-all.sh --prepare without a token]
+    B2 --> H[update-pkg.sh --prepare for each new_version]
+    H --> H1[clone AUR repo over HTTPS]
     H1 --> H2[audit PKGBUILD]
     H2 --> H3[sed pkgver, reset pkgrel=1]
     H3 --> H4[validate URLs, updpkgsums, verify sources]
     H4 --> H5[namcap, makepkg --printsrcinfo]
-    H5 --> H6[git commit + push to AUR]
-    H6 --> K
+    H5 --> H6[hand over PKGBUILD, .SRCINFO, AUR commit]
     H -->|failure| J[write error to .status/]
     D -->|failure| J
-    J --> K
-    C -->|all done| K[update-readme.sh]
-    K --> K1[read .status/ directory]
-    K1 --> K2[generate status table + badge]
-    K2 --> L[commit via GitHub API]
+    B2 -->|all done| W{update prepared or status table changed?}
+    W -->|no| O[done]
+    W -->|yes| V[verify job: no secrets]
+    V --> V1[check-all.sh --verify]
+    V1 --> V2[verify-pkg.sh: download the sources, check the checksums]
+    V2 -->|failure| V3[take the update out, write update_failed]
+    V2 --> Q[publish job: SSH key, GPG key, write token]
+    V3 --> Q
+    Q --> R[check-all.sh --publish]
+    R --> R1[run strategy again]
+    R1 --> R2[publish-pkg.sh: check the prepared files against the AUR copy]
+    R2 --> R3[git commit + push to AUR]
+    R3 --> K[update-readme.sh]
+    K --> L[commit via GitHub API]
     L --> M{failures in .status/?}
     M -->|yes| N[create GitHub Issue]
-    M -->|no| O[done]
+    M -->|no| O
 ```
 
 ### Key design decisions
@@ -50,7 +61,7 @@ flowchart TD
 - **One YAML per package.** Adding or removing a package is one file.
 - **Strategy-based version detection.** Each type of upstream source has its own script. A new source is a new script plus its entry in `scripts/validate-pkg.sh`.
 - **Patch, do not generate.** aurtomator trusts your PKGBUILD and changes only `pkgver`, `pkgrel`, checksums and `.SRCINFO`. Build steps, dependencies and install files stay untouched.
-- **One workflow run.** All packages are checked in one CI job, with one Arch container and one SSH and GPG setup.
+- **Three jobs, one with secrets.** A PKGBUILD is code that every step reading it executes. `prepare` checks all packages and runs those steps without secrets, and only its check step, which runs no PKGBUILD, gets the read-only workflow token. `verify` downloads the sources of each prepared update and checks its checksums, without secrets, so code from one PKGBUILD cannot forge the checksums of another package. `publish` holds the SSH key, the GPG key and the write token, never executes a PKGBUILD and never downloads a source, and checks what `verify` passes on before it pushes. See [4.4](#44-prepare-and-publish).
 - **Failure isolation.** A broken package does not block the others. Each failure is logged for its package and opens a GitHub Issue.
 
 ## 2. Package YAML Format
@@ -94,7 +105,7 @@ aurtomator ships 14 strategies. A strategy is a bash script in `strategies/`. It
 
 **How the version is extracted:** reads `.tag_name` of the latest release and strips a leading `v`. The endpoint skips drafts and pre-releases.
 
-**Authentication:** when `GITHUB_TOKEN` is set in the environment, it is sent as a Bearer token. The `check-updates` workflow sets it to the workflow token, which allows 1,000 requests per hour per repository. Without it, for example in a local run, the limit is 60 requests per hour.
+**Authentication:** when `GITHUB_TOKEN` is set in the environment, it is sent as a Bearer token. curl reads the header from stdin, so the token does not appear on a command line. The `check-updates` workflow sets it to the workflow token, which allows 1,000 requests per hour per repository. Without it, for example in a local run, the limit is 60 requests per hour.
 
 **Example YAML:**
 
@@ -527,14 +538,15 @@ strategy: kde-tarball
 
 ## 4. Update Process
 
-`check-all.sh --update` calls `update-pkg.sh` for every package with a new version. `--prepare` and `--publish` split the same update into two runs, see [4.4](#44-prepare-and-publish).
+`check-all.sh --update` calls `update-pkg.sh` for every package with a new version. `--prepare`, `--verify` and `--publish` split the same update into three runs, see [4.4](#44-prepare-and-publish).
 
 ### 4.1 Arguments
 
 ```text
 update-pkg.sh <package-name> <new-version> [--dry-run] [--prepare <dir>]
+verify-pkg.sh <package-name> <prepared-dir>
 publish-pkg.sh <package-name> <version> <prepared-dir> [--dry-run]
-check-all.sh [--update | --prepare <dir> | --publish <dir>] [--dry-run]
+check-all.sh [--update | --prepare <dir> | --verify <dir> | --publish <dir>] [--dry-run]
 ```
 
 ### 4.2 Step-by-step
@@ -597,7 +609,7 @@ Both count toward `pkg_ok`, so the packages badge stays `brightgreen`. Only `che
 
 ### 4.4 Prepare and publish
 
-A PKGBUILD is a bash script, and every step that reads it executes it: the audit, `updpkgsums`, `makepkg --verifysource` and `makepkg --printsrcinfo`. Whoever can push to the AUR repo of a tracked package, a co-maintainer for example, runs code in those steps. Prepare and publish split the update so that this code never runs where the SSH key, the GPG key or a write token is.
+A PKGBUILD is a bash script, and every step that reads it executes it: the audit, `updpkgsums`, `makepkg --verifysource` and `makepkg --printsrcinfo`. Whoever can push to the AUR repo of a tracked package, a co-maintainer for example, runs code in those steps. Prepare and publish split the update so that this code never runs where the SSH key, the GPG key or a write token is. Code that runs in prepare can write the prepared files of every package, so verify checks their checksums against the sources in between.
 
 **Prepare**, `update-pkg.sh --prepare <dir>`, needs no secrets:
 
@@ -605,16 +617,29 @@ A PKGBUILD is a bash script, and every step that reads it executes it: the audit
 2. Run steps 3 to 9 of [4.2](#42-step-by-step).
 3. Copy `PKGBUILD`, `.SRCINFO` and the commit id of the clone's `HEAD` to `<dir>/<package-name>/` as `PKGBUILD`, `.SRCINFO` and `base`. Nothing is committed and the package YAML does not change. Exit code 2 still means the AUR already has the version.
 
+**Verify**, `verify-pkg.sh <package-name> <dir>/<package-name>`, needs no secrets, never sources the PKGBUILD and never runs `makepkg`:
+
+1. The prepared directory must pass step 1 of publish below.
+2. Clone `https://aur.archlinux.org/<package-name>.git` anonymously. When `HEAD` is not `base`, the AUR repo moved after the update was prepared: exit code 3.
+3. `PKGBUILD` and `.SRCINFO` in the clone must be regular files. The prepared files must hold no NUL byte and pass steps 4 and 5 of publish below, with the prepared `pkgver` as `<version>`. From here on, every source URL in the prepared `.SRCINFO` follows from the AUR copy.
+4. Each checksum array of the prepared `PKGBUILD` must hold the same values as the same key in the prepared `.SRCINFO`.
+5. Every checksum other than `SKIP` must match its source, computed as makepkg does with `<algorithm>sum`. The file is the one makepkg uses. A file in the AUR repo with the name of the source comes first and must be a regular file. Otherwise a remote source is downloaded with curl, retried as makepkg does and limited to `http`, `https` and `ftp`, redirects included. A git source at `#tag=` or `#commit=` is cloned as a mirror over `https` or `http`, and its checksum is that of `git archive --format tar` of the tag or commit, with `export-subst` and `export-ignore` turned off, as makepkg computes it. A checksum for any other source, another VCS for example, cannot be checked and stops the verify.
+6. Any mismatch stops the verify with exit code 1. Otherwise the exit code is 0.
+
 **Publish**, `publish-pkg.sh <package-name> <version> <dir>/<package-name>`, never sources the PKGBUILD and never runs `makepkg`. It treats the prepared files as untrusted:
 
 1. The prepared directory must not be a symlink, `PKGBUILD`, `.SRCINFO` and `base` must be regular files, and `base` a commit id.
 2. When the prepared `pkgver` is not `<version>`, upstream moved after the update was prepared: exit code 3.
 3. Clone over SSH. When `HEAD` is not `base`, the AUR repo moved after the update was prepared: exit code 3. `PKGBUILD` and `.SRCINFO` in the clone must be regular files, not symlinks.
 4. The prepared `PKGBUILD` may differ from the AUR copy only in `pkgver=`, which must be `<version>`, in `pkgrel=`, which must be `1`, and in the values of the checksum arrays. The arrays keep their names and lengths, hold only quoted hex checksums or `SKIP`, and have a `SKIP` exactly where the AUR copy has one.
-5. Each line of the prepared `.SRCINFO` must be the line of the AUR copy with the old version replaced by `<version>`. `pkgrel` and the checksums follow the rules of step 4.
+5. Each line of the prepared `.SRCINFO` must be the line of the AUR copy with the old version replaced by `<version>`. The same holds for three forms a PKGBUILD often derives from `pkgver`: dots turned into underscores (`1_86_0`), the part before the first `+` (`0.13.0` of `0.13.0+dev+1853+g6edb38ca98`), and the version without its last component (`6.19` of `6.19.0`, as in `frameworks/${pkgver%.*}/` of KDE Frameworks). The last form counts only while it keeps a dot. Each part of a line is replaced at most once, so `5.1` inside an already replaced `5.10.0` stays. A line built from any other form of the version, a lone major version for example, stops the publish, and the package needs a manual update. `pkgrel` and the checksums follow the rules of step 4.
 6. Any other difference, and a NUL byte in either file, stops the publish with exit code 1. Otherwise steps 10 to 13 of [4.2](#42-step-by-step) follow. When the prepared files equal the AUR copy, only `current` is written to the YAML and the exit code is 2.
 
-`check-all.sh --prepare <dir>` prepares every package with a new version. Its status becomes `new_version` or `available_downgrade`, and `update_failed` when preparing fails. `check-all.sh --publish <dir>` takes every package in `packages/` that has a directory in `<dir>`, runs its strategy once more and publishes with the version the strategy reports now. The statuses of the other packages stay as they are, after a check: the prepare run executes PKGBUILDs, so only statuses of packages in `packages/` are kept, in the forms that run writes, and any other content becomes `check_failed`. Symlinks in `.status/` are removed before anything is written there. Exit code 3 leaves the status at `new_version` or `available_downgrade` without an error, and the next run prepares the package again.
+`check-all.sh --prepare <dir>` runs no strategy and needs no `GITHUB_TOKEN`. It takes the versions from the statuses that a check run, `check-all.sh` without a mode, wrote to `.status/` before it, and reads them before the first PKGBUILD runs. It prepares every package with `new_version` or `available_downgrade` into `<dir>/prepared/` and copies the statuses to `<dir>/status/`. A failed preparation becomes `update_failed`, and a package without a status from the check run becomes `check_failed`. The other statuses stay as the check run wrote them.
+
+`check-all.sh --verify <dir>` runs `verify-pkg.sh` for every package in `packages/` that has a directory in `<dir>/prepared/`, and runs no strategy. An update that fails is removed from `<dir>/prepared/`, its status in `<dir>/status/` becomes `update_failed`, and `<dir>/status/_error_count` grows by one. An update with exit code 3 is removed and keeps its status, and the next run prepares it again.
+
+`check-all.sh --publish <dir>` builds `.status/` anew from `<dir>/status/`. The prepare run executes PKGBUILDs, so only regular files named after a package in `packages/` are taken, in the forms that run writes, and any other content becomes `check_failed`. When the script stops before that, `.status/` stays empty and the steps after it read nothing from the prepare run. Then it takes every package in `packages/` that has a directory in `<dir>/prepared/`, runs its strategy once more and publishes with the version the strategy reports now. Exit code 3 leaves the status at `new_version` or `available_downgrade` without an error, and the next run prepares the package again.
 
 ## 5. CI Workflow: check-updates.yml
 
@@ -624,18 +649,51 @@ The workflow runs every hour (`cron: "0 * * * *"`) and by hand through `workflow
 
 ### 5.2 Permissions and container
 
-The workflow has `contents: write` for the status commit and `issues: write` for failure issues, and nothing else. The job runs in `archlinux:base-devel` on `ubuntu-latest` with a 30-minute timeout. `makepkg` refuses to run as root, so the steps that touch packages run as a `builder` user.
+The workflow has three jobs after a short `image` job. `image` reads the image from `.github/ci-image/Dockerfile`: `archlinux:base-devel`, pinned by digest, so a new image on Docker Hub reaches the jobs with the secrets only through a reviewed commit. Dependabot updates the digest once a month with a pull request, and `ci.yml` runs the tests in the new image before the merge, see [6.3](#63-ci-image-updates). The three jobs run in that image on `ubuntu-latest` with a 30-minute timeout, and `vercmp` from pacman, which `check-all.sh` requires, is the reason `verify` and `publish` need Arch too. Every install step upgrades `archlinux-keyring` before the system, because a pinned image ages and an old keyring rejects packages signed with a newer packager key. `makepkg` refuses to run as root, so the steps that touch packages in `prepare` and `publish` run as a `builder` user. `builder` has no `sudo` rights: the steps run as root and switch to `builder` with `sudo -u builder`. `verify` executes no PKGBUILD and runs as root.
+
+| Job | Permissions | Secrets |
+|-----|-------------|---------|
+| `image` | `contents: read` | none |
+| `prepare` | `contents: read` | none |
+| `verify` | `contents: read` | none |
+| `publish` | `contents: write` for the status commit, `issues: write` for failure issues | `AUR_SSH_KEY`, `GPG_SIGNING_KEY`, `AUR_GIT_NAME`, `AUR_GIT_EMAIL` |
+
+`verify` and `publish` run only when `prepare` hands over a prepared update or a change in the status table of `README.md`, and `publish` only after `verify` succeeds. In most hours nothing changes, and both are skipped.
 
 ### 5.3 Steps
 
-1. **Install dependencies:** `sudo git github-cli openssh gnupg namcap jq go-yq pacman-contrib`, and the `builder` user. `builder` has no `sudo` rights: the steps run as root and switch to `builder` with `sudo -u builder`.
-2. **Checkout:** `actions/checkout`, pinned by commit SHA like every action in this repository, with `persist-credentials: false`, so the workflow token is not written to `.git/config`. The job never pushes to GitHub with git: the status commit goes through the API.
+Every job starts with **Checkout:** `actions/checkout`, pinned by commit SHA like every action in this repository, with `persist-credentials: false`, so the workflow token is not written to `.git/config`. The workflow never pushes to GitHub with git: the status commit goes through the API.
+
+`image`:
+
+1. **Checkout:** `.github/ci-image` only.
+2. **Read image:** takes the `FROM` line of `.github/ci-image/Dockerfile` and fails unless it is `archlinux:base-devel@sha256:` with a 64-character digest.
+
+`prepare`:
+
+1. **Install dependencies:** `sudo git openssh namcap jq go-yq pacman-contrib`, and the `builder` user.
+2. **Check updates:** gives the workspace to `builder` and runs `check-all.sh` as `builder`, with `GITHUB_TOKEN` set to the read-only workflow token. `sudo --preserve-env` passes the token, so it does not appear on a command line. No PKGBUILD runs in this step.
+3. **Prepare updates:** runs `check-all.sh --prepare handoff` as `builder`, without a token. Code from a PKGBUILD can read the environment of every running process of `builder` through `/proc/<pid>/environ`, so the token exists only in the step before.
+4. **Hand over:** as `builder`, runs `update-readme.sh` to find out whether the status table changes. Code from a PKGBUILD has run in the workspace by now, `.git/config` included, so root does not run git there. A process started by a PKGBUILD can outlive its step, so the step then kills every process of `builder`. Only after that does root copy the regular files at `prepared/<package>/PKGBUILD`, `prepared/<package>/.SRCINFO`, `prepared/<package>/base` and `status/<package>` from `handoff/` to `upload/`. `find` does not follow symlinks and separates paths with NUL, because a name may hold a newline, so a link to a file outside the workspace does not reach the artifact. A package name never starts with a dot, so `.` and `..` match no path.
+5. **Upload handoff:** uploads `upload/` as the `handoff` artifact with `include-hidden-files: true`, because `.SRCINFO` starts with a dot, and a retention of 1 day.
+
+`verify`:
+
+1. **Install dependencies:** `git jq go-yq`.
+2. **Download handoff:** the `handoff` artifact to `handoff/`.
+3. **Verify checksums:** runs `check-all.sh --verify handoff`, see [4.4](#44-prepare-and-publish).
+4. **Upload verified handoff:** uploads `handoff/` as the `verified` artifact with `include-hidden-files: true` and a retention of 1 day.
+
+`publish`:
+
+1. **Install dependencies:** `sudo git github-cli openssh gnupg jq go-yq`, and the `builder` user.
+2. **Download verified handoff:** the `verified` artifact to `handoff/`.
 3. **Setup workspace:** git identity for `builder` from the `AUR_GIT_NAME` and `AUR_GIT_EMAIL` secrets, default `aurtomator`.
 4. **Setup AUR SSH:** writes `AUR_SSH_KEY` to `/home/builder/.ssh/aur`, writes the Ed25519 host key that <https://aur.archlinux.org> publishes to `known_hosts`, and writes an SSH config with `StrictHostKeyChecking yes` and connection multiplexing. A host that answers with another key fails with `Host key verification failed`. When the AUR changes its host key, update the key in `check-updates.yml`.
 5. **Setup GPG:** with `GPG_SIGNING_KEY` set, imports the key for `builder`, passes `GPG_KEY_ID` to the later steps and enables commit signing. Without it, the step is skipped.
-6. **Check and update packages:** runs `check-all.sh --update` as `builder`, with `GPG_KEY_ID`, `GIT_AUTHOR_NAME`, `GIT_AUTHOR_EMAIL` and `GITHUB_TOKEN` set to the workflow token.
+6. **Publish updates:** runs `check-all.sh --publish handoff` as `builder`, with `GPG_KEY_ID`, `GIT_AUTHOR_NAME`, `GIT_AUTHOR_EMAIL` and `GITHUB_TOKEN` set to the workflow token. It builds `.status/` from the checked statuses and checks the prepared files before it pushes, see [4.4](#44-prepare-and-publish).
 7. **Update README status table:** runs `update-readme.sh` as `builder`.
-8. **Commit changes via API (verified):** see [5.5](#55-verified-commit).
+8. **Commit changes via API:** see [5.5](#55-verified-commit).
 9. **Create issues for failed packages:** see [5.6](#56-failure-issues).
 
 Steps 8 and 9 run as root with `GH_TOKEN` set to the workflow token, `github.token`.
@@ -655,9 +713,9 @@ Steps 8 and 9 run as root with `GH_TOKEN` set to the workflow token, `github.tok
 |------------------------|----------------------------------|------------------------------------------|
 | `.status/<name>`       | `up_to_date`                     | The package is at the latest version     |
 | `.status/<name>`       | `updated: 2.0.0`                 | Pushed to the AUR                        |
-| `.status/<name>`       | `new_version: 2.0.0`             | Update found (check-only mode)           |
+| `.status/<name>`       | `new_version: 2.0.0`             | Update found, not pushed yet             |
 | `.status/<name>`       | `downgrade: 1.2.0`               | Downgrade pushed to the AUR              |
-| `.status/<name>`       | `available_downgrade: 1.2.0`     | Downgrade found (check-only mode)        |
+| `.status/<name>`       | `available_downgrade: 1.2.0`     | Downgrade found, not pushed yet          |
 | `.status/<name>`       | `check_failed: <error>`          | The strategy failed                      |
 | `.status/<name>`       | `update_failed: <error>`         | The update failed                        |
 | `.status/_error_count` | `0`                              | Total error count of the run             |
@@ -683,7 +741,7 @@ The color is `brightgreen` with no failures and `red` otherwise.
 
 A `git push` from the workflow would show as unverified, so the step commits through the GitHub Git Data API:
 
-1. Stop when `git diff --quiet` finds no change.
+1. List the changed tracked files with `git diff --name-only -z`, and stop when there is none. The job writes only `README.md` and `packages/<package-name>.yml`, so a change to any other tracked file fails the step and nothing is committed.
 2. Read the branch head and its tree.
 3. Create a blob for every changed file, a tree on the base tree, and a commit.
 4. Move the branch ref with `force=false`.
@@ -696,7 +754,9 @@ The step runs with `if: always()`. For every `.status/` entry with `check_failed
 
 1. Creates the `auto-update` label when it is missing.
 2. Skips the package when an open `auto-update` issue already matches `<package> failed`.
-3. Opens an issue titled `❌ <package>: update failed` with the package, the error and a link to the run.
+3. Opens an issue titled `❌ <package>: check failed` or `❌ <package>: update failed`, after the status, with the package, the status, a link to the run and the error. The error holds text from upstream, a rejected tag name for example, so it stands in a code block, where links, images and mentions do not render, and is cut to its last 4000 characters. `builder` writes the body with `failure_issue_body` from `lib.sh`, so the step runs no code from the workspace as root.
+
+The step belongs to `publish`, which runs when the status table changes. A package that keeps failing gets its issue in the run where it starts failing, and a closed issue comes back only after its status changes again.
 
 ## 6. CI Quality Gate: ci.yml
 
@@ -704,7 +764,7 @@ The step runs with `if: always()`. For every `.status/` entry with `check_failed
 
 ### 6.1 Lint job
 
-`ubuntu-latest`, 5-minute timeout. It installs `shellcheck` from apt and `shfmt` with `go install`, then runs:
+`ubuntu-latest`, 5-minute timeout. It installs `shellcheck` from apt and `shfmt` v3.14.1 with `go install`, then runs:
 
 ```bash
 shellcheck -x -S warning scripts/*.sh strategies/*.sh
@@ -715,7 +775,7 @@ shfmt -d -i 2 -ci scripts/*.sh strategies/*.sh
 
 ### 6.2 Test job
 
-`archlinux:base-devel` container, 15-minute timeout. It installs `bash bats git go-yq curl openssh ruby ruby-erb` and the `bashcov` and `simplecov-cobertura` gems, then runs:
+15-minute timeout. It runs in the image that the `image` job of `ci.yml` reads, the same job as in [5.2](#52-permissions-and-container). It upgrades `archlinux-keyring`, installs `bash bats git go-yq curl openssh ruby ruby-erb` and the gems `bashcov` 4.0.0 and `simplecov-cobertura` 4.0.0, then runs:
 
 ```bash
 ./scripts/validate-pkg.sh --all
@@ -724,6 +784,14 @@ bashcov -- bats tests/ --recursive
 ```
 
 The coverage run uploads `coverage/coverage.xml` to Codecov and never fails the job.
+
+### 6.3 CI image updates
+
+Once a month, when Docker Hub has a new `archlinux:base-devel`, Dependabot opens a pull request that changes the digest in `.github/ci-image/Dockerfile`. The `image` job reads the digest from the pull request, so `test` runs in the new image before the merge.
+
+The `merge-image` job merges such a pull request without a review. It is off until the repository variable `CI_IMAGE_AUTO_MERGE` is `true`, see [SETUP.md](SETUP.md#recommended). It runs after `lint` and `test` passed, only for a pull request that `dependabot[bot]` opened, on an event Dependabot caused, and gets `contents: write` and `pull-requests: write`. A pull request that changes any other file, a Dependabot update of an action for example, stays open with a notice. Otherwise the job squash-merges it with `--match-head-commit`, so a commit pushed after the tests stops the merge.
+
+With the variable set, a new image reaches the jobs with the secrets after the tests and without a review. A branch rule that requires an approval, or an up-to-date branch after `main` has moved, makes the merge fail, and the pull request waits for a manual merge.
 
 ## 7. Local Testing
 
