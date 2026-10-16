@@ -86,12 +86,26 @@ if [[ "\$1" == "clone" && " \$* " == *" --mirror "* ]]; then
   exec env -u GIT_ALLOW_PROTOCOL /usr/bin/git clone -q --mirror "$TEST_TMPDIR/upstream.git" "\${@: -1}"
 fi
 if [[ "\$1" == "clone" ]]; then
-  echo "\$2" >>"$TEST_TMPDIR/clone-urls"
-  exec /usr/bin/git clone -q "$AUR_REMOTE" "\$3"
+  echo "\${@: -2:1}" >>"$TEST_TMPDIR/clone-urls"
+  echo "\${*:2:\$#-3}" >>"$TEST_TMPDIR/clone-opts"
+  exec /usr/bin/git clone -q "\${@:2:\$#-3}" "$AUR_REMOTE" "\${@: -1}"
 fi
 exec /usr/bin/git "\$@"
 EOF
   chmod +x "$MOCK_DIR/git"
+}
+
+# Helper: add a file to the AUR repo of demo and hand the new commit to the
+# prepared update as its base
+# Usage: aur_add_file <name> <content>
+aur_add_file() {
+  local work="$TEST_TMPDIR/aur-work-demo"
+  printf '%s\n' "$2" >"$work/$1"
+  git -C "$work" add "$1"
+  git -C "$work" -c user.name=aur -c user.email=aur@example.invalid \
+    -c commit.gpgsign=false commit -qm "add $1"
+  git -C "$work" push -q "$AUR_REMOTE" master
+  git -C "$AUR_REMOTE" rev-parse HEAD >"$PREPARED/base"
 }
 
 # Helper: makepkg that prints a fixed .SRCINFO, namcap that finds nothing
@@ -175,6 +189,17 @@ current: '1.0.0'"
   [ "$(pkg_get "$TEST_TMPDIR/packages/demo.yml" .current)" = "1.1.0" ]
 }
 
+@test "publish-pkg: clones the AUR repo without a checkout and keeps its other files" {
+  setup_publish
+  aur_add_file demo.install "post_install() { :; }"
+  run "$TEST_TMPDIR/scripts/publish-pkg.sh" demo 1.1.0 "$PREPARED"
+  [ "$status" -eq 0 ]
+  grep -qx -- '--no-checkout' "$TEST_TMPDIR/clone-opts"
+  git -C "$AUR_REMOTE" show HEAD:PKGBUILD | grep -qx 'pkgver=1.1.0'
+  [ "$(git -C "$AUR_REMOTE" show HEAD:demo.install)" = "post_install() { :; }" ]
+  [ "$(git -C "$AUR_REMOTE" ls-tree --name-only HEAD | LC_ALL=C sort | tr '\n' ' ')" = ".SRCINFO PKGBUILD demo.install " ]
+}
+
 @test "publish-pkg: refuses a prepared PKGBUILD that changes other lines" {
   setup_publish
   sed -i 's|https://example.com/demo|https://evil.example/demo|' "$PREPARED/PKGBUILD"
@@ -236,10 +261,11 @@ current: '1.0.0'"
   [ "$(git -C "$AUR_REMOTE" rev-parse HEAD)" = "$AUR_BASE" ]
 }
 
-@test "publish-pkg: defers when upstream moved since the update was prepared" {
+@test "publish-pkg: refuses an update prepared for another version" {
   setup_publish
   run "$TEST_TMPDIR/scripts/publish-pkg.sh" demo 1.2.0 "$PREPARED"
-  [ "$status" -eq 3 ]
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"pkgver=1.1.0, expected 1.2.0"* ]]
   [ "$(git -C "$AUR_REMOTE" rev-parse HEAD)" = "$AUR_BASE" ]
 }
 
@@ -324,6 +350,13 @@ commit_aur_state() {
     -c commit.gpgsign=false commit -qm "$1"
   git -C "$work" push -q "$AUR_REMOTE" master
   git -C "$AUR_REMOTE" rev-parse HEAD >"$PREPARED/base"
+}
+
+@test "verify-pkg: clones the AUR repo without a checkout" {
+  setup_verify
+  run "$TEST_TMPDIR/scripts/verify-pkg.sh" demo "$PREPARED"
+  [ "$status" -eq 0 ]
+  grep -qx -- '--no-checkout' "$TEST_TMPDIR/clone-opts"
 }
 
 @test "verify-pkg: accepts checksums that match the sources" {
@@ -683,7 +716,7 @@ checked_status() {
   printf '%s\n' "$2" >"$TEST_TMPDIR/.status/$1"
 }
 
-@test "check-all --publish: publishes with the version upstream reports now and keeps the checked statuses" {
+@test "check-all --publish: publishes the version the check run found, runs no strategy and keeps the checked statuses" {
   create_test_package "pkg" "github-release" "upstream:
   project: owner/repo
 current: '1.0.0'"
@@ -693,9 +726,11 @@ current: '2.0.0'"
   checked_status pkg "new_version: 2.0.0"
   checked_status other "up_to_date"
   mkdir -p "$TEST_TMPDIR/out/prepared/pkg"
+  stub_script check-update.sh 1 "strategy ran"
   stub_script publish-pkg.sh 0
   run "$TEST_TMPDIR/scripts/check-all.sh" --publish "$TEST_TMPDIR/out"
   [ "$status" -eq 0 ]
+  [ ! -e "$TEST_TMPDIR/check-update.sh.args" ]
   [ "$(cat "$TEST_TMPDIR/publish-pkg.sh.args")" = "pkg 2.0.0 $TEST_TMPDIR/out/prepared/pkg" ]
   [ "$(cat "$TEST_TMPDIR/.status/pkg")" = "updated: 2.0.0" ]
   [ "$(cat "$TEST_TMPDIR/.status/other")" = "up_to_date" ]
@@ -1124,6 +1159,51 @@ EOF
   [ "$status" -eq 0 ]
   [ "${lines[5]}" = "[first 4 characters cut]" ]
   [ "${lines[6]}" = "$tail" ]
+}
+
+# === aur_export and aur_reanchor ===
+
+# Helper: a repo with a file, an executable, a symlink out of the repo and a
+# directory, cloned to $TEST_TMPDIR/clone without a checkout
+make_export_clone() {
+  local repo="$TEST_TMPDIR/tree"
+  git init -q -b master "$repo"
+  echo "pkgver=1.0.0" >"$repo/PKGBUILD"
+  printf '#!/bin/sh\n' >"$repo/run.sh"
+  chmod +x "$repo/run.sh"
+  ln -s /etc/hostname "$repo/link"
+  mkdir "$repo/dir"
+  echo inside >"$repo/dir/file"
+  git -C "$repo" add .
+  git -C "$repo" -c user.name=aur -c user.email=aur@example.invalid \
+    -c commit.gpgsign=false commit -qm tree
+  git clone -q --no-checkout "$repo" "$TEST_TMPDIR/clone"
+}
+
+@test "aur_export: writes the files of HEAD and stands in for links and directories" {
+  make_export_clone
+  run aur_export "$TEST_TMPDIR/clone" "$TEST_TMPDIR/files"
+  [ "$status" -eq 0 ]
+  [ "$(cat "$TEST_TMPDIR/files/PKGBUILD")" = "pkgver=1.0.0" ]
+  [ -f "$TEST_TMPDIR/files/run.sh" ]
+  [ ! -L "$TEST_TMPDIR/files/run.sh" ]
+  [ -L "$TEST_TMPDIR/files/link" ]
+  [ "$(readlink "$TEST_TMPDIR/files/link")" != /etc/hostname ]
+  [ -d "$TEST_TMPDIR/files/dir" ]
+  [ -z "$(ls -A "$TEST_TMPDIR/files/dir")" ]
+  [ ! -e "$TEST_TMPDIR/clone/PKGBUILD" ]
+}
+
+@test "aur_reanchor: puts a clone without a checkout on master and checks nothing out" {
+  make_export_clone
+  local clone="$TEST_TMPDIR/clone"
+  git -C "$clone" update-ref --no-deref HEAD "$(git -C "$clone" rev-parse HEAD)"
+  git -C "$clone" branch -q -D master
+  run aur_reanchor "$clone" --no-checkout
+  [ "$status" -eq 0 ]
+  [ "$(git -C "$clone" symbolic-ref HEAD)" = "refs/heads/master" ]
+  [ "$(git -C "$clone" rev-parse master)" = "$(git -C "$clone" rev-parse origin/master)" ]
+  [ ! -e "$clone/PKGBUILD" ]
 }
 
 # === check_prepared_pkgbuild ===
