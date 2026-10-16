@@ -677,16 +677,22 @@ current: '1.0.0'"
   [ "$(cat "$TEST_TMPDIR/.status/pkg")" = "update_failed: audit failed" ]
 }
 
-@test "check-all --publish: publishes with the version upstream reports now and imports other statuses" {
+# Helper: write the status that the check job hands over for a package
+# Usage: checked_status <package> <status>
+checked_status() {
+  printf '%s\n' "$2" >"$TEST_TMPDIR/.status/$1"
+}
+
+@test "check-all --publish: publishes with the version upstream reports now and keeps the checked statuses" {
   create_test_package "pkg" "github-release" "upstream:
   project: owner/repo
 current: '1.0.0'"
   create_test_package "other" "github-release" "upstream:
   project: owner/repo
 current: '2.0.0'"
-  mkdir -p "$TEST_TMPDIR/out/prepared/pkg" "$TEST_TMPDIR/out/status"
-  echo "new_version: 2.0.0" >"$TEST_TMPDIR/out/status/pkg"
-  echo "up_to_date" >"$TEST_TMPDIR/out/status/other"
+  checked_status pkg "new_version: 2.0.0"
+  checked_status other "up_to_date"
+  mkdir -p "$TEST_TMPDIR/out/prepared/pkg"
   stub_script publish-pkg.sh 0
   run "$TEST_TMPDIR/scripts/check-all.sh" --publish "$TEST_TMPDIR/out"
   [ "$status" -eq 0 ]
@@ -695,19 +701,111 @@ current: '2.0.0'"
   [ "$(cat "$TEST_TMPDIR/.status/other")" = "up_to_date" ]
 }
 
-@test "check-all --publish: starts from an empty status directory" {
+@test "check-all --publish: keeps a failed check" {
   create_test_package "pkg" "github-release" "upstream:
   project: owner/repo
 current: '2.0.0'"
-  echo "update_failed: stale" >"$TEST_TMPDIR/.status/pkg"
+  checked_status pkg "check_failed: API down"
   run "$TEST_TMPDIR/scripts/check-all.sh" --publish "$TEST_TMPDIR/out"
-  [ ! -e "$TEST_TMPDIR/.status/pkg" ]
+  [ "$status" -eq 0 ]
+  [ "$(cat "$TEST_TMPDIR/.status/pkg")" = "check_failed: API down" ]
+  [ "$(cat "$TEST_TMPDIR/.status/_error_count")" = "1" ]
+}
+
+@test "check-all --publish: marks a package the check run left out" {
+  create_test_package "pkg" "github-release" "upstream:
+  project: owner/repo
+current: '2.0.0'"
+  run "$TEST_TMPDIR/scripts/check-all.sh" --publish "$TEST_TMPDIR/out"
+  [ "$(cat "$TEST_TMPDIR/.status/pkg")" = "check_failed: not checked before --publish" ]
+}
+
+@test "check-all --publish: replaces a checked status the check run does not write" {
+  create_test_package "pkg" "github-release" "upstream:
+  project: owner/repo
+current: '2.0.0'"
+  checked_status pkg "update_failed: stale"
+  run "$TEST_TMPDIR/scripts/check-all.sh" --publish "$TEST_TMPDIR/out"
+  [ "$(cat "$TEST_TMPDIR/.status/pkg")" = "check_failed: invalid status from the check run" ]
+}
+
+@test "check-all --publish: replaces a checked status with an unsafe version" {
+  create_test_package "pkg" "github-release" "upstream:
+  project: owner/repo
+current: '1.0.0'"
+  checked_status pkg "new_version: 1.0](https://evil.example)"
+  mkdir -p "$TEST_TMPDIR/out/prepared/pkg"
+  stub_script publish-pkg.sh 0
+  run "$TEST_TMPDIR/scripts/check-all.sh" --publish "$TEST_TMPDIR/out"
+  [ ! -e "$TEST_TMPDIR/publish-pkg.sh.args" ]
+  [ "$(cat "$TEST_TMPDIR/.status/pkg")" = "check_failed: invalid status from the check run" ]
+}
+
+@test "check-all --publish: replaces a checked status with extra lines" {
+  create_test_package "pkg" "github-release" "upstream:
+  project: owner/repo
+current: '1.0.0'"
+  checked_status pkg $'new_version: 2.0.0\n| [x](https://evil.example) |'
+  run "$TEST_TMPDIR/scripts/check-all.sh" --publish "$TEST_TMPDIR/out"
+  [ "$(cat "$TEST_TMPDIR/.status/pkg")" = "check_failed: invalid status from the check run" ]
+}
+
+@test "check-all --publish: publishes only packages the check run found outdated" {
+  create_test_package "pkg" "github-release" "upstream:
+  project: owner/repo
+current: '1.0.0'"
+  checked_status pkg "up_to_date"
+  mkdir -p "$TEST_TMPDIR/out/prepared/pkg"
+  stub_script publish-pkg.sh 0
+  run "$TEST_TMPDIR/scripts/check-all.sh" --publish "$TEST_TMPDIR/out"
+  [ ! -e "$TEST_TMPDIR/publish-pkg.sh.args" ]
+  [ "$(cat "$TEST_TMPDIR/.status/pkg")" = "up_to_date" ]
+}
+
+@test "check-all --publish: records an outdated package without an update as failed" {
+  create_test_package "pkg" "github-release" "upstream:
+  project: owner/repo
+current: '1.0.0'"
+  checked_status pkg "new_version: 2.0.0"
+  run "$TEST_TMPDIR/scripts/check-all.sh" --publish "$TEST_TMPDIR/out"
+  [ "$status" -eq 0 ]
+  [ "$(cat "$TEST_TMPDIR/.status/pkg")" = "update_failed: prepare and verify handed over no update" ]
+  [ "$(cat "$TEST_TMPDIR/.status/_error_count")" = "1" ]
+}
+
+@test "check-all --publish: keeps the update failure the prepare run recorded" {
+  create_test_package "pkg" "github-release" "upstream:
+  project: owner/repo
+current: '1.0.0'"
+  checked_status pkg "new_version: 2.0.0"
+  mkdir -p "$TEST_TMPDIR/out/status"
+  printf 'update_failed: audit failed\nline two\n' >"$TEST_TMPDIR/out/status/pkg"
+  run "$TEST_TMPDIR/scripts/check-all.sh" --publish "$TEST_TMPDIR/out"
+  [ "$(cat "$TEST_TMPDIR/.status/pkg")" = $'update_failed: audit failed\nline two' ]
+}
+
+@test "check-all --publish: takes no other status from the prepare run" {
+  create_test_package "pkg" "github-release" "upstream:
+  project: owner/repo
+current: '1.0.0'"
+  create_test_package "other" "github-release" "upstream:
+  project: owner/repo
+current: '2.0.0'"
+  checked_status pkg "new_version: 2.0.0"
+  checked_status other "up_to_date"
+  mkdir -p "$TEST_TMPDIR/out/status"
+  echo "up_to_date" >"$TEST_TMPDIR/out/status/pkg"
+  echo "check_failed: forged" >"$TEST_TMPDIR/out/status/other"
+  run "$TEST_TMPDIR/scripts/check-all.sh" --publish "$TEST_TMPDIR/out"
+  [ "$(cat "$TEST_TMPDIR/.status/pkg")" = "update_failed: prepare and verify handed over no update" ]
+  [ "$(cat "$TEST_TMPDIR/.status/other")" = "up_to_date" ]
 }
 
 @test "check-all --publish: leaves a deferred package as available, without an error" {
   create_test_package "pkg" "github-release" "upstream:
   project: owner/repo
 current: '1.0.0'"
+  checked_status pkg "new_version: 2.0.0"
   mkdir -p "$TEST_TMPDIR/out/prepared/pkg"
   stub_script publish-pkg.sh 3
   run "$TEST_TMPDIR/scripts/check-all.sh" --publish "$TEST_TMPDIR/out"
@@ -719,6 +817,7 @@ current: '1.0.0'"
   create_test_package "pkg" "github-release" "upstream:
   project: owner/repo
 current: '1.0.0'"
+  checked_status pkg "new_version: 2.0.0"
   mkdir -p "$TEST_TMPDIR/out/prepared/pkg"
   stub_script publish-pkg.sh 1 "changes lines outside pkgver"
   run "$TEST_TMPDIR/scripts/check-all.sh" --publish "$TEST_TMPDIR/out"
@@ -730,6 +829,7 @@ current: '1.0.0'"
   create_test_package "pkg" "github-release" "upstream:
   project: owner/repo
 current: '2.0.0'"
+  checked_status pkg "up_to_date"
   mkdir -p "$TEST_TMPDIR/out/prepared/evil"
   stub_script publish-pkg.sh 0
   run "$TEST_TMPDIR/scripts/check-all.sh" --publish "$TEST_TMPDIR/out"
@@ -741,83 +841,75 @@ current: '2.0.0'"
   create_test_package "pkg" "github-release" "upstream:
   project: owner/repo
 current: '1.0.0'"
+  checked_status pkg "new_version: 2.0.0"
   mkdir -p "$TEST_TMPDIR/elsewhere/pkg" "$TEST_TMPDIR/out"
   ln -s "$TEST_TMPDIR/elsewhere" "$TEST_TMPDIR/out/prepared"
   stub_script publish-pkg.sh 0
   run "$TEST_TMPDIR/scripts/check-all.sh" --publish "$TEST_TMPDIR/out"
   [ ! -f "$TEST_TMPDIR/publish-pkg.sh.args" ]
+  [ "$(cat "$TEST_TMPDIR/.status/pkg")" = "update_failed: prepare and verify handed over no update" ]
 }
 
 @test "check-all --publish: does not import statuses of names that are not packages" {
   create_test_package "pkg" "github-release" "upstream:
   project: owner/repo
 current: '2.0.0'"
+  checked_status pkg "up_to_date"
   mkdir -p "$TEST_TMPDIR/out/status"
   echo "update_failed: spoofed" >"$TEST_TMPDIR/out/status/evil"
-  echo "up_to_date" >"$TEST_TMPDIR/out/status/pkg"
   run "$TEST_TMPDIR/scripts/check-all.sh" --publish "$TEST_TMPDIR/out"
   [ ! -e "$TEST_TMPDIR/.status/evil" ]
   [ "$(cat "$TEST_TMPDIR/.status/pkg")" = "up_to_date" ]
 }
 
-@test "check-all --publish: does not import a status directory that is a symlink" {
+@test "check-all --publish: does not read a handed over status directory that is a symlink" {
   create_test_package "pkg" "github-release" "upstream:
   project: owner/repo
-current: '2.0.0'"
+current: '1.0.0'"
+  checked_status pkg "new_version: 2.0.0"
   mkdir -p "$TEST_TMPDIR/elsewhere" "$TEST_TMPDIR/out"
-  echo "up_to_date" >"$TEST_TMPDIR/elsewhere/pkg"
+  echo "update_failed: from elsewhere" >"$TEST_TMPDIR/elsewhere/pkg"
   ln -s "$TEST_TMPDIR/elsewhere" "$TEST_TMPDIR/out/status"
   run "$TEST_TMPDIR/scripts/check-all.sh" --publish "$TEST_TMPDIR/out"
-  [ ! -e "$TEST_TMPDIR/.status/pkg" ]
-}
-
-@test "check-all --publish: replaces a status the prepare run does not write" {
-  create_test_package "pkg" "github-release" "upstream:
-  project: owner/repo
-current: '2.0.0'"
-  mkdir -p "$TEST_TMPDIR/out/status"
-  echo "updated: 9.9.9" >"$TEST_TMPDIR/out/status/pkg"
-  run "$TEST_TMPDIR/scripts/check-all.sh" --publish "$TEST_TMPDIR/out"
-  [[ "$(cat "$TEST_TMPDIR/.status/pkg")" == "check_failed:"* ]]
-}
-
-@test "check-all --publish: replaces a status with an unsafe version" {
-  create_test_package "pkg" "github-release" "upstream:
-  project: owner/repo
-current: '2.0.0'"
-  mkdir -p "$TEST_TMPDIR/out/status"
-  echo "new_version: 1.0](https://evil.example)" >"$TEST_TMPDIR/out/status/pkg"
-  run "$TEST_TMPDIR/scripts/check-all.sh" --publish "$TEST_TMPDIR/out"
-  [[ "$(cat "$TEST_TMPDIR/.status/pkg")" == "check_failed:"* ]]
-}
-
-@test "check-all --publish: replaces a status with extra lines" {
-  create_test_package "pkg" "github-release" "upstream:
-  project: owner/repo
-current: '2.0.0'"
-  mkdir -p "$TEST_TMPDIR/out/status"
-  printf 'new_version: 2.0.0\n| [x](https://evil.example) |\n' >"$TEST_TMPDIR/out/status/pkg"
-  run "$TEST_TMPDIR/scripts/check-all.sh" --publish "$TEST_TMPDIR/out"
-  [[ "$(cat "$TEST_TMPDIR/.status/pkg")" == "check_failed:"* ]]
-  ! grep -q evil "$TEST_TMPDIR/.status/pkg"
+  [ "$(cat "$TEST_TMPDIR/.status/pkg")" = "update_failed: prepare and verify handed over no update" ]
 }
 
 @test "check-all --publish: does not follow symlinks among the handed over statuses" {
   create_test_package "pkg" "github-release" "upstream:
   project: owner/repo
 current: '1.0.0'"
+  create_test_package "other" "github-release" "upstream:
+  project: owner/repo
+current: '1.0.0'"
+  checked_status pkg "new_version: 2.0.0"
+  checked_status other "new_version: 2.0.0"
   mkdir -p "$TEST_TMPDIR/out/prepared/pkg" "$TEST_TMPDIR/out/status"
-  echo "keep" >"$TEST_TMPDIR/target-status"
+  echo "update_failed: from a link" >"$TEST_TMPDIR/target-status"
   echo "keep" >"$TEST_TMPDIR/target-count"
   ln -s "$TEST_TMPDIR/target-status" "$TEST_TMPDIR/out/status/pkg"
+  ln -s "$TEST_TMPDIR/target-status" "$TEST_TMPDIR/out/status/other"
   ln -s "$TEST_TMPDIR/target-count" "$TEST_TMPDIR/out/status/_error_count"
-  ln -s "$TEST_TMPDIR/target-status" "$TEST_TMPDIR/.status/pkg"
   stub_script publish-pkg.sh 0
   run "$TEST_TMPDIR/scripts/check-all.sh" --publish "$TEST_TMPDIR/out"
-  [ "$(cat "$TEST_TMPDIR/target-status")" = "keep" ]
+  [ "$(cat "$TEST_TMPDIR/target-status")" = "update_failed: from a link" ]
   [ "$(cat "$TEST_TMPDIR/target-count")" = "keep" ]
-  [ ! -L "$TEST_TMPDIR/.status/pkg" ]
   [ "$(cat "$TEST_TMPDIR/.status/pkg")" = "updated: 2.0.0" ]
+  [ "$(cat "$TEST_TMPDIR/.status/other")" = "update_failed: prepare and verify handed over no update" ]
+}
+
+@test "check-all --publish: does not read a checked status that is a symlink" {
+  create_test_package "pkg" "github-release" "upstream:
+  project: owner/repo
+current: '1.0.0'"
+  echo "new_version: 2.0.0" >"$TEST_TMPDIR/target-status"
+  ln -s "$TEST_TMPDIR/target-status" "$TEST_TMPDIR/.status/pkg"
+  mkdir -p "$TEST_TMPDIR/out/prepared/pkg"
+  stub_script publish-pkg.sh 0
+  run "$TEST_TMPDIR/scripts/check-all.sh" --publish "$TEST_TMPDIR/out"
+  [ ! -e "$TEST_TMPDIR/publish-pkg.sh.args" ]
+  [ ! -L "$TEST_TMPDIR/.status/pkg" ]
+  [ "$(cat "$TEST_TMPDIR/target-status")" = "new_version: 2.0.0" ]
+  [ "$(cat "$TEST_TMPDIR/.status/pkg")" = "check_failed: not checked before --publish" ]
 }
 
 @test "check-all --publish: replaces a status directory that is a symlink" {
@@ -833,16 +925,107 @@ current: '2.0.0'"
   [ -z "$(ls -A "$TEST_TMPDIR/elsewhere")" ]
 }
 
-@test "check-all --publish: ignores an error count that is not a number" {
+@test "check-all --publish: counts the errors itself" {
   create_test_package "pkg" "github-release" "upstream:
   project: owner/repo
 current: '1.0.0'"
+  create_test_package "broken" "github-release" "upstream:
+  project: owner/repo
+current: '1.0.0'"
+  checked_status pkg "new_version: 2.0.0"
+  checked_status broken "check_failed: API down"
+  echo 7 >"$TEST_TMPDIR/.status/_error_count"
   mkdir -p "$TEST_TMPDIR/out/prepared/pkg" "$TEST_TMPDIR/out/status"
   echo 'a[$(touch '"$TEST_TMPDIR"'/pwned)]' >"$TEST_TMPDIR/out/status/_error_count"
   stub_script publish-pkg.sh 0
   run "$TEST_TMPDIR/scripts/check-all.sh" --publish "$TEST_TMPDIR/out"
   [ ! -f "$TEST_TMPDIR/pwned" ]
-  [ "$(cat "$TEST_TMPDIR/.status/_error_count")" = "0" ]
+  [ "$(cat "$TEST_TMPDIR/.status/_error_count")" = "1" ]
+}
+
+# === check-all.sh time budgets ===
+
+# Helper: replace a script with a stub that starts a background sleep,
+# records its pid in $TEST_TMPDIR/<script>.child, and then hangs
+# Usage: hanging_script <script name>
+hanging_script() {
+  rm -f "$TEST_TMPDIR/scripts/$1"
+  cat >"$TEST_TMPDIR/scripts/$1" <<EOF
+#!/usr/bin/env bash
+sleep 60 &
+echo \$! >"$TEST_TMPDIR/$1.child"
+sleep 60
+EOF
+  chmod +x "$TEST_TMPDIR/scripts/$1"
+}
+
+# Succeeds when the child that hanging_script started has ended. In a job
+# container pid 1 never reaps an orphan, so an ended child can stay a zombie.
+child_ended() {
+  local state
+  state=$(ps -o stat= -p "$(cat "$TEST_TMPDIR/$1.child")") || return 0
+  [[ "$state" == Z* ]]
+}
+
+@test "check-all: a strategy that hangs fails after its time budget and the others go on" {
+  create_test_package "slow" "github-release" "upstream:
+  project: owner/repo
+current: '1.0.0'"
+  create_test_package "zzz" "github-release" "upstream:
+  project: owner/repo
+current: '1.0.0'"
+  rm -f "$TEST_TMPDIR/scripts/check-update.sh"
+  cat >"$TEST_TMPDIR/scripts/check-update.sh" <<EOF
+#!/usr/bin/env bash
+[[ "\$1" == "slow" ]] && exec "$TEST_TMPDIR/scripts/hang.sh"
+exit 0
+EOF
+  chmod +x "$TEST_TMPDIR/scripts/check-update.sh"
+  hanging_script hang.sh
+  SECONDS=0
+  AURTOMATOR_CHECK_TIMEOUT=1 run "$TEST_TMPDIR/scripts/check-all.sh"
+  [ "$SECONDS" -lt 10 ]
+  [ "$(cat "$TEST_TMPDIR/.status/slow")" = "check_failed: timed out after 1 s" ]
+  [ "$(cat "$TEST_TMPDIR/.status/zzz")" = "up_to_date" ]
+  child_ended hang.sh
+}
+
+@test "check-all --prepare: an update that hangs fails after its time budget" {
+  create_test_package "pkg" "github-release" "upstream:
+  project: owner/repo
+current: '1.0.0'"
+  checked_status pkg "new_version: 2.0.0"
+  hanging_script update-pkg.sh
+  SECONDS=0
+  AURTOMATOR_UPDATE_TIMEOUT=1 run "$TEST_TMPDIR/scripts/check-all.sh" --prepare "$TEST_TMPDIR/out"
+  [ "$SECONDS" -lt 10 ]
+  [ "$(cat "$TEST_TMPDIR/out/status/pkg")" = "update_failed: timed out after 1 s" ]
+  child_ended update-pkg.sh
+}
+
+@test "check-all --verify: a verify that hangs fails after its time budget" {
+  setup_check_verify
+  hanging_script verify-pkg.sh
+  SECONDS=0
+  AURTOMATOR_UPDATE_TIMEOUT=1 run "$TEST_TMPDIR/scripts/check-all.sh" --verify "$TEST_TMPDIR/out"
+  [ "$SECONDS" -lt 10 ]
+  [ ! -e "$TEST_TMPDIR/out/prepared/pkg" ]
+  [ "$(cat "$TEST_TMPDIR/out/status/pkg")" = "update_failed: timed out after 1 s" ]
+  child_ended verify-pkg.sh
+}
+
+@test "check-all --publish: a publish that hangs fails after its time budget" {
+  create_test_package "pkg" "github-release" "upstream:
+  project: owner/repo
+current: '1.0.0'"
+  checked_status pkg "new_version: 2.0.0"
+  mkdir -p "$TEST_TMPDIR/out/prepared/pkg"
+  hanging_script publish-pkg.sh
+  SECONDS=0
+  AURTOMATOR_UPDATE_TIMEOUT=1 run "$TEST_TMPDIR/scripts/check-all.sh" --publish "$TEST_TMPDIR/out"
+  [ "$SECONDS" -lt 10 ]
+  [ "$(cat "$TEST_TMPDIR/.status/pkg")" = "update_failed: timed out after 1 s" ]
+  child_ended publish-pkg.sh
 }
 
 # === check-all.sh --verify ===
@@ -880,14 +1063,15 @@ current: '1.0.0'"
   [ "$(cat "$TEST_TMPDIR/out/status/_error_count")" = "2" ]
 }
 
-@test "check-all --verify: takes out an update the AUR moved under and keeps its status" {
+# The prepare run writes the base of every package, so a moved AUR repo and
+# a wrong base look the same
+@test "check-all --verify: takes out an update the AUR moved under, with update_failed" {
   setup_check_verify
-  stub_script verify-pkg.sh 3
+  stub_script verify-pkg.sh 3 "the AUR repo moved"
   run "$TEST_TMPDIR/scripts/check-all.sh" --verify "$TEST_TMPDIR/out"
   [ "$status" -eq 0 ]
   [ ! -e "$TEST_TMPDIR/out/prepared/pkg" ]
-  [ "$(cat "$TEST_TMPDIR/out/status/pkg")" = "new_version: 2.0.0" ]
-  [ "$(cat "$TEST_TMPDIR/out/status/_error_count")" = "1" ]
+  [ "$(cat "$TEST_TMPDIR/out/status/pkg")" = "update_failed: the AUR repo moved" ]
 }
 
 @test "check-all --verify: verifies only prepared packages from packages/" {
@@ -988,6 +1172,58 @@ EOF
   write_pkgbuild "$NEW" 1.1.0 1 "sha256sums=('SKIP' '$H4')"
   run check_prepared_pkgbuild "$OLD" "$NEW" 1.1.0
   [ "$status" -eq 0 ]
+}
+
+@test "check_prepared_pkgbuild: accepts a checksum array continued with a backslash" {
+  local sums="sha256sums=('SKIP' \\
+            'SKIP')"
+  write_pkgbuild "$OLD" 1.0.0 2 "$sums"
+  write_pkgbuild "$NEW" 1.1.0 1 "$sums"
+  run check_prepared_pkgbuild "$OLD" "$NEW" 1.1.0
+  [ "$status" -eq 0 ]
+}
+
+@test "check_prepared_pkgbuild: accepts a comment after a checksum array" {
+  local sums="sha256sums=('SKIP' 'SKIP')  # VCS sources"
+  write_pkgbuild "$OLD" 1.0.0 2 "$sums"
+  write_pkgbuild "$NEW" 1.1.0 1 "$sums"
+  run check_prepared_pkgbuild "$OLD" "$NEW" 1.1.0
+  [ "$status" -eq 0 ]
+}
+
+@test "check_prepared_pkgbuild: accepts comments inside a checksum array" {
+  local sums="sha256sums=( # git
+            'SKIP' # patch (local)
+            'SKIP')"
+  write_pkgbuild "$OLD" 1.0.0 2 "$sums"
+  write_pkgbuild "$NEW" 1.1.0 1 "$sums"
+  run check_prepared_pkgbuild "$OLD" "$NEW" 1.1.0
+  [ "$status" -eq 0 ]
+}
+
+# bash joins the next line to the assignment, and runs it as a command
+@test "check_prepared_pkgbuild: rejects a backslash after a checksum array" {
+  write_pkgbuild "$OLD" 1.0.0 2 "sha256sums=('SKIP' 'SKIP')"
+  write_pkgbuild "$NEW" 1.1.0 1 "sha256sums=('SKIP' 'SKIP') \\"
+  run check_prepared_pkgbuild "$OLD" "$NEW" 1.1.0
+  [ "$status" -eq 1 ]
+}
+
+# bash reads an escaped space there, so the # starts a word, not a comment
+@test "check_prepared_pkgbuild: rejects a backslash before a hash sign in a checksum array" {
+  write_pkgbuild "$OLD" 1.0.0 2 "sha256sums=('SKIP' 'SKIP')"
+  write_pkgbuild "$NEW" 1.1.0 1 "sha256sums=('SKIP' \\ # c
+            'SKIP')"
+  run check_prepared_pkgbuild "$OLD" "$NEW" 1.1.0
+  [ "$status" -eq 1 ]
+}
+
+# bash starts no comment right after the closing parenthesis
+@test "check_prepared_pkgbuild: rejects a hash sign right after a checksum array" {
+  write_pkgbuild "$OLD" 1.0.0 2 "sha256sums=('SKIP' 'SKIP')"
+  write_pkgbuild "$NEW" 1.1.0 1 "sha256sums=('SKIP' 'SKIP')# c"
+  run check_prepared_pkgbuild "$OLD" "$NEW" 1.1.0
+  [ "$status" -eq 1 ]
 }
 
 @test "check_prepared_pkgbuild: rejects a changed number of checksums" {
@@ -1092,6 +1328,55 @@ write_srcinfo_line() {
   write_srcinfo_line "$TEST_TMPDIR/new.SRCINFO" 3.0 "license = GPL-3"
   run check_prepared_srcinfo "$TEST_TMPDIR/old.SRCINFO" "$TEST_TMPDIR/new.SRCINFO" 3.0
   [ "$status" -eq 1 ]
+}
+
+# Helper: .SRCINFO as makepkg --printsrcinfo prints it for a PKGBUILD with
+# pkgdesc, license and depends holding 2.0 apart from pkgver
+# Usage: write_srcinfo_lookalike <path> <pkgver>
+write_srcinfo_lookalike() {
+  printf '%s\n' \
+    "pkgbase = demo" \
+    $'\tpkgdesc = A GPL-2.0 licensed tool' \
+    $'\tpkgver = '"$2" \
+    $'\tpkgrel = 1' \
+    $'\turl = https://example.com' \
+    $'\tarch = x86_64' \
+    $'\tlicense = GPL-2.0-or-later' \
+    $'\tdepends = glibc>=2.0.1' \
+    $'\tprovides = tool='"$2" \
+    $'\tsource = https://example.com/releases/'"$2"'/demo-'"$2"'.tar.gz' \
+    $'\tsha256sums = SKIP' \
+    "" \
+    "pkgname = demo" >"$1"
+}
+
+@test "check_prepared_srcinfo: keeps text that only looks like the old version" {
+  write_srcinfo_lookalike "$TEST_TMPDIR/old.SRCINFO" 2.0
+  write_srcinfo_lookalike "$TEST_TMPDIR/new.SRCINFO" 2.1
+  run check_prepared_srcinfo "$TEST_TMPDIR/old.SRCINFO" "$TEST_TMPDIR/new.SRCINFO" 2.1
+  [ "$status" -eq 0 ]
+}
+
+@test "check_prepared_srcinfo: rejects a source that keeps the old version" {
+  write_srcinfo_line "$TEST_TMPDIR/old.SRCINFO" 2.0 "source = https://example.com/demo-2.0.tar.gz"
+  write_srcinfo_line "$TEST_TMPDIR/new.SRCINFO" 2.1 "source = https://example.com/demo-2.0.tar.gz"
+  run check_prepared_srcinfo "$TEST_TMPDIR/old.SRCINFO" "$TEST_TMPDIR/new.SRCINFO" 2.1
+  [ "$status" -eq 1 ]
+}
+
+@test "check_prepared_srcinfo: rejects an arch source that keeps the old version" {
+  write_srcinfo_line "$TEST_TMPDIR/old.SRCINFO" 2.0 "source_x86_64 = https://example.com/demo-2.0-x86_64.tar.gz"
+  write_srcinfo_line "$TEST_TMPDIR/new.SRCINFO" 2.1 "source_x86_64 = https://example.com/demo-2.0-x86_64.tar.gz"
+  run check_prepared_srcinfo "$TEST_TMPDIR/old.SRCINFO" "$TEST_TMPDIR/new.SRCINFO" 2.1
+  [ "$status" -eq 1 ]
+}
+
+@test "check_prepared_srcinfo: rejects a line changed beyond the version" {
+  write_srcinfo_line "$TEST_TMPDIR/old.SRCINFO" 2.0 "depends = glibc>=2.0.1"
+  write_srcinfo_line "$TEST_TMPDIR/new.SRCINFO" 2.1 "depends = glibc>=2.9"
+  run check_prepared_srcinfo "$TEST_TMPDIR/old.SRCINFO" "$TEST_TMPDIR/new.SRCINFO" 2.1
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"changes more than the version"* ]]
 }
 
 @test "check_prepared_srcinfo: rejects an added dependency" {
