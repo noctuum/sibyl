@@ -23,7 +23,7 @@ Automated AUR package updates from a single GitHub repo.
 | [marp-cli-bin](https://aur.archlinux.org/packages/marp-cli-bin) | 4.5.1 | github-release | 2026-09-06 | ✅ up to date |
 | [memos-bin](https://aur.archlinux.org/packages/memos-bin) | 0.31.0 | github-release | 2026-09-19 | ✅ up to date |
 | [miniflux-bin](https://aur.archlinux.org/packages/miniflux-bin) | 2.3.3 | github-release | 2026-07-24 | ✅ up to date |
-| [neovim-nightly-bin](https://aur.archlinux.org/packages/neovim-nightly-bin) | 0.13.0+dev+1892+g9b7ec59580 | github-nightly | 2026-10-17 | 🔄 updated to 0.13.0+dev+1892+g9b7ec59580 |
+| [neovim-nightly-bin](https://aur.archlinux.org/packages/neovim-nightly-bin) | 0.13.0+dev+1892+g9b7ec59580 | github-nightly | 2026-10-17 | ✅ up to date |
 | [sherpa-onnx-bin](https://aur.archlinux.org/packages/sherpa-onnx-bin) | 1.13.8 | github-release | — | ✅ up to date |
 | [sherpa-onnx-piper-voice-ru-denis](https://aur.archlinux.org/packages/sherpa-onnx-piper-voice-ru-denis) | 20251202 | github-asset | — | ✅ up to date |
 | [sherpa-onnx-piper-voice-ru-dmitri](https://aur.archlinux.org/packages/sherpa-onnx-piper-voice-ru-dmitri) | 20251202 | github-asset | — | ✅ up to date |
