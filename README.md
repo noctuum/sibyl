@@ -22,7 +22,7 @@ Automated AUR package updates from a single GitHub repo.
 | [liblinear](https://aur.archlinux.org/packages/liblinear) | 2.50 | webpage-scrape | — | ✅ up to date |
 | [marp-cli-bin](https://aur.archlinux.org/packages/marp-cli-bin) | 4.5.1 | github-release | 2026-09-06 | ✅ up to date |
 | [memos-bin](https://aur.archlinux.org/packages/memos-bin) | 0.31.0 | github-release | 2026-09-19 | ✅ up to date |
-| [miniflux-bin](https://aur.archlinux.org/packages/miniflux-bin) | 2.3.3 | github-release | 2026-07-24 | ✅ up to date |
+| [miniflux-bin](https://aur.archlinux.org/packages/miniflux-bin) | 2.3.4 | github-release | 2026-10-20 | 🔄 updated to 2.3.4 |
 | [neovim-nightly-bin](https://aur.archlinux.org/packages/neovim-nightly-bin) | 0.13.0+dev+1915+gc5641b2bfb | github-nightly | 2026-10-19 | ✅ up to date |
 | [sherpa-onnx-bin](https://aur.archlinux.org/packages/sherpa-onnx-bin) | 1.13.8 | github-release | — | ✅ up to date |
 | [sherpa-onnx-piper-voice-ru-denis](https://aur.archlinux.org/packages/sherpa-onnx-piper-voice-ru-denis) | 20251202 | github-asset | — | ✅ up to date |
