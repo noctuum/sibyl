@@ -49,6 +49,7 @@ teardown() {
 
   run "$TEST_TMPDIR/strategies/github-release.sh" "test-nomatch"
   [ "$status" -ne 0 ]
+  [[ "$output" == *"tag_version_regex 'docker-v(.*)' did not match tag '0.1.8-stable'"* ]]
 }
 
 # === github-tag ===
@@ -246,6 +247,16 @@ teardown() {
   [ "$output" = "7.0.0" ]
 }
 
+@test "webpage-scrape: a pattern may hold a slash" {
+  create_test_package "test-scrape-path" "webpage-scrape" "upstream:
+  url: https://example.com/releases
+  pattern: 'download/test-scrape-([0-9.]+)\\.tar\\.gz'"
+
+  run "$TEST_TMPDIR/strategies/webpage-scrape.sh" "test-scrape-path"
+  [ "$status" -eq 0 ]
+  [ "$output" = "7.0.0" ]
+}
+
 # === git-latest ===
 
 @test "git-latest: returns rCOUNT.HASH format from git repo" {
@@ -263,12 +274,55 @@ teardown() {
 
   create_test_package "test-git" "git-latest" "upstream:
   type: git
-  url: ${fake_repo}"
+  url: https://git.example.com/repo.git"
+
+  # git that clones the fake repo in place of the URL, and logs the
+  # protocols the strategy allows
+  cat >"$MOCK_DIR/git" <<EOF
+#!/usr/bin/env bash
+if [[ "\$1" == "clone" ]]; then
+  echo "\${GIT_ALLOW_PROTOCOL:-unset} \${@: -2:1}" >>"$TEST_TMPDIR/git-clone"
+  exec env -u GIT_ALLOW_PROTOCOL /usr/bin/git clone "\${@:2:\$#-3}" "$fake_repo" "\${@: -1}"
+fi
+exec /usr/bin/git "\$@"
+EOF
+  chmod +x "$MOCK_DIR/git"
 
   run "$TEST_TMPDIR/strategies/git-latest.sh" "test-git"
   [ "$status" -eq 0 ]
   # Should match r3.<7-char-hash>
   [[ "$output" =~ ^r3\.[0-9a-f]{7}$ ]]
+  [ "$(cat "$TEST_TMPDIR/git-clone")" = "http:https https://git.example.com/repo.git" ]
+}
+
+@test "git-latest: refuses a local repository" {
+  git init -q "$TEST_TMPDIR/local-repo"
+  git -C "$TEST_TMPDIR/local-repo" -c user.name=test -c user.email=test@test \
+    commit -q --allow-empty -m "commit 1"
+  create_test_package "test-git-file" "git-latest" "upstream:
+  type: git
+  url: file://$TEST_TMPDIR/local-repo"
+
+  run "$TEST_TMPDIR/strategies/git-latest.sh" "test-git-file"
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"transport 'file' not allowed"* ]]
+}
+
+@test "git-latest: refuses an ssh URL without connecting" {
+  cat >"$MOCK_DIR/ssh" <<EOF
+#!/usr/bin/env bash
+echo "\$*" >>"$TEST_TMPDIR/ssh.args"
+exit 255
+EOF
+  chmod +x "$MOCK_DIR/ssh"
+  create_test_package "test-git-ssh" "git-latest" "upstream:
+  type: git
+  url: ssh://git.example.com/repo.git"
+
+  run "$TEST_TMPDIR/strategies/git-latest.sh" "test-git-ssh"
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"transport 'ssh' not allowed"* ]]
+  [ ! -e "$TEST_TMPDIR/ssh.args" ]
 }
 
 # === github-nightly ===
@@ -316,6 +370,49 @@ teardown() {
   run "$TEST_TMPDIR/strategies/github-nightly.sh" "test-nightly-d"
   [ "$status" -eq 0 ]
   [[ "$output" == "nightly-2026-03-26" ]]
+}
+
+@test "github-nightly: a channel with a double quote matches the release name" {
+  create_test_package "test-nightly-quote-d" "github-nightly" "upstream:
+  project: owner/quoted-repo
+  channel: 'Beta \"b\"'
+  version_source: tag"
+
+  run "$TEST_TMPDIR/strategies/github-nightly.sh" "test-nightly-quote-d"
+  [ "$status" -eq 0 ]
+  [ "$output" = "2.0.0" ]
+}
+
+@test "github-nightly: a nightly_tag with a double quote matches the tag" {
+  create_test_package "test-nightly-quote-b" "github-nightly" "upstream:
+  project: owner/quoted-repo
+  nightly_tag: 'nightly-\"q\"'
+  version_source: tag_date"
+
+  run "$TEST_TMPDIR/strategies/github-nightly.sh" "test-nightly-quote-b"
+  [ "$status" -eq 0 ]
+  [ "$output" = "2026.04.01" ]
+}
+
+@test "github-nightly: fails when the tag holds no date" {
+  create_test_package "test-nightly-nodate" "github-nightly" "upstream:
+  project: owner/repo
+  version_source: tag_date"
+
+  run "$TEST_TMPDIR/strategies/github-nightly.sh" "test-nightly-nodate"
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"Could not extract version from nightly release"* ]]
+}
+
+@test "github-nightly: fails when version_pattern matches nothing in the body" {
+  create_test_package "test-nightly-nomatch" "github-nightly" "upstream:
+  project: owner/repo
+  version_source: release_body
+  version_pattern: 'NOMATCH v\\K\\S+'"
+
+  run "$TEST_TMPDIR/strategies/github-nightly.sh" "test-nightly-nomatch"
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"Could not extract version from nightly release"* ]]
 }
 
 @test "github-nightly: published_date version source" {
@@ -384,8 +481,9 @@ teardown() {
 
   cd "$TEST_TMPDIR"
   run "$TEST_TMPDIR/strategies/webpage-scrape.sh" "test-scrape-exec"
-  [ "$status" -ne 0 ]
   [ ! -e "$TEST_TMPDIR/pwned" ]
+  [ "$status" -eq 0 ]
+  [ "$output" = "7" ]
 }
 
 @test "webpage-scrape: a pattern may start with a dash" {
@@ -452,7 +550,7 @@ teardown() {
   [[ "$output" == *"not found"* ]]
 }
 
-@test "github-asset: fails when the release tag does not exist" {
+@test "github-asset: fails on a body without assets" {
   create_test_package "test-asset-404" "github-asset" "upstream:
   project: null-owner/null-repo
   tag: models
@@ -576,11 +674,12 @@ run_github_strategies() {
 @test "strategy fails gracefully on unknown package" {
   run "$TEST_TMPDIR/strategies/github-release.sh" "nonexistent-package"
   [ "$status" -ne 0 ]
+  [[ "$output" == *"Package not found: "*"/packages/nonexistent-package.yml"* ]]
 }
 
 # === Error handling: null/empty API responses ===
 
-@test "github-release: fails on null tag_name (404 response)" {
+@test "github-release: fails on a body without tag_name" {
   create_test_package "test-null" "github-release" "upstream:
   project: null-owner/null-repo"
 
@@ -668,6 +767,7 @@ run_github_strategies() {
 
   run "$TEST_TMPDIR/strategies/kde-tarball.sh" "no-versions-here"
   [ "$status" -ne 0 ]
+  [[ "$output" == *"No versions found at "* ]]
 }
 
 @test "webpage-scrape: fails on missing url" {
@@ -676,6 +776,7 @@ run_github_strategies() {
 
   run "$TEST_TMPDIR/strategies/webpage-scrape.sh" "test-nourl"
   [ "$status" -ne 0 ]
+  [[ "$output" == *"Only HTTPS URLs supported: null"* ]]
 }
 
 @test "webpage-scrape: fails on missing pattern" {
@@ -684,6 +785,7 @@ run_github_strategies() {
 
   run "$TEST_TMPDIR/strategies/webpage-scrape.sh" "test-nopat"
   [ "$status" -ne 0 ]
+  [[ "$output" == *"No versions matched pattern 'null'"* ]]
 }
 
 @test "webpage-scrape: fails on non-HTTPS url" {
@@ -703,6 +805,7 @@ run_github_strategies() {
 
   run "$TEST_TMPDIR/strategies/webpage-scrape.sh" "test-nomatch"
   [ "$status" -ne 0 ]
+  [[ "$output" == *"No versions matched pattern "*" at https://example.com/empty-page"* ]]
 }
 
 @test "git-latest: fails on unknown upstream type" {
@@ -761,6 +864,22 @@ EOF
   run "$TEST_TMPDIR/strategies/github-release.sh" "test-neterr"
   [ "$status" -ne 0 ]
   [[ "$output" == *"Failed to fetch"* ]]
+}
+
+@test "github-release: fails on a 404 (curl exit 22)" {
+  create_test_package "test-404" "github-release" "upstream:
+  project: owner/repo"
+
+  # curl -sf prints nothing on a 404 and exits 22
+  cat >"$TEST_TMPDIR/mock-bin/curl" <<'EOF'
+#!/usr/bin/env bash
+exit 22
+EOF
+  chmod +x "$TEST_TMPDIR/mock-bin/curl"
+
+  run "$TEST_TMPDIR/strategies/github-release.sh" "test-404"
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"Failed to fetch latest release for owner/repo"* ]]
 }
 
 @test "github-asset: fails on curl network error" {

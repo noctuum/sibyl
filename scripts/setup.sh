@@ -85,13 +85,14 @@ load_config() {
   fi
 }
 
+# load_config sources the file, so each value is written shell-quoted
 save_config() {
-  cat >"$CONFIG_FILE" <<EOF
-GIT_AUTHOR_NAME="${GIT_AUTHOR_NAME}"
-GIT_AUTHOR_EMAIL="${GIT_AUTHOR_EMAIL}"
-GPG_KEY_ID="${GPG_KEY_ID}"
-AUR_SSH_KEY="${AUR_SSH_KEY}"
-EOF
+  {
+    printf 'GIT_AUTHOR_NAME=%s\n' "${GIT_AUTHOR_NAME@Q}"
+    printf 'GIT_AUTHOR_EMAIL=%s\n' "${GIT_AUTHOR_EMAIL@Q}"
+    printf 'GPG_KEY_ID=%s\n' "${GPG_KEY_ID@Q}"
+    printf 'AUR_SSH_KEY=%s\n' "${AUR_SSH_KEY@Q}"
+  } >"$CONFIG_FILE"
   ok "Config saved to .aurtomator.conf"
 }
 
@@ -153,7 +154,12 @@ setup_ssh() {
   if [[ "$key_check" == ssh-* ]]; then
     ok "SSH key: $AUR_SSH_KEY"
   elif echo "$key_check" | grep -qi "incorrect passphrase"; then
-    ok "SSH key: $AUR_SSH_KEY (passphrase-protected)"
+    fail "SSH key has a passphrase: $AUR_SSH_KEY"
+    printf "\n  CI uses the key without a prompt. Remove the passphrase from a copy:\n"
+    printf "    cp %s %s-ci\n" "$AUR_SSH_KEY" "$AUR_SSH_KEY"
+    printf "    ssh-keygen -p -N '' -f %s-ci\n" "$AUR_SSH_KEY"
+    printf "    ./scripts/setup.sh ssh --ssh-key %s-ci\n\n" "$AUR_SSH_KEY"
+    return 1
   else
     fail "Not a valid private key: $AUR_SSH_KEY"
     return 1
@@ -436,7 +442,7 @@ verify_all() {
     ok "Identity: $GIT_AUTHOR_NAME <$GIT_AUTHOR_EMAIL>"
   else
     fail "Identity: git author name/email not configured"
-    ((errors++))
+    errors=$((errors + 1))
   fi
 
   # SSH (AUR returns exit 1 even on success, so check output for "Welcome")
@@ -446,7 +452,7 @@ verify_all() {
     ok "SSH: aur.archlinux.org accessible"
   else
     fail "SSH: cannot connect to aur.archlinux.org"
-    ((errors++))
+    errors=$((errors + 1))
   fi
 
   # GPG (only if configured)
@@ -455,7 +461,7 @@ verify_all() {
       ok "GPG: signing works with $GPG_KEY_ID"
     else
       fail "GPG: cannot sign with $GPG_KEY_ID"
-      ((errors++))
+      errors=$((errors + 1))
     fi
   else
     ok "GPG: skipped (not configured)"
@@ -480,7 +486,7 @@ verify_all() {
       ok "Secrets: ${secret_count}/${secret_expected} configured"
     else
       warn "Secrets: ${secret_count}/${secret_expected} configured"
-      ((errors++))
+      errors=$((errors + 1))
     fi
   else
     warn "Secrets: cannot verify (gh not available)"
@@ -492,6 +498,7 @@ verify_all() {
   else
     printf "\n  %s%s%d issue(s) found.%s Fix and re-run:\n" "$YELLOW" "$BOLD" "$errors" "$RESET"
     printf "    ./scripts/setup.sh verify\n\n"
+    return 1
   fi
 }
 
@@ -555,13 +562,16 @@ if [[ ${#STEPS[@]} -eq 5 ]]; then
   FULL_SETUP=true
 fi
 
+# A failed verify still saves the config, so the re-run it suggests has
+# the values of this run
+EXIT_STATUS=0
 for step in "${STEPS[@]}"; do
   case "$step" in
     identity) setup_identity ;;
     ssh) setup_ssh ;;
     gpg) setup_gpg ;;
     secrets) setup_secrets ;;
-    verify) verify_all ;;
+    verify) verify_all || EXIT_STATUS=1 ;;
   esac
   if [[ "$FULL_SETUP" == "false" ]]; then
     save_config
@@ -571,3 +581,4 @@ done
 if [[ "$FULL_SETUP" == "true" ]]; then
   save_config
 fi
+exit "$EXIT_STATUS"

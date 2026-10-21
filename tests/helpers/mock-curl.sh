@@ -12,7 +12,8 @@ done
 case "$url" in
   # --- Specific error/null patterns (must be before wildcards) ---
 
-  # GitHub Release: null tag_name (404 response)
+  # GitHub Release: a body without tag_name. A real 404 is exit 22 with
+  # no body, see the tests of curl exit codes.
   *api.github.com/repos/null-owner/null-repo/releases/latest)
     echo '{"message": "Not Found"}'
     ;;
@@ -56,7 +57,7 @@ case "$url" in
   *example.com/empty-page*)
     echo '<html><body>No downloads here</body></html>'
     ;;
-  # GitHub Asset - release tag missing (404 body)
+  # GitHub Asset: a body without assets
   *api.github.com/repos/null-owner/null-repo/releases/tags/*)
     echo '{"message": "Not Found"}'
     ;;
@@ -70,6 +71,10 @@ case "$url" in
   # Pattern A: fixed nightly tag
   *api.github.com/repos/*/releases/tags/nightly)
     printf '{"tag_name": "nightly", "body": "NVIM v0.12.0-dev+2713+g925e9e8722\\nSome other text", "published_at": "2026-03-27T05:43:19Z"}'
+    ;;
+  # Pattern B+D: release names and tags that hold a double quote
+  *api.github.com/repos/owner/quoted-repo/releases\?per_page=20)
+    echo '[{"tag_name": "v1.0.0", "name": "Stable"}, {"tag_name": "v2.0.0", "name": "Beta \"b\""}, {"tag_name": "nightly-\"q\"-2026-04-01", "name": "Nightly"}]'
     ;;
   # Pattern B+D: releases list (for dated tags and channel filter)
   *api.github.com/repos/*/releases\?per_page=20)

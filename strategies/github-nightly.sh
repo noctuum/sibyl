@@ -37,7 +37,8 @@ tag_version_regex=$(pkg_get "$pkg_file" '.upstream.tag_version_regex // ""')
 
 api="https://api.github.com/repos/${owner_repo}"
 
-# Fetch release based on pattern
+# Fetch release based on pattern. channel and nightly_tag reach yq through
+# the environment so that quotes in them cannot break the expression.
 if [[ "$nightly_tag" == "latest" ]]; then
   # Pattern C: separate nightly repo, use /releases/latest
   release=$(github_api "${api}/releases/latest") || {
@@ -50,14 +51,14 @@ elif [[ -n "$channel" ]]; then
     echo "Failed to fetch releases for ${owner_repo}" >&2
     exit 1
   }
-  release=$(echo "$releases_json" | yq -r "[.[] | select(.name | contains(\"${channel}\"))][0]")
+  release=$(echo "$releases_json" | CHANNEL="$channel" yq -r '[.[] | select(.name | contains(strenv(CHANNEL)))][0]')
 elif [[ "$nightly_tag" == *"-"* && "$nightly_tag" != "nightly" ]]; then
   # Pattern B: dated tags with prefix (e.g. "nightly-")
   releases_json=$(github_api "${api}/releases?per_page=20") || {
     echo "Failed to fetch releases for ${owner_repo}" >&2
     exit 1
   }
-  release=$(echo "$releases_json" | yq -r "[.[] | select(.tag_name | contains(\"${nightly_tag}\"))][0]")
+  release=$(echo "$releases_json" | NIGHTLY_TAG="$nightly_tag" yq -r '[.[] | select(.tag_name | contains(strenv(NIGHTLY_TAG)))][0]')
 else
   # Pattern A: fixed tag (default)
   release=$(github_api "${api}/releases/tags/${nightly_tag}") || {
@@ -89,7 +90,7 @@ case "$version_source" in
     ;;
   tag_date)
     tag=$(echo "$release" | yq -r '.tag_name')
-    version=$(echo "$tag" | grep -oE '[0-9]{4}-[0-9]{2}-[0-9]{2}' | tr '-' '.')
+    version=$(echo "$tag" | grep -oE '[0-9]{4}-[0-9]{2}-[0-9]{2}' | tr '-' '.' || true)
     ;;
   release_body)
     if [[ -z "$version_pattern" ]]; then
@@ -97,7 +98,7 @@ case "$version_source" in
       exit 1
     fi
     body=$(echo "$release" | yq -r '.body')
-    version=$(echo "$body" | grep -oP -e "$version_pattern" | head -1)
+    version=$(echo "$body" | grep -oP -e "$version_pattern" | head -1 || true)
     # Clean up: replace - with + for pacman compatibility
     version="${version//-/+}"
     ;;

@@ -34,6 +34,7 @@ teardown() {
   source "$TEST_TMPDIR/scripts/lib.sh"
   run pkg_file "nonexistent"
   [ "$status" -ne 0 ]
+  [[ "$output" == *"Package not found: "*"/packages/nonexistent.yml"* ]]
 }
 
 @test "lib.sh: pkg_get reads YAML field" {
@@ -356,6 +357,7 @@ current: '2.0.0'"
 @test "check-update: fails on nonexistent package" {
   run "$TEST_TMPDIR/scripts/check-update.sh" "nonexistent"
   [ "$status" -ne 0 ]
+  [[ "$output" == *"Package not found: "*"/packages/nonexistent.yml"* ]]
 }
 
 # === validate_source_urls ===
@@ -442,6 +444,47 @@ MOCKCURL
   [[ "$output" == *"HTML instead of"* ]]
 }
 
+# Helper: a PKGBUILD with one source, and a curl that prints $CURL_W and
+# exits $CURL_RC. Real curl -s prints the -w text and nothing on stderr
+# when it fails.
+mock_source_head() {
+  cat >"$TEST_TMPDIR/PKGBUILD" <<'EOF'
+pkgname=test-status
+pkgver=1.0.0
+pkgrel=1
+arch=('x86_64')
+source=("https://example.com/test-1.0.0.tar.gz")
+sha256sums=('abc123')
+EOF
+  cat >"$MOCK_DIR/curl" <<'MOCKCURL'
+#!/usr/bin/env bash
+printf '%s' "$CURL_W"
+exit "$CURL_RC"
+MOCKCURL
+  chmod +x "$MOCK_DIR/curl"
+}
+
+@test "lib.sh: validate_source_urls reports a refused connection (curl exit 7)" {
+  mock_source_head
+  CURL_RC=7 CURL_W='000 ' run bash -c 'source "$0/scripts/lib.sh"; validate_source_urls "$1" || exit $?' "$TEST_TMPDIR" "$TEST_TMPDIR/PKGBUILD"
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"Source URL unreachable: https://example.com/test-1.0.0.tar.gz"* ]]
+}
+
+@test "lib.sh: validate_source_urls reports a timeout (curl exit 28)" {
+  mock_source_head
+  CURL_RC=28 CURL_W='000 ' run bash -c 'source "$0/scripts/lib.sh"; validate_source_urls "$1" || exit $?' "$TEST_TMPDIR" "$TEST_TMPDIR/PKGBUILD"
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"Source URL unreachable: https://example.com/test-1.0.0.tar.gz"* ]]
+}
+
+@test "lib.sh: validate_source_urls reports a redirect loop (curl exit 47)" {
+  mock_source_head
+  CURL_RC=47 CURL_W='302 text/plain' run bash -c 'source "$0/scripts/lib.sh"; validate_source_urls "$1" || exit $?' "$TEST_TMPDIR" "$TEST_TMPDIR/PKGBUILD"
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"Source URL unreachable: https://example.com/test-1.0.0.tar.gz"* ]]
+}
+
 # === http_get ===
 
 @test "lib.sh: http_get tries a transient failure again" {
@@ -471,15 +514,20 @@ MOCKCURL
 }
 
 @test "lib.sh: validate_pkgver rejects what makepkg forbids in pkgver" {
-  for v in '1.0-1' '1:2.0' '1.0/2' ''; do
+  for v in '1.0-1' '1:2.0' '1.0/2'; do
     run bash -c 'source "$0/scripts/lib.sh"; validate_pkgver "$1"' "$TEST_TMPDIR" "$v"
     [ "$status" -eq 1 ]
+    [[ "$output" == *"Version string rejected, only A-Za-z0-9 . _ + are allowed"* ]]
   done
+  run bash -c 'source "$0/scripts/lib.sh"; validate_pkgver "$1"' "$TEST_TMPDIR" ''
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"Version string is empty"* ]]
 }
 
 @test "lib.sh: validate_pkgver rejects non-ASCII" {
   run bash -c 'source "$0/scripts/lib.sh"; validate_pkgver "$1"' "$TEST_TMPDIR" '1.0в'
   [ "$status" -eq 1 ]
+  [[ "$output" == *"Version string rejected, only A-Za-z0-9 . _ + are allowed"* ]]
 }
 
 @test "check-update: rejects an injected version from the strategy" {
@@ -582,6 +630,36 @@ EOF
   run "$TEST_TMPDIR/scripts/check-all.sh"
   [ "$status" -eq 0 ]
   [[ "$output" == *"Checked: 0"* ]]
+}
+
+# === project path with a space ===
+
+# Helper: a project at "$TEST_TMPDIR/my project" with the scripts and
+# strategies of the test project and one package, pkg, that is up to date
+make_spaced_project() {
+  SPACED="$TEST_TMPDIR/my project"
+  mkdir -p "$SPACED/packages"
+  ln -s "$TEST_TMPDIR/scripts" "$SPACED/scripts"
+  ln -s "$TEST_TMPDIR/strategies" "$SPACED/strategies"
+  printf '%s\n' "name: pkg" "strategy: github-release" "upstream:" "  project: owner/repo" \
+    "current: '2.0.0'" >"$SPACED/packages/pkg.yml"
+}
+
+@test "check-all: finds the packages of a project whose path has a space" {
+  make_spaced_project
+  run "$SPACED/scripts/check-all.sh"
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"Checked: 1, Updated: 0, Errors: 0"* ]]
+  [ "$(cat "$SPACED/.status/pkg")" = "up_to_date" ]
+}
+
+@test "update-readme: lists the packages of a project whose path has a space" {
+  make_spaced_project
+  printf '%s\n' '<!-- PACKAGES:START -->' '<!-- PACKAGES:END -->' >"$SPACED/README.md"
+  git -C "$SPACED" init -q
+  run "$SPACED/scripts/update-readme.sh"
+  [ "$status" -eq 0 ]
+  grep -q '\[pkg\]' "$SPACED/README.md"
 }
 
 # === update-readme.sh ===
@@ -1096,6 +1174,7 @@ EOF
 @test "update-pkg: fails on nonexistent package" {
   run "$TEST_TMPDIR/scripts/update-pkg.sh" "nonexistent" "1.0.0"
   [ "$status" -ne 0 ]
+  [[ "$output" == *"Package not found: "*"/packages/nonexistent.yml"* ]]
 }
 
 @test "update-pkg: fails when AUR clone fails" {
@@ -1232,6 +1311,10 @@ pkgver() {
 }
 EOF
   git -C "$aur_dir" add . && git -C "$aur_dir" commit -q -m "init"
+  # A bare remote, so the push of the copied clone succeeds
+  git init --bare -q "$TEST_TMPDIR/aur-bare-test-vcs-ok.git"
+  git -C "$aur_dir" remote add origin "$TEST_TMPDIR/aur-bare-test-vcs-ok.git"
+  git -C "$aur_dir" push -q -u origin HEAD
 
   cat > "$MOCK_DIR/git" <<MOCKGIT
 #!/usr/bin/env bash
@@ -1250,10 +1333,10 @@ echo "pkgname = test-vcs-ok"
 EOF
   chmod +x "$MOCK_DIR/makepkg"
 
-  # Should pass audit (pkgver() + git-latest = OK)
-  # Will fail at git push (no remote) but should get past audit
+  # pkgver() with the git-latest strategy passes the audit
   run "$TEST_TMPDIR/scripts/update-pkg.sh" "test-vcs-ok" "r200.def5678"
-  [[ "$output" == *"VCS package, skipping checksums"* ]] || [[ "$output" == *"Generating .SRCINFO"* ]]
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"Pushed test-vcs-ok r200.def5678 to AUR"* ]]
 }
 
 @test "update-pkg: validate_source_urls blocks HTML responses" {
@@ -1308,8 +1391,18 @@ MOCKCURL
   [[ "$output" == *"Source URL returns HTML"* ]] || [[ "$output" == *"Source URL validation failed"* ]]
 }
 
+# Helper: skip without namcap, except in CI, which installs it
+require_namcap() {
+  command -v namcap &>/dev/null && return 0
+  if [[ -n "${CI:-}" ]]; then
+    echo "namcap is not installed, and CI installs it" >&2
+    return 1
+  fi
+  skip "namcap not installed"
+}
+
 @test "update-pkg: namcap blocks on real errors (missing pkgdesc)" {
-  command -v namcap &>/dev/null || skip "namcap not installed"
+  require_namcap
 
   create_test_package "test-namcap" "github-release" "upstream:
   project: owner/repo
@@ -1379,7 +1472,7 @@ EOF
 }
 
 @test "update-pkg: namcap passes with real warnings only (missing Maintainer)" {
-  command -v namcap &>/dev/null || skip "namcap not installed"
+  require_namcap
 
   create_test_package "test-namcap-warn" "github-release" "upstream:
   project: owner/repo
@@ -1516,15 +1609,17 @@ echo "pkgname = test-detached"
 EOF
   chmod +x "$MOCK_DIR/makepkg"
 
-  # Remove namcap mock so the namcap block is skipped gracefully
-  rm -f "$MOCK_DIR/namcap"
+  # namcap that finds nothing
+  printf '#!/usr/bin/env bash\nexit 0\n' >"$MOCK_DIR/namcap"
+  chmod +x "$MOCK_DIR/namcap"
 
   run "$TEST_TMPDIR/scripts/update-pkg.sh" "test-detached" "2.0.0"
-  # Detected + logged
+  [ "$status" -eq 0 ]
   [[ "$output" == *"Detached HEAD after clone"* ]]
   [[ "$output" == *"Re-basing on origin/master"* ]]
-  # Proceeded past the self-heal block (reached later stages)
-  [[ "$output" == *"Updating pkgver"* ]] || [[ "$output" == *"Generating .SRCINFO"* ]]
+  [[ "$output" == *"Pushed test-detached 2.0.0 to AUR"* ]]
+  run git -C "$bare_dir" log -1 --format=%s master
+  [[ "$output" == "2.0.0 release from "* ]]
 }
 
 @test "update-pkg: fails loudly on detached HEAD when origin/master is absent" {
@@ -1591,6 +1686,7 @@ MOCKGIT
 
   run "$TEST_TMPDIR/scripts/validate-pkg.sh" "bad-pkg"
   [ "$status" -ne 0 ]
+  [[ "$output" == *"unknown strategy 'nonexistent'"* ]]
 }
 
 # === updpkgsums dependency ===
@@ -1621,9 +1717,14 @@ b2sums=('abc123')
 EOF
   git -C "$aur_dir" add . && git -C "$aur_dir" commit -q -m "init"
 
-  # Remove updpkgsums from PATH to simulate CI without pacman-contrib
-  CLEAN_PATH=$(echo "$PATH" | tr ':' '\n' | grep -v mock | tr '\n' ':')
-  
+  # The source URL answers as a download, so the run reaches the checksums
+  printf '#!/usr/bin/env bash\nprintf "200 application/octet-stream"\n' >"$MOCK_DIR/curl"
+  chmod +x "$MOCK_DIR/curl"
+  # /usr/bin without updpkgsums, as on a system without pacman-contrib
+  mkdir "$TEST_TMPDIR/usr-bin"
+  ln -s /usr/bin/* "$TEST_TMPDIR/usr-bin/"
+  rm -f "$TEST_TMPDIR/usr-bin/updpkgsums"
+
   # Mock git clone to return our fake AUR dir
   mkdir -p "$MOCK_DIR"
   cat > "$MOCK_DIR/git" <<MOCKGIT
@@ -1637,8 +1738,9 @@ MOCKGIT
   chmod +x "$MOCK_DIR/git"
 
   # update-pkg fails without updpkgsums
-  run env PATH="$MOCK_DIR:/usr/bin" "$TEST_TMPDIR/scripts/update-pkg.sh" "test-checksums" "2.0.0"
-  [ "$status" -ne 0 ]
+  run env PATH="$MOCK_DIR:$TEST_TMPDIR/usr-bin" "$TEST_TMPDIR/scripts/update-pkg.sh" "test-checksums" "2.0.0"
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"Required command not found: updpkgsums"* ]]
 }
 
 @test "update-pkg: skips checksums for VCS packages (SKIP pattern)" {
@@ -1666,6 +1768,10 @@ source=("git+https://example.com/repo.git")
 sha256sums=('SKIP')
 EOF
   git -C "$aur_dir" add . && git -C "$aur_dir" commit -q -m "init"
+  # A bare remote, so the push of the copied clone succeeds
+  git init --bare -q "$TEST_TMPDIR/aur-bare-test-vcs.git"
+  git -C "$aur_dir" remote add origin "$TEST_TMPDIR/aur-bare-test-vcs.git"
+  git -C "$aur_dir" push -q -u origin HEAD
 
   # Mock git clone
   cat > "$MOCK_DIR/git" <<MOCKGIT
@@ -1688,8 +1794,9 @@ EOF
 
   # Should skip updpkgsums and not fail
   run "$TEST_TMPDIR/scripts/update-pkg.sh" "test-vcs" "r200.def5678"
-  # Will fail at git push (no remote) but should get past checksums
-  [[ "$output" == *"VCS package, skipping checksums"* ]] || [[ "$output" == *"Generating .SRCINFO"* ]]
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"VCS package, skipping checksums"* ]]
+  [[ "$output" == *"Pushed test-vcs r200.def5678 to AUR"* ]]
 }
 
 @test "update-pkg: skips checksums for arch-specific SKIP arrays" {

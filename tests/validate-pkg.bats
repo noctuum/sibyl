@@ -68,6 +68,24 @@ teardown() {
   [ "$status" -eq 0 ]
 }
 
+@test "validate: git-latest git type fails on a URL without HTTPS" {
+  create_test_package "mypkg" "git-latest" "upstream:
+  type: git
+  url: file:///srv/repo"
+  run "$TEST_TMPDIR/scripts/validate-pkg.sh" "mypkg"
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"upstream.url must use HTTPS: file:///srv/repo"* ]]
+}
+
+@test "validate: git-latest git type fails on an HTTP URL" {
+  create_test_package "mypkg" "git-latest" "upstream:
+  type: git
+  url: http://git.example.com/repo.git"
+  run "$TEST_TMPDIR/scripts/validate-pkg.sh" "mypkg"
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"upstream.url must use HTTPS: http://git.example.com/repo.git"* ]]
+}
+
 @test "validate: pypi passes" {
   create_test_package "mypkg" "pypi" "upstream:
   registry: requests"
@@ -369,6 +387,7 @@ EOF
 @test "validate: fails on nonexistent package" {
   run "$TEST_TMPDIR/scripts/validate-pkg.sh" "nonexistent"
   [ "$status" -ne 0 ]
+  [[ "$output" == *"Package not found: "*"/packages/nonexistent.yml"* ]]
 }
 
 # === Regex validation ===
@@ -385,6 +404,27 @@ EOF
   create_test_package "mypkg" "webpage-scrape" "upstream:
   url: https://example.com/releases
   pattern: '-([0-9]+\\.[0-9]+)\\.tar\\.gz'"
+  run "$TEST_TMPDIR/scripts/validate-pkg.sh" "mypkg"
+  [ "$status" -eq 0 ]
+}
+
+# grep -E takes these and bash refuses them
+@test "validate: webpage-scrape rejects a pattern that bash cannot compile" {
+  local pattern
+  for pattern in '(?:v)?pkg-([0-9.]+)' '*pkg-([0-9.]+)' 'pkg-([0-9]{1)'; do
+    create_test_package "mypkg" "webpage-scrape" "upstream:
+  url: https://example.com/releases
+  pattern: '$pattern'"
+    run "$TEST_TMPDIR/scripts/validate-pkg.sh" "mypkg"
+    [ "$status" -ne 0 ]
+    [[ "$output" == *"not valid ERE regex"* ]]
+  done
+}
+
+@test "validate: webpage-scrape accepts a pattern with a slash" {
+  create_test_package "mypkg" "webpage-scrape" "upstream:
+  url: https://example.com/releases
+  pattern: 'download/pkg-([0-9.]+)\\.tar\\.gz'"
   run "$TEST_TMPDIR/scripts/validate-pkg.sh" "mypkg"
   [ "$status" -eq 0 ]
 }

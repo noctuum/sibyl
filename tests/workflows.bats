@@ -95,6 +95,22 @@ run_blocks() {
   done
 }
 
+@test "ci: the lint job runs actionlint on the workflows" {
+  run yq '[.jobs.lint.steps[] | select(.run == "actionlint")] | length' "$GITHUB_DIR/workflows/ci.yml"
+  [ "$status" -eq 0 ]
+  [ "$output" = "1" ]
+}
+
+@test "ci: the test job runs the suite once, under bashcov, and fails with it" {
+  run yq '[.jobs.test.steps[] | select(has("run")) | .run | select(test("bats tests/"))] | length' "$GITHUB_DIR/workflows/ci.yml"
+  [ "$status" -eq 0 ]
+  [ "$output" = "1" ]
+  run yq '.jobs.test.steps[] | select(has("run")) | .run | select(test("bats tests/"))' "$GITHUB_DIR/workflows/ci.yml"
+  [ "$status" -eq 0 ]
+  [[ "$output" == "bashcov -- bats tests/ --recursive"* ]]
+  [[ "$output" != *"|| true"* ]]
+}
+
 @test "merge-image: runs only after lint and test" {
   run yq '.jobs["merge-image"].needs | sort | join(" ")' "$GITHUB_DIR/workflows/ci.yml"
   [ "$status" -eq 0 ]
@@ -191,7 +207,7 @@ run_decide_step() {
     printf '%s\n' "${pair#*=}" >"$ws/.status/${pair%%=*}"
   done
   printf '#!/bin/sh\nexit 0\n' >"$bin/sudo"
-  printf '#!/bin/sh\n[ -z "$README_CHANGED" ]\n' >"$bin/git"
+  printf '#!/bin/sh\n[ -z "${README_CHANGED:-}" ]\n' >"$bin/git"
   chmod +x "$bin/sudo" "$bin/git"
   step_run check Decide >"$BATS_TEST_TMPDIR/step.sh"
   : >"$BATS_TEST_TMPDIR/output"
@@ -410,7 +426,7 @@ while (($#)); do
   esac
   shift
 done
-titles=$(grep -v '^$' <<<"${GH_TITLES:-}" | head -n "$limit")
+titles=$(grep -v '^$' <<<"${GH_TITLES:-}" | head -n "$limit") || true
 case "$jq_expr" in
   length) grep -c . <<<"$titles" ;;
   ".[].title") [[ -z "$titles" ]] || printf '%s\n' "$titles" ;;
@@ -482,6 +498,111 @@ EOF
   run_issue_step foo=up_to_date bar="new_version: 2.0.0"
   [ "$status" -eq 0 ]
   [ ! -s "$GH_LOG" ]
+}
+
+# Runs the close step of publish in a workspace with the statuses given as
+# name=status pairs. gh lists the open issues in $GH_OPEN, one
+# "<number> <title>" per line, the first 30 unless --limit says otherwise,
+# answers has_issues with $GH_HAS_ISSUES (true by default), fails the list
+# when $GH_FAIL is set and logs every call to $GH_LOG.
+run_close_step() {
+  local ws="$BATS_TEST_TMPDIR/ws" bin="$BATS_TEST_TMPDIR/bin" pair
+  mkdir -p "$ws/.status" "$bin"
+  for pair in "$@"; do
+    printf '%s\n' "${pair#*=}" >"$ws/.status/${pair%%=*}"
+  done
+  cat >"$bin/gh" <<'EOF'
+#!/usr/bin/env bash
+printf '%s\n' "$*" >>"$GH_LOG"
+case "$1 $2" in
+  "api repos/owner/fork") echo "${GH_HAS_ISSUES:-true}" ;;
+  "issue list")
+    [[ -z "${GH_FAIL:-}" ]] || exit 1
+    limit=30
+    while (($#)); do
+      [[ "$1" != --limit ]] || limit=$2
+      shift
+    done
+    [[ -z "${GH_OPEN:-}" ]] || head -n "$limit" <<<"$GH_OPEN"
+    ;;
+esac
+EOF
+  chmod +x "$bin/gh"
+  GH_LOG="$BATS_TEST_TMPDIR/gh.log"
+  : >"$GH_LOG"
+  step_run publish "Close issues of recovered packages" >"$BATS_TEST_TMPDIR/step.sh"
+  run env -C "$ws" PATH="$bin:$PATH" GH_LOG="$GH_LOG" GH_OPEN="${GH_OPEN:-}" GH_FAIL="${GH_FAIL:-}" \
+    GH_HAS_ISSUES="${GH_HAS_ISSUES:-}" GITHUB_REPOSITORY=owner/fork \
+    RUN_URL=https://example.invalid/run sh -e "$BATS_TEST_TMPDIR/step.sh"
+}
+
+@test "check-updates: the close step runs before the issue step, and not after a failed step" {
+  run yq '[.jobs.publish.steps[].name] | join(",")' "$CHECK_UPDATES"
+  [[ "$output" == *"Close issues of recovered packages,Create issues for failed packages" ]]
+  run yq '.jobs.publish.steps[] | select(.name == "Close issues of recovered packages") | has("if")' "$CHECK_UPDATES"
+  [ "$output" = "false" ]
+}
+
+@test "check-updates: the close step finds an open issue behind 30 others" {
+  local i
+  GH_OPEN="$(for i in {1..30}; do echo "$i ❌ pkg$i: check failed"; done)"$'\n31 ❌ foo: check failed' \
+    run_close_step foo=up_to_date
+  [ "$status" -eq 0 ]
+  grep -q '^issue close 31 ' "$GH_LOG"
+}
+
+@test "check-updates: closes the check issue of a package whose check passed" {
+  GH_OPEN=$'12 ❌ foo: check failed\n13 ❌ bar: check failed' \
+    run_close_step foo=up_to_date bar="new_version: 2.0.0" _error_count=0
+  [ "$status" -eq 0 ]
+  grep -qx 'issue close 12 --comment The status of foo is `up_to_date` in https://example.invalid/run.' "$GH_LOG"
+  grep -qx 'issue close 13 --comment The status of bar is `new_version: 2.0.0` in https://example.invalid/run.' "$GH_LOG"
+}
+
+@test "check-updates: closes the update issue of a package that reached the AUR" {
+  GH_OPEN=$'12 ❌ foo: update failed\n13 ❌ bar: update failed\n14 ❌ baz: update failed' \
+    run_close_step foo=up_to_date bar="updated: 2.0.0" baz="downgrade: 1.0.0"
+  [ "$status" -eq 0 ]
+  run grep -c '^issue close' "$GH_LOG"
+  [ "$output" = "3" ]
+}
+
+@test "check-updates: keeps the update issue of a package that has not reached the AUR" {
+  GH_OPEN=$'12 ❌ foo: update failed\n13 ❌ bar: update failed\n14 ❌ baz: update failed' \
+    run_close_step foo="new_version: 2.0.0" bar="downgrade_skipped: 1.0.0" baz="update_failed: boom"
+  [ "$status" -eq 0 ]
+  run grep -c '^issue close' "$GH_LOG"
+  [ "$output" = "0" ]
+}
+
+@test "check-updates: keeps the issues of a package whose check still fails" {
+  GH_OPEN=$'12 ❌ foo: check failed\n13 ❌ foo: update failed' \
+    run_close_step foo="check_failed: API down"
+  [ "$status" -eq 0 ]
+  run grep -c '^issue close' "$GH_LOG"
+  [ "$output" = "0" ]
+}
+
+@test "check-updates: closes no issue of another package" {
+  GH_OPEN=$'12 ❌ foo-bar: check failed\n13 ❌ Check AUR Package Updates failed' \
+    run_close_step foo=up_to_date
+  [ "$status" -eq 0 ]
+  run grep -c '^issue close' "$GH_LOG"
+  [ "$output" = "0" ]
+}
+
+@test "check-updates: the close step lists nothing when Issues are disabled" {
+  GH_HAS_ISSUES=false GH_FAIL=1 run_close_step foo=up_to_date
+  [ "$status" -eq 0 ]
+  run grep -c '^issue ' "$GH_LOG"
+  [ "$output" = "0" ]
+}
+
+@test "check-updates: the close step fails when the open issues cannot be listed" {
+  GH_FAIL=1 run_close_step foo=up_to_date
+  [ "$status" -ne 0 ]
+  run grep -c '^issue close' "$GH_LOG"
+  [ "$output" = "0" ]
 }
 
 @test "check-updates: verify runs as builder and hands over as prepare does" {

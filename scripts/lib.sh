@@ -133,6 +133,30 @@ release_tags() {
   grep -E '^v?[0-9]+(\.[0-9]+)*$' <<<"$1" || true
 }
 
+# The first capture group of every match of an ERE in stdin, one per line.
+# grep finds the matches and bash takes the group, so no delimiter of a sed
+# command limits the pattern.
+# Args: $1=ERE with a capture group
+capture_matches() {
+  local pattern="$1" match
+  while IFS= read -r match; do
+    if [[ "$match" =~ $pattern ]]; then
+      printf '%s\n' "${BASH_REMATCH[1]}"
+    fi
+  done < <(grep -oE -e "$pattern")
+}
+
+# Succeeds when bash accepts an ERE, as capture_matches needs. bash refuses
+# some patterns that grep -E takes, (?:x) and *x among them.
+# Args: $1=ERE
+ere_valid() {
+  local rc=0
+  # [[ =~ ]] returns 2 for a pattern bash cannot compile
+  # shellcheck disable=SC2319
+  [[ "" =~ $1 ]] 2>/dev/null || rc=$?
+  ((rc != 2))
+}
+
 # =============================================================================
 # CHECKSUMS
 # =============================================================================
@@ -916,10 +940,13 @@ verify_prepared_sums() {
 # where links, images and mentions do not render. The fence is longer than
 # any run of backticks in the error, so the error cannot close it. The
 # error is cut to its last 4000 characters, where the cause usually is.
+# The job containers run in the C locale, where bash counts bytes, so the
+# cut could split a character.
 # Args: $1=status file in .status/, named after the package, holding
 #       check_failed: ... or update_failed: ...; $2=URL of the run
 failure_issue_body() {
   local status kind error fence='```' limit=4000
+  local LC_ALL=C.UTF-8
   status=$(<"$1")
   kind="${status%%:*}"
   error="${status#*: }"
@@ -931,7 +958,7 @@ failure_issue_body() {
   done
   # The backticks are Markdown code around the package name
   # shellcheck disable=SC2016
-  printf 'Package: `%s`\nStatus: %s\nRun: %s\n\n%s\n%s\n%s\n\nAuto-created by update workflow. Close after fixing.\n' \
+  printf 'Package: `%s`\nStatus: %s\nRun: %s\n\n%s\n%s\n%s\n\nAuto-created by update workflow. A run closes it when the package recovers.\n' \
     "${1##*/}" "${kind//_/ }" "$2" "$fence" "$error" "$fence"
 }
 

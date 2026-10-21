@@ -237,6 +237,7 @@ current: '1.0.0'"
   sed -i 's|https://example.com/demo|https://evil.example/demo|' "$PREPARED/PKGBUILD"
   run "$TEST_TMPDIR/scripts/publish-pkg.sh" demo 1.1.0 "$PREPARED"
   [ "$status" -eq 1 ]
+  [[ "$output" == *"Prepared PKGBUILD changes lines outside pkgver, pkgrel and checksums"* ]]
   [ "$(git -C "$AUR_REMOTE" rev-parse HEAD)" = "$AUR_BASE" ]
   [ "$(pkg_get "$TEST_TMPDIR/packages/demo.yml" .current)" = "1.0.0" ]
 }
@@ -257,6 +258,7 @@ current: '1.0.0'"
   ln -s "$TEST_TMPDIR/real-prepared" "$PREPARED"
   run "$TEST_TMPDIR/scripts/publish-pkg.sh" demo 1.1.0 "$PREPARED"
   [ "$status" -eq 1 ]
+  [[ "$output" == *"Prepared directory is missing or a symlink"* ]]
   [ "$(git -C "$AUR_REMOTE" rev-parse HEAD)" = "$AUR_BASE" ]
 }
 
@@ -282,6 +284,7 @@ current: '1.0.0'"
   setup_publish
   run "$TEST_TMPDIR/scripts/publish-pkg.sh" demo '1.1.0;id' "$PREPARED"
   [ "$status" -eq 1 ]
+  [[ "$output" == *"Version string rejected, only A-Za-z0-9 . _ + are allowed: '1.1.0;id'"* ]]
   [ ! -f "$TEST_TMPDIR/clone-urls" ]
 }
 
@@ -433,6 +436,26 @@ commit_aur_state() {
   [[ "$output" == *"Could not download"* ]]
 }
 
+@test "verify-pkg: refuses a local source that is a symlink in the AUR repo" {
+  setup_verify
+  ln -sf /etc/hostname "$TEST_TMPDIR/aur-work-demo/local.patch"
+  commit_aur_state "local.patch as a symlink"
+  run "$TEST_TMPDIR/scripts/verify-pkg.sh" demo "$PREPARED"
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"Source local.patch is a symlink or not a regular file in the AUR repo"* ]]
+}
+
+# aur_export writes a symlink as one to /nonexistent; this one leads to a
+# regular file
+@test "_source_file: refuses a local source that links to a regular file" {
+  mkdir "$TEST_TMPDIR/aur" "$TEST_TMPDIR/downloads"
+  echo "patch" >"$TEST_TMPDIR/real.patch"
+  ln -s "$TEST_TMPDIR/real.patch" "$TEST_TMPDIR/aur/local.patch"
+  run _source_file local.patch "$TEST_TMPDIR/aur" "$TEST_TMPDIR/downloads"
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"Source local.patch is a symlink or not a regular file in the AUR repo"* ]]
+}
+
 @test "verify-pkg: refuses a checksum of a source it does not download" {
   setup_verify "file:///etc"
   run "$TEST_TMPDIR/scripts/verify-pkg.sh" demo "$PREPARED"
@@ -576,6 +599,24 @@ use_source() {
   [[ "$output" == *"demo.git#tag=v1.1.0"* ]]
 }
 
+@test "verify-pkg: refuses a git source it cannot clone" {
+  setup_verify
+  # No make_upstream, so the mirror clone finds no repository
+  use_source "demo::git+https://example.com/demo.git#tag=vVER"
+  run "$TEST_TMPDIR/scripts/verify-pkg.sh" demo "$PREPARED"
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"Could not clone https://example.com/demo.git"* ]]
+}
+
+@test "verify-pkg: refuses a git tag the repository does not have" {
+  setup_verify
+  make_upstream
+  use_source "demo::git+https://example.com/demo.git#tag=releaseVER"
+  run "$TEST_TMPDIR/scripts/verify-pkg.sh" demo "$PREPARED"
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"Could not archive release1.1.0 of https://example.com/demo.git"* ]]
+}
+
 @test "verify-pkg: refuses a checksum of a git source at a branch" {
   setup_verify
   make_upstream
@@ -592,6 +633,7 @@ use_source() {
   use_source "demo::git+ssh://example.com/demo.git#tag=vVER"
   run "$TEST_TMPDIR/scripts/verify-pkg.sh" demo "$PREPARED"
   [ "$status" -eq 1 ]
+  [[ "$output" == *"git sources are cloned over https or http only"* ]]
   [ ! -e "$TEST_TMPDIR/git-clone-urls" ]
 }
 
@@ -601,6 +643,7 @@ use_source() {
   use_source "demo::git+https://example.com/demo.git#tag=-vVER"
   run "$TEST_TMPDIR/scripts/verify-pkg.sh" demo "$PREPARED"
   [ "$status" -eq 1 ]
+  [[ "$output" == *"tag=-v1.1.0: makepkg hashes a git source only at a tag or commit"* ]]
   [ ! -e "$TEST_TMPDIR/git-clone-urls" ]
 }
 
@@ -669,6 +712,7 @@ use_source() {
   ln -s "$TEST_TMPDIR/real-prepared" "$PREPARED"
   run "$TEST_TMPDIR/scripts/verify-pkg.sh" demo "$PREPARED"
   [ "$status" -eq 1 ]
+  [[ "$output" == *"Prepared directory is missing or a symlink"* ]]
   [ ! -e "$TEST_TMPDIR/clone-urls" ]
 }
 
@@ -1300,7 +1344,7 @@ Run: https://github.com/owner/repo/actions/runs/1
 rejected '1.0.1 @octocat https://evil.example'
 ```
 
-Auto-created by update workflow. Close after fixing.
+Auto-created by update workflow. A run closes it when the package recovers.
 EOF
   )
   [ "$output" = "$expected" ]
@@ -1322,6 +1366,22 @@ EOF
   [ "$status" -eq 0 ]
   [ "${lines[5]}" = "[first 4 characters cut]" ]
   [ "${lines[6]}" = "$tail" ]
+}
+
+@test "failure_issue_body: cuts a long error by characters in the C locale" {
+  local tail
+  tail=$(printf '中%.0s' {1..4000})
+  echo "update_failed: ab${tail}" >"$TEST_TMPDIR/demo"
+  # The job containers run without a locale
+  LC_ALL=C
+  run --keep-empty-lines failure_issue_body "$TEST_TMPDIR/demo" https://example.invalid/run
+  [ "$status" -eq 0 ]
+  [ "${lines[5]}" = "[first 2 characters cut]" ]
+  [ "${lines[6]}" = "$tail" ]
+  printf '%s' "$output" | iconv -f UTF-8 -t UTF-8 >/dev/null
+  # The caller keeps its locale
+  failure_issue_body "$TEST_TMPDIR/demo" https://example.invalid/run >/dev/null
+  [ "$LC_ALL" = C ]
 }
 
 # === aur_export and aur_reanchor ===
@@ -1438,6 +1498,7 @@ make_unpushable_repo() {
   write_pkgbuild "$NEW" 1.1.0 1 "sha256sums=('$H3' \$(curl evil.example))"
   run check_prepared_pkgbuild "$OLD" "$NEW" 1.1.0
   [ "$status" -eq 1 ]
+  [[ "$output" == *"Prepared PKGBUILD has more than quoted checksums, comments and line continuations in a checksum array"* ]]
 }
 
 @test "check_prepared_pkgbuild: rejects text after a checksum array" {
@@ -1445,6 +1506,7 @@ make_unpushable_repo() {
   write_pkgbuild "$NEW" 1.1.0 1 "sha256sums=('$H3' '$H4'); curl evil.example"
   run check_prepared_pkgbuild "$OLD" "$NEW" 1.1.0
   [ "$status" -eq 1 ]
+  [[ "$output" == *"Prepared PKGBUILD has more than quoted checksums, comments and line continuations in a checksum array"* ]]
 }
 
 @test "check_prepared_pkgbuild: rejects a SKIP where the AUR had a hash" {
@@ -1495,6 +1557,7 @@ make_unpushable_repo() {
   write_pkgbuild "$NEW" 1.1.0 1 "sha256sums=('SKIP' 'SKIP') \\"
   run check_prepared_pkgbuild "$OLD" "$NEW" 1.1.0
   [ "$status" -eq 1 ]
+  [[ "$output" == *"Prepared PKGBUILD has more than quoted checksums, comments and line continuations in a checksum array"* ]]
 }
 
 # bash reads an escaped space there, so the # starts a word, not a comment
@@ -1504,6 +1567,7 @@ make_unpushable_repo() {
             'SKIP')"
   run check_prepared_pkgbuild "$OLD" "$NEW" 1.1.0
   [ "$status" -eq 1 ]
+  [[ "$output" == *"Prepared PKGBUILD has more than quoted checksums, comments and line continuations in a checksum array"* ]]
 }
 
 # bash starts no comment right after the closing parenthesis
@@ -1512,6 +1576,7 @@ make_unpushable_repo() {
   write_pkgbuild "$NEW" 1.1.0 1 "sha256sums=('SKIP' 'SKIP')# c"
   run check_prepared_pkgbuild "$OLD" "$NEW" 1.1.0
   [ "$status" -eq 1 ]
+  [[ "$output" == *"Prepared PKGBUILD has more than quoted checksums, comments and line continuations in a checksum array"* ]]
 }
 
 @test "check_prepared_pkgbuild: rejects a changed number of checksums" {
@@ -1519,6 +1584,7 @@ make_unpushable_repo() {
   write_pkgbuild "$NEW" 1.1.0 1 "sha256sums=('$H3')"
   run check_prepared_pkgbuild "$OLD" "$NEW" 1.1.0
   [ "$status" -eq 1 ]
+  [[ "$output" == *"Prepared PKGBUILD changes the checksum arrays"* ]]
 }
 
 @test "check_prepared_pkgbuild: rejects a new checksum array" {
@@ -1527,6 +1593,7 @@ make_unpushable_repo() {
 b2sums=('$H3' '$H4')"
   run check_prepared_pkgbuild "$OLD" "$NEW" 1.1.0
   [ "$status" -eq 1 ]
+  [[ "$output" == *"Prepared PKGBUILD changes lines outside pkgver, pkgrel and checksums"* ]]
 }
 
 @test "check_prepared_pkgbuild: rejects a pkgver other than the expected version" {
@@ -1551,6 +1618,7 @@ b2sums=('$H3' '$H4')"
   sed -i 's|^url="https://example.com"$|url="https://example.com\x00"|' "$NEW"
   run check_prepared_pkgbuild "$OLD" "$NEW" 1.1.0
   [ "$status" -eq 1 ]
+  [[ "$output" == *"Prepared PKGBUILD holds a NUL byte"* ]]
 }
 
 @test "check_prepared_srcinfo: rejects a NUL byte" {
@@ -1559,6 +1627,7 @@ b2sums=('$H3' '$H4')"
   sed -i $'s/^\tlicense = MIT$/\tlicense = MIT\\x00 extra/' "$TEST_TMPDIR/new.SRCINFO"
   run check_prepared_srcinfo "$TEST_TMPDIR/old.SRCINFO" "$TEST_TMPDIR/new.SRCINFO" 1.1.0
   [ "$status" -eq 1 ]
+  [[ "$output" == *"Prepared .SRCINFO holds a NUL byte"* ]]
 }
 
 @test "check_prepared_pkgbuild: rejects when a file cannot be read" {
@@ -1650,6 +1719,7 @@ write_srcinfo_lookalike() {
   write_srcinfo_line "$TEST_TMPDIR/new.SRCINFO" 2.1 "source = https://example.com/demo-2.0.tar.gz"
   run check_prepared_srcinfo "$TEST_TMPDIR/old.SRCINFO" "$TEST_TMPDIR/new.SRCINFO" 2.1
   [ "$status" -eq 1 ]
+  [[ "$output" == *"line 4 is not the AUR source with the new version"* ]]
 }
 
 @test "check_prepared_srcinfo: rejects an arch source that keeps the old version" {
@@ -1657,6 +1727,7 @@ write_srcinfo_lookalike() {
   write_srcinfo_line "$TEST_TMPDIR/new.SRCINFO" 2.1 "source_x86_64 = https://example.com/demo-2.0-x86_64.tar.gz"
   run check_prepared_srcinfo "$TEST_TMPDIR/old.SRCINFO" "$TEST_TMPDIR/new.SRCINFO" 2.1
   [ "$status" -eq 1 ]
+  [[ "$output" == *"line 4 is not the AUR source with the new version"* ]]
 }
 
 @test "check_prepared_srcinfo: rejects a line changed beyond the version" {
@@ -1696,6 +1767,7 @@ write_srcinfo_nightly() {
   write_srcinfo_nightly "$TEST_TMPDIR/new.SRCINFO" 1.1.0 demo-oct16.tar.gz b2sums=SKIP
   run check_prepared_srcinfo "$TEST_TMPDIR/old.SRCINFO" "$TEST_TMPDIR/new.SRCINFO" 1.1.0
   [ "$status" -eq 1 ]
+  [[ "$output" == *"line 4 is not the AUR source with the new version"* ]]
 }
 
 @test "check_prepared_srcinfo: rejects a new URL for a SKIP source" {
@@ -1704,6 +1776,7 @@ write_srcinfo_nightly() {
     https://evil.example/demo-linux.tar.gz
   run check_prepared_srcinfo "$TEST_TMPDIR/old.SRCINFO" "$TEST_TMPDIR/new.SRCINFO" 1.1.0
   [ "$status" -eq 1 ]
+  [[ "$output" == *"line 4 is not the AUR source with the new version"* ]]
 }
 
 @test "check_prepared_srcinfo: rejects new digits in the name of a hashed source" {
@@ -1711,6 +1784,7 @@ write_srcinfo_nightly() {
   write_srcinfo_nightly "$TEST_TMPDIR/new.SRCINFO" 1.1.0 demo-20261016.tar.gz "b2sums=$H3"
   run check_prepared_srcinfo "$TEST_TMPDIR/old.SRCINFO" "$TEST_TMPDIR/new.SRCINFO" 1.1.0
   [ "$status" -eq 1 ]
+  [[ "$output" == *"line 4 is not the AUR source with the new version"* ]]
 }
 
 @test "check_prepared_srcinfo: rejects new digits when another checksum array has a hash" {
@@ -1718,6 +1792,7 @@ write_srcinfo_nightly() {
   write_srcinfo_nightly "$TEST_TMPDIR/new.SRCINFO" 1.1.0 demo-20261016.tar.gz "b2sums=SKIP sha256sums=$H3"
   run check_prepared_srcinfo "$TEST_TMPDIR/old.SRCINFO" "$TEST_TMPDIR/new.SRCINFO" 1.1.0
   [ "$status" -eq 1 ]
+  [[ "$output" == *"line 4 is not the AUR source with the new version"* ]]
 }
 
 # Helper: .SRCINFO of a nightly package with a generic source and an
@@ -1750,6 +1825,7 @@ write_srcinfo_arch() {
   sed -i $'s/^\tlicense = MIT$/\tlicense = MIT\\n\tdepends = evil-pkg/' "$TEST_TMPDIR/new.SRCINFO"
   run check_prepared_srcinfo "$TEST_TMPDIR/old.SRCINFO" "$TEST_TMPDIR/new.SRCINFO" 1.1.0
   [ "$status" -eq 1 ]
+  [[ "$output" == *"Prepared .SRCINFO adds or removes lines"* ]]
 }
 
 @test "check_prepared_srcinfo: rejects a line turned into an unknown checksum key" {
@@ -1758,6 +1834,7 @@ write_srcinfo_arch() {
   sed -i $'s/^\tlicense = MIT$/\tlicensesums = abc/' "$TEST_TMPDIR/new.SRCINFO"
   run check_prepared_srcinfo "$TEST_TMPDIR/old.SRCINFO" "$TEST_TMPDIR/new.SRCINFO" 1.1.0
   [ "$status" -eq 1 ]
+  [[ "$output" == *"line 7 changes more than the version"* ]]
 }
 
 @test "check_prepared_srcinfo: rejects a source change beyond the version" {
@@ -1766,6 +1843,7 @@ write_srcinfo_arch() {
   sed -i 's|https://example.com/demo|https://evil.example/demo|' "$TEST_TMPDIR/new.SRCINFO"
   run check_prepared_srcinfo "$TEST_TMPDIR/old.SRCINFO" "$TEST_TMPDIR/new.SRCINFO" 1.1.0
   [ "$status" -eq 1 ]
+  [[ "$output" == *"line 8 is not the AUR source with the new version"* ]]
 }
 
 @test "check_prepared_srcinfo: rejects a SKIP where the AUR had a hash" {
@@ -1773,6 +1851,7 @@ write_srcinfo_arch() {
   write_srcinfo "$TEST_TMPDIR/new.SRCINFO" 1.1.0 1 "SKIP" "$H4"
   run check_prepared_srcinfo "$TEST_TMPDIR/old.SRCINFO" "$TEST_TMPDIR/new.SRCINFO" 1.1.0
   [ "$status" -eq 1 ]
+  [[ "$output" == *"line 10 is not a checksum matching the AUR copy"* ]]
 }
 
 @test "check_prepared_srcinfo: rejects when the files cannot be read" {
@@ -1786,4 +1865,25 @@ write_srcinfo_arch() {
   write_srcinfo "$TEST_TMPDIR/new.SRCINFO" 1.2.0 1 "$H3" "$H4"
   run check_prepared_srcinfo "$TEST_TMPDIR/old.SRCINFO" "$TEST_TMPDIR/new.SRCINFO" 1.1.0
   [ "$status" -eq 1 ]
+  [[ "$output" == *"Prepared .SRCINFO has pkgver = 1.2.0, expected 1.1.0"* ]]
+}
+
+@test "check_prepared_srcinfo: rejects a pkgrel other than 1" {
+  write_srcinfo "$TEST_TMPDIR/old.SRCINFO" 1.0.0 2 "$H1" "$H2"
+  write_srcinfo "$TEST_TMPDIR/new.SRCINFO" 1.1.0 2 "$H3" "$H4"
+  run check_prepared_srcinfo "$TEST_TMPDIR/old.SRCINFO" "$TEST_TMPDIR/new.SRCINFO" 1.1.0
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"Prepared .SRCINFO has pkgrel = 2, expected 1"* ]]
+}
+
+@test "check_prepared_files: refuses a PKGBUILD of the AUR repo that is a symlink" {
+  mkdir "$TEST_TMPDIR/aur" "$TEST_TMPDIR/prepared"
+  write_pkgbuild "$TEST_TMPDIR/aur-PKGBUILD" 1.0.0 2 "sha256sums=('$H1' '$H2')"
+  ln -s "$TEST_TMPDIR/aur-PKGBUILD" "$TEST_TMPDIR/aur/PKGBUILD"
+  write_srcinfo "$TEST_TMPDIR/aur/.SRCINFO" 1.0.0 2 "$H1" "$H2"
+  write_pkgbuild "$TEST_TMPDIR/prepared/PKGBUILD" 1.1.0 1 "sha256sums=('$H3' '$H4')"
+  write_srcinfo "$TEST_TMPDIR/prepared/.SRCINFO" 1.1.0 1 "$H3" "$H4"
+  run check_prepared_files "$TEST_TMPDIR/aur" "$TEST_TMPDIR/prepared" 1.1.0
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"PKGBUILD in the AUR repo is missing, a symlink or not a regular file"* ]]
 }

@@ -43,11 +43,12 @@ jobs:
         with:
           persist-credentials: false
 
-      - name: Install shellcheck and shfmt
+      - name: Install shellcheck, shfmt and actionlint
         run: |
           sudo apt-get update -qq
           sudo apt-get install -y -qq shellcheck
           go install mvdan.cc/sh/v3/cmd/shfmt@v3.14.1
+          go install github.com/rhysd/actionlint/cmd/actionlint@v1.7.12
           echo "$HOME/go/bin" >> "$GITHUB_PATH"
 
       - name: shellcheck
@@ -55,6 +56,10 @@ jobs:
 
       - name: shfmt
         run: shfmt -d -i 2 -ci scripts/*.sh strategies/*.sh
+
+      # Checks the workflows, and the run blocks with shellcheck
+      - name: actionlint
+        run: actionlint
 
   test:
     needs: image
@@ -65,7 +70,7 @@ jobs:
       - name: Install dependencies
         run: |
           pacman -Sy --noconfirm --needed archlinux-keyring
-          pacman -Su --noconfirm --needed bash bats git go-yq curl openssh ruby ruby-erb
+          pacman -Su --noconfirm --needed bash bats git go-yq curl openssh namcap ruby ruby-erb
           gem install bashcov:4.0.0 simplecov-cobertura:4.0.0 --no-document
           echo "$(ruby -e 'puts Gem.user_dir')/bin" >> "$GITHUB_PATH"
 
@@ -76,12 +81,9 @@ jobs:
       - name: Validate package configs
         run: ./scripts/validate-pkg.sh --all
 
-      - name: Run BATS tests
-        run: bats tests/ --recursive
-
-      - name: Generate coverage
+      - name: Run BATS tests with coverage
         run: |
-          bashcov -- bats tests/ --recursive 2>&1 || true
+          bashcov -- bats tests/ --recursive
           # Fix absolute paths in Cobertura XML so Codecov can match files
           if [ -f coverage/coverage.xml ]; then
             sed -i "s|<source>.*</source>|<source>.</source>|g" coverage/coverage.xml
