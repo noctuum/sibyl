@@ -76,6 +76,7 @@ Each package has a file at `packages/<name>.yml`. The file name, the `name` fiel
 | `upstream`     | depends  | Strategy-specific settings. `archpkg`, `repology` and `kde-tarball` need none. |
 | `current`      | no       | Currently tracked version. Written after every push.                        |
 | `last_updated` | no       | Date of the last push, `YYYY-MM-DD`. Written after every push.              |
+| `allow_downgrade` | no    | `true` publishes an upstream version lower than `current`. Default `false`, see [4.3](#43-downgrade-behavior). |
 
 Example:
 
@@ -138,10 +139,10 @@ upstream:
 | Field                        | Required | Description                              |
 |------------------------------|----------|------------------------------------------|
 | `upstream.project`           | yes      | `owner/repo` format                      |
-| `upstream.tag_pattern`       | no       | Glob to filter tags (e.g. `v*`)          |
-| `upstream.tag_version_regex` | no       | ERE with one capture group               |
+| `upstream.tag_pattern`       | no       | Glob to filter tags (e.g. `release-*`), replaces the default filter |
+| `upstream.tag_version_regex` | no       | ERE with one capture group, replaces the default filter |
 
-**How the version is extracted:** fetches the first 100 tags and filters them by `tag_pattern`, where `*` matches anything and the match is anchored at the start. It strips a leading `v`, or applies `tag_version_regex`, and returns the highest tag by `sort -V`. `sort -V` places `1.0.0-rc1` above `1.0.0`, so filter pre-release tags with `tag_pattern`.
+**How the version is extracted:** fetches the first 100 tags. Without `tag_pattern` and `tag_version_regex`, it keeps the tags of the form `v1.2.3` or `1.2.3`, so `latest`, `1.0.0-rc1` and `1.0.0rc1` are left out, and a project without such a tag fails the check with a message that names both fields. `tag_pattern` filters the tags instead, where `*` matches anything and the match is anchored at the start. The strategy strips a leading `v`, or applies `tag_version_regex`, and returns the highest tag by `sort -V`. `sort -V` places `1.0.0-rc1` above `1.0.0`, so a `tag_pattern` that lets pre-release tags through picks them.
 
 **Authentication:** same as `github-release`.
 
@@ -152,7 +153,6 @@ name: my-package
 strategy: github-tag
 upstream:
   project: owner/repo
-  tag_pattern: "v*"
 ```
 
 ### 3.3 github-nightly
@@ -267,9 +267,9 @@ upstream:
 |------------------------|----------|-------------------------------------------------------|
 | `upstream.host`        | yes      | GitLab hostname (e.g. `invent.kde.org`, `gitlab.com`) |
 | `upstream.project`     | yes      | Project path (e.g. `network/my-kde-app`)              |
-| `upstream.tag_pattern` | no       | Glob to filter tags                                   |
+| `upstream.tag_pattern` | no       | Glob to filter tags, replaces the default filter      |
 
-**How the version is extracted:** URL-encodes the project path (`/` becomes `%2F`), fetches the first 100 tags, filters them by `tag_pattern`, strips a leading `v` and returns the highest by `sort -V`. There is no authentication, so private projects cannot be queried.
+**How the version is extracted:** URL-encodes the project path (`/` becomes `%2F`) and fetches the first 100 tags. Without `tag_pattern`, it keeps the tags of the form `v1.2.3` or `1.2.3`, and a project without such a tag fails the check with a message that names `tag_pattern`. With it, it filters the tags by the pattern. It strips a leading `v` and returns the highest by `sort -V`. There is no authentication, so private projects cannot be queried.
 
 **Example YAML:**
 
@@ -293,9 +293,9 @@ upstream:
 |------------------------|----------|------------------------------------------|
 | `upstream.host`        | yes      | Instance hostname (e.g. `codeberg.org`)  |
 | `upstream.project`     | yes      | `owner/repo` format                      |
-| `upstream.tag_pattern` | no       | Glob to filter tags                      |
+| `upstream.tag_pattern` | no       | Glob to filter tags, replaces the default filter |
 
-**How the version is extracted:** fetches up to 50 tags without pagination, filters them by `tag_pattern`, strips a leading `v` and returns the highest by `sort -V`.
+**How the version is extracted:** fetches up to 50 tags without pagination. Without `tag_pattern`, it keeps the tags of the form `v1.2.3` or `1.2.3`, and a project without such a tag fails the check with a message that names `tag_pattern`. With it, it filters the tags by the pattern. It strips a leading `v` and returns the highest by `sort -V`.
 
 **Example YAML:**
 
@@ -555,7 +555,7 @@ check-all.sh [--update | --prepare <dir> | --verify <dir> | --publish <dir>] [--
 ### 4.2 Step-by-step
 
 1. Load `.aurtomator.conf` when it exists. In CI, `GIT_AUTHOR_NAME`, `GIT_AUTHOR_EMAIL` and `GPG_KEY_ID` come from the workflow environment.
-2. Clone `ssh://aur@aur.archlinux.org/<package-name>.git` into a temporary directory, with up to 3 attempts. A clone without a PKGBUILD stops the update.
+2. Wait 2 seconds, then clone `ssh://aur@aur.archlinux.org/<package-name>.git` into a temporary directory, with up to 3 attempts 5 seconds apart. A clone without a PKGBUILD stops the update.
 3. When the clone lands on a detached `HEAD`, reset `master` to `origin/master`, so the push is a fast-forward.
 4. Warn when the PKGBUILD has no `# Maintainer:` line.
 5. Audit the PKGBUILD. Split packages, `pkgver()` with the wrong strategy and mixed checksums block the update. Patches only warn. See [SUPPORTED-PACKAGES.md](SUPPORTED-PACKAGES.md).
@@ -565,24 +565,32 @@ check-all.sh [--update | --prepare <dir> | --verify <dir> | --publish <dir>] [--
 9. Regenerate `.SRCINFO` with `makepkg --printsrcinfo`.
 10. With `--dry-run`, print the PKGBUILD diff and stop.
 11. Commit `PKGBUILD` and `.SRCINFO` as `<new-version> release from <strategy>`, authored by `GIT_AUTHOR_NAME` and `GIT_AUTHOR_EMAIL` (default `aurtomator`). With `GPG_KEY_ID` set, the commit is amended with a signature. When signing fails, the commit is pushed unsigned.
-12. Push, with up to 3 attempts.
+12. Push, with up to 3 attempts 5 seconds apart.
 13. Write `current` and `last_updated` to the package YAML.
+
+`AURTOMATOR_CLONE_DELAY` and `AURTOMATOR_RETRY_DELAY` change the 2 and the 5 seconds. The tests set both to 0.
 
 ### 4.3 Downgrade behavior
 
-aurtomator follows upstream when it publishes a version older than the tracked one, and does **not** block it. Upstream is the source of truth: a packager that refuses a re-published older release only drifts out of sync. A downgrade is logged and shown, and it does not count as a failure.
+An upstream version lower than `current` reaches the AUR only when the package YAML sets `allow_downgrade: true`. Without it, `check-all.sh` skips the version, writes `downgrade_skipped: <version>` and pushes nothing. A skipped downgrade opens no issue and does not count as a failure. `--prepare` and `--publish` apply the same rule, so a downgrade of a package without the flag is never prepared or published.
+
+The default guards against a lower version that upstream does not mean as a step back. `github-release` reads `/releases/latest`, and GitHub picks that release by the date of the commit it was made from, not by the date it was published. A maintenance release of an older line, made from a commit newer than the one of the current release, becomes the latest release. Without the flag, aurtomator would push it as a downgrade and push the newer version again at the next release.
+
+`allow_downgrade: true` fits a package whose upstream does mean it, for example one that rolls back a broken release and the AUR package should follow.
 
 #### When does this happen?
 
+- Upstream publishes a maintenance release of an older line, and `/releases/latest` returns it.
 - Upstream deletes and recreates a release tag. In the gap, `/releases/latest` returns the previous release, so a cycle like `v1.2.1 → v1.2.0 → v1.2.1` can take only minutes.
 - Upstream rolls back a broken release and removes its tag.
 - Upstream marks an older release line as latest again, for example when a 2.x release is pulled and 1.x becomes the newest release.
 
 #### How to detect downgrades in logs
 
-Every comparison that finds the current version newer than the latest one (`vercmp "$current" "$latest"` returns `1`) logs the literal token `DOWNGRADE`. In a CI run, `check-all.sh` logs:
+Every comparison that finds the current version newer than the latest one (`vercmp "$current" "$latest"` returns `1`) logs the literal token `DOWNGRADE`. In a CI run, `check-all.sh` logs the first line for a package without `allow_downgrade: true` and the second for one with it:
 
 ```text
+! myapp-bin: DOWNGRADE detected 1.2.1 → 1.2.0, skipped: allow_downgrade is not set
 ! myapp-bin: DOWNGRADE detected 1.2.1 → 1.2.0 (mirroring upstream)
 ```
 
@@ -596,19 +604,21 @@ Every comparison that finds the current version newer than the latest one (`verc
 
 #### Status values and README icons
 
-`check-all.sh` writes two status tokens for downgrades to `.status/<pkg>`:
+`check-all.sh` writes three status tokens for downgrades to `.status/<pkg>`:
 
-| Token                         | Meaning                                           |
-|-------------------------------|---------------------------------------------------|
-| `downgrade: <version>`        | `--update` mode: the downgrade was pushed to the AUR |
-| `available_downgrade: <ver>`  | Check-only mode: a downgrade is available and not applied |
+| Token                          | Meaning                                                        |
+|--------------------------------|----------------------------------------------------------------|
+| `downgrade_skipped: <version>` | A downgrade was found for a package without `allow_downgrade: true`. Nothing is pushed |
+| `available_downgrade: <ver>`   | A downgrade the package allows was found and is not pushed yet |
+| `downgrade: <version>`         | The downgrade was pushed to the AUR                            |
 
 `update-readme.sh` renders them as:
 
-- `downgrade: 1.2.0` → `⬇️ downgraded to 1.2.0`
+- `downgrade_skipped: 1.2.0` → `⬇️ 1.2.0 skipped (downgrade)`
 - `available_downgrade: 1.2.0` → `⬇️ 1.2.0 available (downgrade)`
+- `downgrade: 1.2.0` → `⬇️ downgraded to 1.2.0`
 
-Both count toward `pkg_ok`, so the packages badge stays `brightgreen`. Only `check_failed` and `update_failed` turn it red.
+All three count toward `pkg_ok`, so the packages badge stays `brightgreen`. Only `check_failed` and `update_failed` turn it red.
 
 ### 4.4 Prepare and publish
 
@@ -638,17 +648,17 @@ A PKGBUILD is a bash script, and every step that reads it executes it: the audit
 5. Each `source` line of the prepared `.SRCINFO`, with or without an arch suffix, must be the line of the AUR copy with the old version replaced by `<version>`. A source that is `SKIP` in every checksum array of its arch may also change the digits in the name it is saved under, the part before `::`, as `neovim-20261014.tar.gz` becomes `neovim-20261016.tar.gz` in a PKGBUILD that names a nightly download by `$(date -u +%Y%m%d)`. Its URL after `::` must still be the AUR URL with the version replaced. Verify never downloads a `SKIP` source, and makepkg takes the sources from the `PKGBUILD`. Any other line must either equal the line of the AUR copy or be that line with the version replaced in the same way, because a license, a dependency or a description can hold the old version without taking it from `pkgver`, as `GPL-2.0` does in a package at version `2.0`. The replacement also covers three forms a PKGBUILD often derives from `pkgver`: dots turned into underscores (`1_86_0`), the part before the first `+` (`0.13.0` of `0.13.0+dev+1853+g6edb38ca98`), and the version without its last component (`6.19` of `6.19.0`, as in `frameworks/${pkgver%.*}/` of KDE Frameworks). The last form counts only while it keeps a dot. Each part of a line is replaced at most once, so `5.1` inside an already replaced `5.10.0` stays. A line built from any other form of the version, a lone major version for example, stops the publish, and so does a line that has the version replaced in one place and kept in another. The package then needs a manual update. `pkgrel` and the checksums follow the rules of step 4.
 6. Any other difference, and a NUL byte in either file, stops the publish with exit code 1. Otherwise the index of the clone takes the tree of `HEAD`, and the two prepared files enter it byte for byte through `git hash-object --no-filters` and `git update-index`, so the commit keeps every other file of the AUR repo. `git add` would pass them through the attributes of the AUR repo, and `working-tree-encoding=UTF-7` there turns `+AAo-` in a comment into a new line that the checks above never saw. Steps 10 to 13 of [4.2](#42-step-by-step) follow. When the prepared files equal the AUR copy, only `current` is written to the YAML and the exit code is 2.
 
-`check-all.sh --prepare <dir>` runs no strategy and needs no `GITHUB_TOKEN`. It takes the versions from the statuses that a check run, `check-all.sh` without a mode, wrote to `.status/` before it, and reads them before the first PKGBUILD runs. It prepares every package with `new_version` or `available_downgrade` into `<dir>/prepared/` and copies the statuses to `<dir>/status/`. A failed preparation becomes `update_failed`, and a package without a status from the check run becomes `check_failed`. The other statuses stay as the check run wrote them.
+`check-all.sh --prepare <dir>` runs no strategy and needs no `GITHUB_TOKEN`. It takes the versions from the statuses that a check run, `check-all.sh` without a mode, wrote to `.status/` before it, and reads them before the first PKGBUILD runs. It prepares every package with `new_version` or `available_downgrade` into `<dir>/prepared/` and copies the statuses to `<dir>/status/`. A downgrade of a package without `allow_downgrade: true` gets `downgrade_skipped` instead, see [4.3](#43-downgrade-behavior). A failed preparation becomes `update_failed`, and a package without a status from the check run becomes `check_failed`. The other statuses stay as the check run wrote them.
 
 `check-all.sh --verify <dir>` runs `verify-pkg.sh` for every package in `packages/` that has a directory in `<dir>/prepared/`, and runs no strategy. An update that fails is removed from `<dir>/prepared/`, its status in `<dir>/status/` becomes `update_failed`, and `<dir>/status/_error_count` grows by one. Exit code 3 counts as a failure as well: the prepare run writes `base` for every package, so a moved AUR repo looks the same as a wrong `base`. The next run prepares the package again.
 
-`check-all.sh --publish <dir>` takes the statuses of the check run from `.status/`, as `--prepare` does, and writes `.status/` anew. `up_to_date` and `check_failed` stay as they are. A missing status, and one the check run does not write, become `check_failed`. For a package with `new_version` or `available_downgrade` and a directory in `<dir>/prepared/`, it publishes the version in that status and runs no strategy, so nothing contacts an upstream host while the AUR and GPG keys are in place. Exit code 3, an AUR repo that moved, leaves the status at `new_version` or `available_downgrade` without an error, and the next run prepares the package again. A package with `new_version` or `available_downgrade` and no prepared directory gets the `update_failed` status that the prepare or the verify run wrote for it to `<dir>/status/`, or `update_failed: prepare and verify handed over no update`. Nothing else is taken from `<dir>/status/`, and only a regular file without a NUL byte: the prepare run executes PKGBUILDs, and code from one of them can write the files of every package. `_error_count` is the number of `check_failed` and `update_failed` statuses.
+`check-all.sh --publish <dir>` takes the statuses of the check run from `.status/`, as `--prepare` does, and writes `.status/` anew. `up_to_date`, `check_failed` and `downgrade_skipped` stay as they are, and a downgrade of a package without `allow_downgrade: true` gets `downgrade_skipped` and is not published. A missing status, and one the check run does not write, become `check_failed`. For a package with `new_version` or `available_downgrade` and a directory in `<dir>/prepared/`, it publishes the version in that status and runs no strategy, so nothing contacts an upstream host while the AUR and GPG keys are in place. Exit code 3, an AUR repo that moved, leaves the status at `new_version` or `available_downgrade` without an error, and the next run prepares the package again. A package with `new_version` or `available_downgrade` and no prepared directory gets the `update_failed` status that the prepare or the verify run wrote for it to `<dir>/status/`, or `update_failed: prepare and verify handed over no update`. Nothing else is taken from `<dir>/status/`, and only a regular file without a NUL byte: the prepare run executes PKGBUILDs, and code from one of them can write the files of every package. `_error_count` is the number of `check_failed` and `update_failed` statuses.
 
 ## 5. CI Workflow: check-updates.yml
 
 ### 5.1 Trigger
 
-The workflow runs every hour (`cron: "0 * * * *"`) and by hand through `workflow_dispatch`. The `check-updates` concurrency group serializes runs: a new run waits for the running one.
+The workflow runs every hour at minute 17 (`cron: "17 * * * *"`) and by hand through `workflow_dispatch`. GitHub delays scheduled runs at the start of every hour and drops some of them when the load is high, so the schedule avoids minute 0. The `check-updates` concurrency group serializes runs: a new run waits for the running one.
 
 ### 5.2 Permissions and container
 
@@ -731,6 +741,7 @@ Steps 9 and 10 run as root with `GH_TOKEN` set to the workflow token, `github.to
 | `.status/<name>`       | `new_version: 2.0.0`             | Update found, not pushed yet             |
 | `.status/<name>`       | `downgrade: 1.2.0`               | Downgrade pushed to the AUR              |
 | `.status/<name>`       | `available_downgrade: 1.2.0`     | Downgrade found, not pushed yet          |
+| `.status/<name>`       | `downgrade_skipped: 1.2.0`       | Downgrade found, not allowed by the YAML |
 | `.status/<name>`       | `check_failed: <error>`          | The strategy failed                      |
 | `.status/<name>`       | `update_failed: <error>`         | The update failed                        |
 | `.status/_error_count` | `0`                              | Total error count of the run             |
@@ -765,13 +776,21 @@ The message is `chore: update package versions [skip ci]`. `[skip ci]` keeps the
 
 ### 5.6 Failure issues
 
-The step runs with `if: always()`. For every `.status/` entry with `check_failed:` or `update_failed:`, it:
+The step runs with `if: always()`. When a package failed, it first reads `has_issues` of the repository. `gh issue list` fails in a repository with Issues turned off, so when GitHub answers `false`, the step prints a notice and opens no issue. Any other answer goes on, and a failure to read the answer or to list the issues fails the step.
+
+For every `.status/` entry with `check_failed:` or `update_failed:`, the step:
 
 1. Creates the `auto-update` label when it is missing.
 2. Skips the package when an open `auto-update` issue already has the title `❌ <package>: check failed` or `❌ <package>: update failed`, so a package never gets a second issue while one is open. The step compares the titles of up to 1000 open issues and uses no search, because a search splits `foo-bar` into words and finds the issue of `foo-bar` for `foo`.
 3. Opens an issue titled `❌ <package>: check failed` or `❌ <package>: update failed`, after the status, with the package, the status, a link to the run and the error. The error holds text from upstream, a rejected tag name for example, so it stands in a code block, where links, images and mentions do not render, and is cut to its last 4000 characters. `builder` writes the body with `failure_issue_body` from `lib.sh`, so the step runs no code from the workspace as root.
 
 The step belongs to `publish`, which runs when the status table changes. A package that keeps failing gets its issue in the run where it starts failing, and a closed issue comes back only after its status changes again.
+
+### 5.7 Failed runs
+
+The issue step of `publish` reports failed packages, and a run that fails in `image` or `check` never reaches it. `notify-failure.yml` runs on `workflow_run` when a run of `Check AUR Package Updates` completes, and its job runs only when the conclusion of that run is `failure` or `timed_out`. It opens one issue titled `❌ Check AUR Package Updates failed`, with a link to the run, its branch and the names of the failed jobs, and opens no second one while that issue is open. A repository with Issues turned off gets a notice instead, as in [5.6](#56-failure-issues). The workflow has `actions: read` to list the jobs and `issues: write`, and checks out nothing.
+
+GitHub starts a `workflow_run` workflow only from its file on the default branch.
 
 ## 6. CI Quality Gate: ci.yml
 

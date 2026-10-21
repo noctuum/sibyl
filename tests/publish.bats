@@ -694,7 +694,8 @@ EOF
 current: '1.0.0'"
   create_test_package "older" "github-release" "upstream:
   project: owner/repo
-current: '1.0.0'"
+current: '1.0.0'
+allow_downgrade: true"
   echo "new_version: 2.1.0" >"$TEST_TMPDIR/.status/pkg"
   echo "available_downgrade: 0.9.0" >"$TEST_TMPDIR/.status/older"
   stub_script check-update.sh 1 "strategy ran"
@@ -730,6 +731,19 @@ current: '1.0.0'"
   [ "$(cat "$TEST_TMPDIR/out/status/broken")" = "check_failed: API down" ]
   [ "$(cat "$TEST_TMPDIR/out/status/unchecked")" = "check_failed: not checked before --prepare" ]
   [ "$(cat "$TEST_TMPDIR/out/status/_error_count")" = "2" ]
+}
+
+@test "check-all --prepare: prepares no downgrade the check run skipped" {
+  create_test_package "older" "github-release" "upstream:
+  project: owner/repo
+current: '1.0.0'"
+  echo "downgrade_skipped: 0.9.0" >"$TEST_TMPDIR/.status/older"
+  stub_script update-pkg.sh 0
+  run "$TEST_TMPDIR/scripts/check-all.sh" --prepare "$TEST_TMPDIR/out"
+  [ "$status" -eq 0 ]
+  [ ! -e "$TEST_TMPDIR/update-pkg.sh.args" ]
+  [ "$(cat "$TEST_TMPDIR/out/status/older")" = "downgrade_skipped: 0.9.0" ]
+  [ "$(cat "$TEST_TMPDIR/out/status/_error_count")" = "0" ]
 }
 
 @test "check-all --prepare: records a failed preparation" {
@@ -777,6 +791,32 @@ current: '2.0.0'"
   [ "$status" -eq 0 ]
   [ "$(cat "$TEST_TMPDIR/.status/pkg")" = "check_failed: API down" ]
   [ "$(cat "$TEST_TMPDIR/.status/_error_count")" = "1" ]
+}
+
+@test "check-all --publish: keeps a skipped downgrade and publishes nothing" {
+  create_test_package "older" "github-release" "upstream:
+  project: owner/repo
+current: '1.0.0'"
+  checked_status older "downgrade_skipped: 0.9.0"
+  stub_script publish-pkg.sh 0
+  run "$TEST_TMPDIR/scripts/check-all.sh" --publish "$TEST_TMPDIR/out"
+  [ "$status" -eq 0 ]
+  [ ! -e "$TEST_TMPDIR/publish-pkg.sh.args" ]
+  [ "$(cat "$TEST_TMPDIR/.status/older")" = "downgrade_skipped: 0.9.0" ]
+  [ "$(cat "$TEST_TMPDIR/.status/_error_count")" = "0" ]
+}
+
+@test "check-all --publish: publishes no downgrade of a package that does not allow it" {
+  create_test_package "older" "github-release" "upstream:
+  project: owner/repo
+current: '1.0.0'"
+  checked_status older "available_downgrade: 0.9.0"
+  mkdir -p "$TEST_TMPDIR/out/prepared/older"
+  stub_script publish-pkg.sh 0
+  run "$TEST_TMPDIR/scripts/check-all.sh" --publish "$TEST_TMPDIR/out"
+  [ "$status" -eq 0 ]
+  [ ! -e "$TEST_TMPDIR/publish-pkg.sh.args" ]
+  [ "$(cat "$TEST_TMPDIR/.status/older")" = "downgrade_skipped: 0.9.0" ]
 }
 
 @test "check-all --publish: marks a package the check run left out" {
@@ -1236,6 +1276,51 @@ make_export_clone() {
   [ "$(git -C "$clone" symbolic-ref HEAD)" = "refs/heads/master" ]
   [ "$(git -C "$clone" rev-parse master)" = "$(git -C "$clone" rev-parse origin/master)" ]
   [ ! -e "$clone/PKGBUILD" ]
+}
+
+# === aur_clone and aur_commit_push ===
+
+# Helper: a sleep on PATH that logs its argument to $TEST_TMPDIR/sleeps, and
+# a git whose clone always fails
+mock_sleep_and_clone() {
+  printf '#!/usr/bin/env bash\necho "$1" >>"%s/sleeps"\n' "$TEST_TMPDIR" >"$MOCK_DIR/sleep"
+  printf '#!/usr/bin/env bash\n[[ "$1" == clone ]] && exit 128\nexec /usr/bin/git "$@"\n' >"$MOCK_DIR/git"
+  chmod +x "$MOCK_DIR/sleep" "$MOCK_DIR/git"
+}
+
+# Helper: a repo without a remote, with a staged PKGBUILD, at $TEST_TMPDIR/clone
+make_unpushable_repo() {
+  git init -q -b master "$TEST_TMPDIR/clone"
+  echo "pkgver=1.0.0" >"$TEST_TMPDIR/clone/PKGBUILD"
+  git -C "$TEST_TMPDIR/clone" add PKGBUILD
+}
+
+@test "aur_clone: waits the pauses the environment sets" {
+  mock_sleep_and_clone
+  AURTOMATOR_CLONE_DELAY=3 AURTOMATOR_RETRY_DELAY=7 run aur_clone https://example.invalid/demo.git "$TEST_TMPDIR/clone"
+  [ "$status" -eq 1 ]
+  [ "$(cat "$TEST_TMPDIR/sleeps")" = $'3\n7\n7' ]
+  [[ "$output" == *"Clone attempt 2 failed, retrying in 7s"* ]]
+}
+
+@test "aur_commit_push: waits the pause the environment sets" {
+  mock_sleep_and_clone
+  make_unpushable_repo
+  AURTOMATOR_RETRY_DELAY=7 run aur_commit_push "$TEST_TMPDIR/clone" 1.0.0 test
+  [ "$status" -eq 1 ]
+  [ "$(cat "$TEST_TMPDIR/sleeps")" = $'7\n7' ]
+  [[ "$output" == *"Push attempt 2 failed, retrying in 7s"* ]]
+}
+
+@test "aur_clone and aur_commit_push: wait 2 s before a clone and 5 s between attempts by default" {
+  mock_sleep_and_clone
+  make_unpushable_repo
+  unset AURTOMATOR_CLONE_DELAY AURTOMATOR_RETRY_DELAY
+  run aur_clone https://example.invalid/demo.git "$TEST_TMPDIR/other"
+  [ "$status" -eq 1 ]
+  run aur_commit_push "$TEST_TMPDIR/clone" 1.0.0 test
+  [ "$status" -eq 1 ]
+  [ "$(cat "$TEST_TMPDIR/sleeps")" = $'2\n5\n5\n5\n5' ]
 }
 
 # === check_prepared_pkgbuild ===

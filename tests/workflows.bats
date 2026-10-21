@@ -164,6 +164,13 @@ step_run() {
   yq ".jobs.$1.steps[] | select(.name == \"$2\") | .run" "$CHECK_UPDATES"
 }
 
+# GitHub delays scheduled runs at the start of every hour and drops some
+@test "check-updates: runs every hour, off the start of the hour" {
+  run yq '.on.schedule[].cron' "$CHECK_UPDATES"
+  [ "$status" -eq 0 ]
+  [[ "$output" =~ ^([1-9]|[1-5][0-9])\ \*\ \*\ \*\ \*$ ]]
+}
+
 @test "check-updates: the check job decides the run and executes no PKGBUILD" {
   run yq '.jobs.check.steps[] | select(has("run")) | .run' "$CHECK_UPDATES"
   [ "$status" -eq 0 ]
@@ -204,6 +211,8 @@ run_decide_step() {
 @test "check-updates: Decide publishes only a change of the status table" {
   README_CHANGED=1 run run_decide_step pkg="check_failed: API down"
   [ "$status" -eq 0 ]
+  [ "$output" = $'prepare=false\nwork=true' ]
+  README_CHANGED=1 run run_decide_step pkg="downgrade_skipped: 1.0.0"
   [ "$output" = $'prepare=false\nwork=true' ]
 }
 
@@ -375,7 +384,8 @@ EOF
 # Runs the issue step of publish in a workspace with the statuses given as
 # name=status pairs. gh lists the titles in $GH_TITLES, one per line, as
 # every open issue whatever --search asks for, the first 30 unless --limit
-# says otherwise, and logs every call to $GH_LOG.
+# says otherwise, answers has_issues with $GH_HAS_ISSUES (true by default)
+# or fails it when $GH_API_FAIL is set, and logs every call to $GH_LOG.
 run_issue_step() {
   local ws="$BATS_TEST_TMPDIR/ws" bin="$BATS_TEST_TMPDIR/bin" pair
   mkdir -p "$ws/.status" "$bin"
@@ -385,6 +395,11 @@ run_issue_step() {
   cat >"$bin/gh" <<'EOF'
 #!/usr/bin/env bash
 printf '%s\n' "$*" >>"$GH_LOG"
+if [[ "$*" == "api repos/$GITHUB_REPOSITORY --jq .has_issues" ]]; then
+  [[ -z "${GH_API_FAIL:-}" ]] || exit 1
+  echo "${GH_HAS_ISSUES:-true}"
+  exit 0
+fi
 [[ "$1 $2" == "issue list" ]] || exit 0
 [[ -z "${GH_FAIL:-}" ]] || exit 1
 limit=30 jq_expr=""
@@ -408,7 +423,9 @@ EOF
   : >"$GH_LOG"
   step_run publish "Create issues for failed packages" >"$BATS_TEST_TMPDIR/step.sh"
   run env -C "$ws" PATH="$bin:$PATH" GH_LOG="$GH_LOG" GH_TITLES="${GH_TITLES:-}" \
-    GH_FAIL="${GH_FAIL:-}" RUN_URL=https://example.invalid/run sh -e "$BATS_TEST_TMPDIR/step.sh"
+    GH_FAIL="${GH_FAIL:-}" GH_HAS_ISSUES="${GH_HAS_ISSUES:-}" GH_API_FAIL="${GH_API_FAIL:-}" \
+    GITHUB_REPOSITORY=owner/fork \
+    RUN_URL=https://example.invalid/run sh -e "$BATS_TEST_TMPDIR/step.sh"
 }
 
 @test "check-updates: an open issue of another package holds back no issue" {
@@ -439,6 +456,34 @@ EOF
   [ "$output" = "0" ]
 }
 
+# gh issue list exits 1 in a repository with Issues turned off
+@test "check-updates: the issue step gives a notice when Issues are disabled" {
+  GH_HAS_ISSUES=false GH_FAIL=1 run_issue_step foo="update_failed: boom"
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"::notice::Issues are disabled in owner/fork"* ]]
+  run grep -c '^issue ' "$GH_LOG"
+  [ "$output" = "0" ]
+}
+
+@test "check-updates: the issue step skips issues only when GitHub says Issues are off" {
+  GH_HAS_ISSUES=null run_issue_step foo="update_failed: boom"
+  [ "$status" -eq 0 ]
+  grep -q '^issue create --title ❌ foo: update failed ' "$GH_LOG"
+}
+
+@test "check-updates: the issue step fails when it cannot read whether Issues are on" {
+  GH_API_FAIL=1 run_issue_step foo="update_failed: boom"
+  [ "$status" -ne 0 ]
+  run grep -c '^issue ' "$GH_LOG"
+  [ "$output" = "0" ]
+}
+
+@test "check-updates: the issue step asks GitHub nothing when no package failed" {
+  run_issue_step foo=up_to_date bar="new_version: 2.0.0"
+  [ "$status" -eq 0 ]
+  [ ! -s "$GH_LOG" ]
+}
+
 @test "check-updates: verify runs as builder and hands over as prepare does" {
   run step_run verify "Verify checksums"
   [[ "$output" == *"sudo -u builder ./scripts/check-all.sh --verify handoff"* ]]
@@ -462,4 +507,93 @@ EOF
   [ "$output" = ".status" ]
   run yq '.jobs.publish.steps[] | select(.with.name == "verified") | .if' "$CHECK_UPDATES"
   [ "$output" = "needs.verify.result == 'success'" ]
+}
+
+NOTIFY="$GITHUB_DIR/workflows/notify-failure.yml"
+
+@test "notify-failure: runs on a failed run of the update workflow" {
+  run yq '.name' "$CHECK_UPDATES"
+  local name="$output"
+  run yq -o=json -I=0 '.on' "$NOTIFY"
+  [ "$status" -eq 0 ]
+  [ "$output" = "{\"workflow_run\":{\"workflows\":[\"$name\"],\"types\":[\"completed\"]}}" ]
+  run yq '.jobs.notify.if' "$NOTIFY"
+  [ "$output" = "github.event.workflow_run.conclusion == 'failure' || github.event.workflow_run.conclusion == 'timed_out'" ]
+}
+
+@test "notify-failure: reads the jobs of the run and writes issues, nothing else" {
+  run yq -o=json -I=0 '.permissions' "$NOTIFY"
+  [ "$output" = '{"actions":"read","issues":"write"}' ]
+  run yq '[.jobs[].steps[] | select(has("uses"))] | length' "$NOTIFY"
+  [ "$output" = "0" ]
+}
+
+# Runs the step of notify-failure for run 7 of owner/fork. gh lists the
+# titles in $GH_TITLES as the open issues, answers has_issues with
+# $GH_HAS_ISSUES (true by default), lists the jobs in $GH_JOBS as the failed
+# ones or fails that when $GH_JOBS_FAIL is set, fails the list of issues
+# when $GH_FAIL is set and logs every call to $GH_LOG.
+run_notify_step() {
+  local bin="$BATS_TEST_TMPDIR/bin"
+  mkdir -p "$bin"
+  cat >"$bin/gh" <<'EOF'
+#!/usr/bin/env bash
+printf '%s\n' "$*" >>"$GH_LOG"
+case "$1 $2" in
+  "api repos/owner/fork") echo "${GH_HAS_ISSUES:-true}" ;;
+  "api repos/owner/fork/actions/runs/7/jobs")
+    [[ -z "${GH_JOBS_FAIL:-}" ]] || exit 1
+    echo "$GH_JOBS"
+    ;;
+  "issue list")
+    [[ -z "${GH_FAIL:-}" ]] || exit 1
+    [[ -z "${GH_TITLES:-}" ]] || printf '%s\n' "$GH_TITLES"
+    ;;
+esac
+EOF
+  chmod +x "$bin/gh"
+  GH_LOG="$BATS_TEST_TMPDIR/gh.log"
+  : >"$GH_LOG"
+  yq '.jobs.notify.steps[0].run' "$NOTIFY" >"$BATS_TEST_TMPDIR/step.sh"
+  run env PATH="$bin:$PATH" GH_LOG="$GH_LOG" GH_TITLES="${GH_TITLES:-}" GH_FAIL="${GH_FAIL:-}" \
+    GH_HAS_ISSUES="${GH_HAS_ISSUES:-}" GH_JOBS="${GH_JOBS:-}" GH_JOBS_FAIL="${GH_JOBS_FAIL:-}" \
+    GH_REPO=owner/fork RUN_ID=7 \
+    RUN_URL=https://example.invalid/runs/7 RUN_BRANCH=main bash -e "$BATS_TEST_TMPDIR/step.sh"
+}
+
+@test "notify-failure: opens an issue that names the run and its failed jobs" {
+  GH_JOBS="check, publish" run_notify_step
+  [ "$status" -eq 0 ]
+  grep -q '^issue create --title ❌ Check AUR Package Updates failed --label auto-update --body ' "$GH_LOG"
+  grep -q 'https://example.invalid/runs/7' "$GH_LOG"
+  grep -q 'failed in check, publish' "$GH_LOG"
+}
+
+@test "notify-failure: opens the issue when the jobs cannot be listed" {
+  GH_JOBS_FAIL=1 run_notify_step
+  [ "$status" -eq 0 ]
+  grep -q '^issue create --title ❌ Check AUR Package Updates failed ' "$GH_LOG"
+  grep -q 'failed in jobs that could not be listed' "$GH_LOG"
+}
+
+@test "notify-failure: opens no second issue while one is open" {
+  GH_TITLES="❌ Check AUR Package Updates failed" run_notify_step
+  [ "$status" -eq 0 ]
+  run grep -c '^issue create' "$GH_LOG"
+  [ "$output" = "0" ]
+}
+
+@test "notify-failure: gives a notice when Issues are disabled" {
+  GH_HAS_ISSUES=false GH_FAIL=1 run_notify_step
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"::notice::Issues are disabled in owner/fork"* ]]
+  run grep -c '^issue ' "$GH_LOG"
+  [ "$output" = "0" ]
+}
+
+@test "notify-failure: fails when the open issues cannot be listed" {
+  GH_FAIL=1 run_notify_step
+  [ "$status" -ne 0 ]
+  run grep -c '^issue create' "$GH_LOG"
+  [ "$output" = "0" ]
 }

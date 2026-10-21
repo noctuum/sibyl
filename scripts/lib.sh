@@ -118,6 +118,14 @@ validate_pkgver() {
   fi
 }
 
+# The tags of the form v1.2.3 or 1.2.3, for a tag strategy without a filter
+# of its own. sort -V puts latest, 2.1.0-rc1 and 2.1.0rc1 above 2.1.0, so
+# they are left out.
+# Args: $1=tags, one per line
+release_tags() {
+  grep -E '^v?[0-9]+(\.[0-9]+)*$' <<<"$1" || true
+}
+
 # =============================================================================
 # CHECKSUMS
 # =============================================================================
@@ -275,12 +283,13 @@ validate_source_urls() {
 # AUR GIT
 # =============================================================================
 
-# Clone an AUR repo, with 3 attempts
+# Clone an AUR repo, with 3 attempts. AURTOMATOR_CLONE_DELAY and
+# AURTOMATOR_RETRY_DELAY set the pauses, in seconds.
 # Args: $1=url, $2=destination, $3...=options for git clone
 aur_clone() {
-  local attempt
+  local attempt delay="${AURTOMATOR_RETRY_DELAY:-5}"
   # Brief delay to reduce AUR SSH rate-limit pressure from GitHub Actions IP pool
-  sleep 2
+  sleep "${AURTOMATOR_CLONE_DELAY:-2}"
   for attempt in 1 2 3; do
     if git clone "${@:3}" "$1" "$2" 2>&1; then
       return 0
@@ -289,9 +298,9 @@ aur_clone() {
       log_err "Failed to clone AUR repo $1 after 3 attempts"
       return 1
     fi
-    log_warn "Clone attempt $attempt failed, retrying in 5s..."
+    log_warn "Clone attempt $attempt failed, retrying in ${delay}s..."
     rm -rf "$2"
-    sleep 5
+    sleep "$delay"
   done
 }
 
@@ -340,10 +349,11 @@ aur_export() {
 }
 
 # Commit what the index holds, sign when GPG_KEY_ID is set, push with 3
-# attempts. The caller stages PKGBUILD and .SRCINFO.
+# attempts, AURTOMATOR_RETRY_DELAY seconds apart. The caller stages
+# PKGBUILD and .SRCINFO.
 # Args: $1=clone directory, $2=version, $3=strategy (for the commit message)
 aur_commit_push() {
-  local dir="$1" attempt
+  local dir="$1" attempt delay="${AURTOMATOR_RETRY_DELAY:-5}"
   log_info "Pushing to AUR"
   git -C "$dir" config user.name "${GIT_AUTHOR_NAME:-aurtomator}"
   git -C "$dir" config user.email "${GIT_AUTHOR_EMAIL:-aurtomator@users.noreply.github.com}"
@@ -369,8 +379,8 @@ aur_commit_push() {
       log_err "git push to AUR failed after 3 attempts"
       return 1
     fi
-    log_warn "Push attempt $attempt failed, retrying in 5s..."
-    sleep 5
+    log_warn "Push attempt $attempt failed, retrying in ${delay}s..."
+    sleep "$delay"
   done
 }
 
