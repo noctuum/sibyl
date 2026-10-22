@@ -592,6 +592,20 @@ MOCKCURL
   [ "$output" = "-sfL --max-time 30 --retry 2 --retry-delay 5 --retry-connrefused -A aurtomator/1.0 --max-redirs 5 https://example.invalid/a" ]
 }
 
+# script from util-linux runs the command on a terminal of its own
+@test "lib.sh: colors the log on a terminal" {
+  printf 'source "$1/scripts/lib.sh"\nlog_ok done\n' >"$TEST_TMPDIR/color.sh"
+  run script -qec "bash $TEST_TMPDIR/color.sh $TEST_TMPDIR" /dev/null
+  [ "$status" -eq 0 ]
+  [[ "$output" == *$'\e[0;32m✓\e[0m done'* ]]
+}
+
+@test "lib.sh: writes the log without colors elsewhere" {
+  run bash -c 'source "$0/scripts/lib.sh"; log_ok done' "$TEST_TMPDIR"
+  [ "$status" -eq 0 ]
+  [ "$output" = "✓ done" ]
+}
+
 # === validate_pkgver ===
 
 @test "lib.sh: validate_pkgver accepts versions the strategies produce" {
@@ -620,6 +634,14 @@ MOCKCURL
   [[ "$output" == *"Version string is empty"* ]]
 }
 
+@test "lib.sh: validate_pkgver rejects a version without a digit" {
+  for v in nightly latest stable . _+.; do
+    run bash -c 'source "$0/scripts/lib.sh"; validate_pkgver "$1"' "$TEST_TMPDIR" "$v"
+    [ "$status" -eq 1 ]
+    [[ "$output" == *"Version string rejected, it holds no digit: '$v'"* ]]
+  done
+}
+
 @test "lib.sh: validate_pkgver rejects non-ASCII" {
   run bash -c 'source "$0/scripts/lib.sh"; validate_pkgver "$1"' "$TEST_TMPDIR" '1.0в'
   [ "$status" -eq 1 ]
@@ -638,6 +660,20 @@ EOF
   [ "$status" -eq 1 ]
   [[ "$output" == *"rejected"* ]]
   [ ! -e "$TEST_TMPDIR/pwned" ]
+}
+
+# A tag_pattern, a scraped page or a registry can return a word
+@test "check-update: rejects a word from the strategy" {
+  cat >"$TEST_TMPDIR/strategies/word.sh" <<'EOF'
+#!/usr/bin/env bash
+echo latest
+EOF
+  chmod +x "$TEST_TMPDIR/strategies/word.sh"
+  create_test_package "mypkg" "word" "current: '1.0'"
+
+  run "$TEST_TMPDIR/scripts/check-update.sh" "mypkg"
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"Version string rejected, it holds no digit: 'latest'"* ]]
 }
 
 @test "update-pkg: refuses an injected version before any git call" {

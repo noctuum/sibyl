@@ -106,7 +106,8 @@ github_api() {
 # update-pkg.sh writes the value with sed and makepkg then sources the
 # file, so a shell metacharacter in an upstream tag would execute in CI.
 # The allowlist is narrower than makepkg's own pkgver check on purpose:
-# makepkg only forbids whitespace, '/', ':', '-' and non-ASCII.
+# makepkg only forbids whitespace, '/', ':', '-' and non-ASCII. A word
+# without a digit, such as latest from a tag_pattern, is no version.
 # Args: $1=version string
 # Returns: 0=ok, 1=rejected (reason on stderr)
 validate_pkgver() {
@@ -120,6 +121,10 @@ validate_pkgver() {
     log_err "Version string rejected, only A-Za-z0-9 . _ + are allowed: ${ver@Q}"
     return 1
   fi
+  if [[ ! "$ver" =~ [0-9] ]]; then
+    log_err "Version string rejected, it holds no digit: ${ver@Q}"
+    return 1
+  fi
 }
 
 # The tags of the form v1.2.3 or 1.2.3, for a tag strategy without a filter
@@ -128,6 +133,46 @@ validate_pkgver() {
 # Args: $1=tags, one per line
 release_tags() {
   grep -E '^v?[0-9]+(\.[0-9]+)*$' <<<"$1" || true
+}
+
+# The version in each tag of stdin, one per line: the first capture group
+# of tag_version_regex where it matches, or the tag without a leading v
+# when the regex is empty. bash takes the group, so the regex may hold |,
+# which ends the pattern of a sed s command.
+# Args: $1=tag_version_regex or empty
+tag_versions() {
+  local regex="$1" tag
+  while IFS= read -r tag; do
+    if [[ -z "$regex" ]]; then
+      printf '%s\n' "${tag#v}"
+    elif [[ "$tag" =~ $regex ]]; then
+      printf '%s\n' "${BASH_REMATCH[1]}"
+    fi
+  done
+}
+
+# The highest version among the tags of a tag strategy. tag_pattern keeps
+# the tags it matches from the start, with * for any text. Without either
+# field, only the tags of the form v1.2.3 or 1.2.3 count.
+# Args: $1=tags, one per line, $2=tag_pattern, $3=tag_version_regex
+# Returns: 1 with the reason on stderr when no tag gives a version
+latest_tag_version() {
+  local tags="$1" pattern="$2" regex="$3" version
+  if [[ -n "$pattern" ]]; then
+    tags=$(grep -E "^${pattern//\*/.*}" <<<"$tags" || true)
+  elif [[ -z "$regex" ]]; then
+    tags=$(release_tags "$tags")
+    if [[ -z "$tags" ]]; then
+      echo "No tag of the form v1.2.3 or 1.2.3; set upstream.tag_pattern or upstream.tag_version_regex" >&2
+      return 1
+    fi
+  fi
+  version=$(tag_versions "$regex" <<<"$tags" | sort -V | tail -1)
+  if [[ -z "$version" ]]; then
+    echo "No matching tags found" >&2
+    return 1
+  fi
+  echo "$version"
 }
 
 # The first capture group of every match of an ERE in stdin, one per line.
