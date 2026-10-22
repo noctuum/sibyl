@@ -6,6 +6,8 @@ setup() {
   setup_test_env
   # A strategy needs scripts/lib/common.sh and nothing else of scripts/
   find "$TEST_TMPDIR/scripts" -type l ! -name common.sh -delete
+  cp "$TESTS_DIR/helpers/mock-git.sh" "$MOCK_DIR/git"
+  chmod +x "$MOCK_DIR/git"
 }
 
 teardown() {
@@ -102,6 +104,61 @@ teardown() {
   run "$TEST_TMPDIR/strategies/github-tag.sh" "test-gh-tag"
   [ "$status" -eq 0 ]
   [ "$output" = "latest" ]
+}
+
+@test "github-tag: reads every tag with git ls-remote" {
+  create_test_package "test-gh-tag" "github-tag" "upstream:
+  project: paged-owner/paged-repo"
+
+  run "$TEST_TMPDIR/strategies/github-tag.sh" "test-gh-tag"
+  [ "$status" -eq 0 ]
+  [ "$output" = "14" ]
+  [ "$(cat "$TEST_TMPDIR/ls-remote.args")" = "ls-remote --tags --refs https://github.com/paged-owner/paged-repo.git" ]
+}
+
+@test "github-tag: reads the tags over https only, without a terminal prompt" {
+  create_test_package "test-gh-tag" "github-tag" "upstream:
+  project: owner/repo"
+
+  run "$TEST_TMPDIR/strategies/github-tag.sh" "test-gh-tag"
+  [ "$status" -eq 0 ]
+  grep -qx 'GIT_ALLOW_PROTOCOL=https' "$TEST_TMPDIR/ls-remote.env"
+  grep -qx 'GIT_TERMINAL_PROMPT=0' "$TEST_TMPDIR/ls-remote.env"
+}
+
+@test "github-tag: fails when git cannot read the tags" {
+  create_test_package "test-gh-tag" "github-tag" "upstream:
+  project: missing-owner/missing-repo"
+
+  run "$TEST_TMPDIR/strategies/github-tag.sh" "test-gh-tag"
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"Failed to fetch tags for missing-owner/missing-repo"* ]]
+}
+
+@test "github-tag: gives GITHUB_TOKEN to git in the environment, never as an argument" {
+  create_test_package "test-gh-tag" "github-tag" "upstream:
+  project: owner/repo"
+  export GITHUB_TOKEN=standin-token
+  local basic
+  basic=$(printf 'x-access-token:standin-token' | base64 -w0)
+
+  run "$TEST_TMPDIR/strategies/github-tag.sh" "test-gh-tag"
+  [ "$status" -eq 0 ]
+  grep -qx 'GIT_CONFIG_COUNT=1' "$TEST_TMPDIR/ls-remote.env"
+  grep -qx 'GIT_CONFIG_KEY_0=http.https://github.com/.extraHeader' "$TEST_TMPDIR/ls-remote.env"
+  grep -qx "GIT_CONFIG_VALUE_0=Authorization: Basic $basic" "$TEST_TMPDIR/ls-remote.env"
+  ! grep -q -e standin-token -e "$basic" "$TEST_TMPDIR/ls-remote.args"
+}
+
+@test "github-tag: gives git no token without GITHUB_TOKEN" {
+  create_test_package "test-gh-tag" "github-tag" "upstream:
+  project: owner/repo"
+  unset GITHUB_TOKEN
+
+  run "$TEST_TMPDIR/strategies/github-tag.sh" "test-gh-tag"
+  [ "$status" -eq 0 ]
+  [ -s "$TEST_TMPDIR/ls-remote.env" ]
+  ! grep -qE '^GIT_CONFIG_(COUNT|KEY_0|VALUE_0)=' "$TEST_TMPDIR/ls-remote.env"
 }
 
 # === gitlab-tag ===
@@ -259,8 +316,9 @@ teardown() {
 
 # === git-latest ===
 
-@test "git-latest: returns rCOUNT.HASH format from git repo" {
-  # Create a fake bare repo with some commits
+# Helper: a repo with 3 commits in $fake_repo, and a git that clones it in
+# place of any URL and logs the protocols the strategy allows
+fake_git_upstream() {
   fake_repo="$TEST_TMPDIR/fake-upstream"
   mkdir -p "$fake_repo"
   git -C "$fake_repo" init -q
@@ -272,12 +330,6 @@ teardown() {
     git -C "$fake_repo" commit -q -m "commit $i"
   done
 
-  create_test_package "test-git" "git-latest" "upstream:
-  type: git
-  url: https://git.example.com/repo.git"
-
-  # git that clones the fake repo in place of the URL, and logs the
-  # protocols the strategy allows
   cat >"$MOCK_DIR/git" <<EOF
 #!/usr/bin/env bash
 if [[ "\$1" == "clone" ]]; then
@@ -287,12 +339,36 @@ fi
 exec /usr/bin/git "\$@"
 EOF
   chmod +x "$MOCK_DIR/git"
+}
+
+@test "git-latest: returns rCOUNT.HASH format from git repo" {
+  fake_git_upstream
+  create_test_package "test-git" "git-latest" "upstream:
+  type: git
+  url: https://git.example.com/repo.git"
 
   run "$TEST_TMPDIR/strategies/git-latest.sh" "test-git"
   [ "$status" -eq 0 ]
   # Should match r3.<7-char-hash>
   [[ "$output" =~ ^r3\.[0-9a-f]{7}$ ]]
   [ "$(cat "$TEST_TMPDIR/git-clone")" = "http:https https://git.example.com/repo.git" ]
+}
+
+# fabric-git is r2173.ef2e985d on the AUR: rev-parse --short grows with the
+# repository, and r2173.ef2e985 reads as older
+@test "git-latest: takes the length of the hash from current" {
+  fake_git_upstream
+  local len
+  for len in 8 12; do
+    create_test_package "test-git" "git-latest" "upstream:
+  type: git
+  url: https://git.example.com/repo.git
+current: 'r2.$(printf '%0*d' "$len" 0)'"
+
+    run "$TEST_TMPDIR/strategies/git-latest.sh" "test-git"
+    [ "$status" -eq 0 ]
+    [ "$output" = "r3.$(git -C "$fake_repo" rev-parse HEAD | cut -c1-"$len")" ]
+  done
 }
 
 @test "git-latest: refuses a local repository" {
@@ -599,12 +675,11 @@ EOF
 
 # === GITHUB_TOKEN ===
 
-# Helper: one package for each GitHub strategy, and a curl that appends its
-# arguments to curl.args and its stdin to curl.stdin before it answers
+# Helper: one package for each GitHub strategy that calls the API, and a
+# curl that appends its arguments to curl.args and its stdin to curl.stdin
+# before it answers
 setup_github_strategies() {
   create_test_package "gh-release" "github-release" "upstream:
-  project: owner/repo"
-  create_test_package "gh-tag" "github-tag" "upstream:
   project: owner/repo"
   create_test_package "gh-asset" "github-asset" "upstream:
   project: owner/models-repo
@@ -627,11 +702,12 @@ EOF
   chmod +x "$MOCK_DIR/curl"
 }
 
-# Helper: run every GitHub strategy. Stdin is /dev/null, so the recording
-# curl does not wait when a strategy gives it nothing to read.
+# Helper: run every GitHub strategy that calls the API. Stdin is /dev/null,
+# so the recording curl does not wait when a strategy gives it nothing to
+# read.
 run_github_strategies() {
   local strategy
-  for strategy in release tag asset nightly; do
+  for strategy in release asset nightly; do
     run "$TEST_TMPDIR/strategies/github-${strategy}.sh" "gh-${strategy}" </dev/null
     [ "$status" -eq 0 ]
   done
@@ -667,6 +743,63 @@ run_github_strategies() {
   run grep -nE '^[^#]*\bcurl -' "$PROJECT_DIR"/strategies/*.sh
   [ "$status" -eq 1 ]
   [ -z "$output" ]
+}
+
+# === User-Agent ===
+
+# Helper: a curl that appends its arguments to curl.args, one per line,
+# before it answers
+record_curl() {
+  mv "$MOCK_DIR/curl" "$MOCK_DIR/curl-answer"
+  cat >"$MOCK_DIR/curl" <<EOF
+#!/usr/bin/env bash
+printf '%s\n' "\$@" >>"$TEST_TMPDIR/curl.args"
+exec "$MOCK_DIR/curl-answer" "\$@"
+EOF
+  chmod +x "$MOCK_DIR/curl"
+}
+
+# Helper: the value of every -A that curl got
+curl_agents() {
+  grep -x -A1 -- '-A' "$TEST_TMPDIR/curl.args" | grep -vx -e '-A' -e '--'
+}
+
+# SourceForge answers a bare Mozilla/5.0 with HTTP 403
+@test "strategies: send aurtomator/1.0 as the User-Agent" {
+  record_curl
+  create_test_package "scrape" "webpage-scrape" "upstream:
+  url: https://example.com/releases
+  pattern: 'test-scrape-([0-9.]+)\\.tar\\.gz'"
+  create_test_package "release" "github-release" "upstream:
+  project: owner/repo"
+  create_test_package "rust" "crates" "upstream:
+  registry: serde"
+  create_test_package "repo" "repology" "upstream:
+  repology: firefox"
+
+  run "$TEST_TMPDIR/strategies/webpage-scrape.sh" scrape
+  [ "$status" -eq 0 ]
+  run "$TEST_TMPDIR/strategies/github-release.sh" release
+  [ "$status" -eq 0 ]
+  run "$TEST_TMPDIR/strategies/crates.sh" rust
+  [ "$status" -eq 0 ]
+  run "$TEST_TMPDIR/strategies/repology.sh" repo
+  [ "$status" -eq 0 ]
+  [ "$(curl_agents | wc -l)" -eq 4 ]
+  [ "$(curl_agents | sort -u)" = "aurtomator/1.0" ]
+  ! grep -qi 'user-agent' "$TEST_TMPDIR/curl.args"
+}
+
+@test "webpage-scrape: sends upstream.user_agent in place of aurtomator/1.0" {
+  record_curl
+  create_test_package "scrape" "webpage-scrape" "upstream:
+  url: https://example.com/releases
+  pattern: 'test-scrape-([0-9.]+)\\.tar\\.gz'
+  user_agent: 'Example/2.0 (+https://example.com/bot)'"
+
+  run "$TEST_TMPDIR/strategies/webpage-scrape.sh" scrape
+  [ "$status" -eq 0 ]
+  [ "$(curl_agents)" = "Example/2.0 (+https://example.com/bot)" ]
 }
 
 # === Error handling: unknown package ===

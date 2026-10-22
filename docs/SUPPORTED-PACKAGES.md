@@ -17,7 +17,7 @@ For every update, aurtomator does exactly this:
 9. Run `makepkg --printsrcinfo` to regenerate `.SRCINFO`
 10. Commit and push to the AUR
 
-Steps 5 to 7 are skipped when any checksum array holds `SKIP`, see [Packages with VCS checksums](#packages-with-vcs-checksums-skip).
+Steps 5 to 7 are skipped when a checksum array holds a `SKIP` other than that of a signature, see [Packages with VCS checksums](#packages-with-vcs-checksums-skip) and [Sources with a signature](#sources-with-a-signature).
 
 aurtomator does not build packages and does not check runtime dependencies. That needs `ldd` or `readelf` on built binaries and is out of scope. Dependency correctness is the maintainer's responsibility.
 
@@ -58,7 +58,7 @@ upstream:
 
 **Why it works:** `git-latest` makes a bare clone and computes `r{count}.{hash}`, for example `r435.abc1234`, the usual AUR format for `-git` versions. aurtomator writes this value to `pkgver=`, skips `SKIP` checksums and pushes.
 
-A `pkgver()` function in the PKGBUILD is fine: it produces the same `r{count}.{hash}` format. A user who builds the package later gets a newer value when upstream has moved on, as with every `-git` package on the AUR.
+A `pkgver()` function in the PKGBUILD is fine when it produces the same `r{count}.{hash}` format. The hash takes as many characters as the hash in `current`. A `pkgver()` in the form of `git describe`, such as `1.4.0.r47.g0bbf5ad`, does not fit: `vercmp` reads it as newer than every `r{count}.{hash}`, and `validate-pkg.sh` refuses such a `current`. A user who builds the package later gets a newer value when upstream has moved on, as with every `-git` package on the AUR.
 
 ### Packages with VCS checksums (SKIP)
 
@@ -75,9 +75,23 @@ b2sums_x86_64=('SKIP')
 b2sums_aarch64=('SKIP')
 ```
 
-**Why it works:** aurtomator reads every checksum array, with and without an arch suffix. A `SKIP` at any position makes it skip `updpkgsums`, which would otherwise replace `SKIP` with a real hash.
+**Why it works:** aurtomator reads every checksum array, with and without an arch suffix. A `SKIP` at any position makes it skip `updpkgsums`, which would otherwise replace the `SKIP` of a download with a real hash. The `SKIP` of a signature is the exception, see [Sources with a signature](#sources-with-a-signature).
 
-`updpkgsums` is all-or-nothing: it recalculates every checksum or none. A real hash for a remote source next to `SKIP` is blocked by the PKGBUILD audit. See "Mixed SKIP and real checksums" below.
+A real hash for a remote source next to a `SKIP` other than that of a signature is blocked by the PKGBUILD audit. See "Mixed SKIP and real checksums" below.
+
+### Sources with a signature
+
+Packages that download a file and its detached signature, as `lib32-gettext` does:
+
+```bash
+source=("https://example.com/app-${pkgver}.tar.gz"{,.sig})
+sha256sums=('abc123def456...'
+            'SKIP')
+```
+
+**Why it works:** makepkg gives `SKIP` to every source whose file name ends in `.sig`, `.sign` or `.asc`, and `updpkgsums` writes that `SKIP` again. When every `SKIP` of the PKGBUILD belongs to such a source, aurtomator runs steps 5 to 7 as for a package without `SKIP`, and the other sources get new checksums. For a source with a name before `::`, makepkg reads that name and not the URL.
+
+aurtomator does not check the signature. It runs `makepkg --verifysource` with `--skippgpcheck`, and verify skips every `SKIP`, see step 5 of verify in [WORKFLOW.md section 4.4](WORKFLOW.md#44-prepare-and-publish).
 
 ### Non-standard tag formats (tag_version_regex)
 
@@ -126,7 +140,7 @@ A PKGBUILD with a `pkgver()` function and a strategy other than `git-latest` or 
 
 ### Mixed SKIP and real checksums (BLOCKED)
 
-A PKGBUILD with a `SKIP` and a real hash for a remote source, in any order and in any checksum array:
+A PKGBUILD with a `SKIP` and a real hash for a remote source, in any order and in any checksum array. The `SKIP` of a signature does not count, see [Sources with a signature](#sources-with-a-signature).
 
 ```bash
 source=("git+https://example.com/app.git" "https://example.com/data.tar.gz")
@@ -134,15 +148,23 @@ sha256sums=('SKIP'
             'abc123def456...')
 ```
 
-**Detection:** `audit_pkgbuild()` sources the PKGBUILD and pairs every entry of every checksum array (`ck`, `md5`, `sha1`, `sha224`, `sha256`, `sha384`, `sha512`, `b2`, with and without an arch suffix) with the entry at the same index of `source` or `source_<arch>`. A real hash for a URL with `://` next to a `SKIP` blocks the update. A real hash for a local file is allowed, because that file lives in the AUR repo and does not change between versions.
+**Detection:** `audit_pkgbuild()` sources the PKGBUILD and pairs every entry of every checksum array (`ck`, `md5`, `sha1`, `sha224`, `sha256`, `sha384`, `sha512`, `b2`, with and without an arch suffix) with the entry at the same index of `source` or `source_<arch>`. A real hash for a URL with `://` next to a `SKIP` other than that of a signature blocks the update. A real hash for a local file is allowed, because that file lives in the AUR repo and does not change between versions.
 
-**Why:** when aurtomator sees `SKIP`, it skips `updpkgsums`, so the real hash of the remote source would be stale after the version bump.
+**Why:** when aurtomator sees such a `SKIP`, it skips `updpkgsums`, so the real hash of the remote source would be stale after the version bump.
+
+### Sources that do not follow pkgver (BLOCKED)
+
+A PKGBUILD whose sources take the version from another variable, as with `_pkgver=2025-04-03` and `pkgver="${_pkgver//-/.}"`, or a download URL without the version, such as `https://example.org/download/latest/player.tar.zst`, whose file has not changed.
+
+**Detection:** the `.SRCINFO` check refuses a new `pkgver` when no source and no checksum changed and a download over `http`, `https` or `ftp` has a real checksum. Publish runs it, and `update-pkg.sh` runs it before the commit. See step 5 of publish in [WORKFLOW.md section 4.4](WORKFLOW.md#44-prepare-and-publish).
+
+**Why:** `sed` sets only `pkgver`. When the sources stay the same, `updpkgsums` hashes the old files again, and the new version would hold them.
 
 ### Source URL returns HTML (BLOCKED)
 
 Upstream moves or renames a release, and the old URL now redirects to an HTML error or download page.
 
-**Detection:** `validate_source_urls()` sends a HEAD request to every URL in `source` and in each `source_<arch>` array and follows up to 5 redirects. curl reports the status and the `Content-Type` of the last response. A status of 400 or above, a missing status, or `Content-Type: text/html` in any letter case blocks the update. The script does not parse the headers itself, because the server chose that text. The check runs only when no checksum array holds `SKIP`: one `SKIP` turns it off for every URL of the package.
+**Detection:** `validate_source_urls()` sends a HEAD request to every URL in `source` and in each `source_<arch>` array and follows up to 5 redirects. curl reports the status and the `Content-Type` of the last response. A status of 400 or above, a missing status, or `Content-Type: text/html` in any letter case blocks the update. The script does not parse the headers itself, because the server chose that text. The check runs only when no checksum array holds a `SKIP` other than that of a signature: one such `SKIP` turns it off for every URL of the package.
 
 **Why:** without this check, `updpkgsums` would hash the HTML page. The checksums would match and the package would fail to install.
 
@@ -169,7 +191,7 @@ When upstream changes the download URL format:
 - Binary renamed: `app-linux-x86_64` to `app-linux-amd64`
 - Major version path change: `v1/app.tar.gz` to `v2/app.tar.gz`
 
-aurtomator does not modify `source=()`. After such a change, source URL validation or `updpkgsums` fails and aurtomator refuses to push. That failure is safe. In a package with a `SKIP` checksum every remote source is `SKIP`, and no step downloads one, so a changed URL there is pushed unnoticed.
+aurtomator does not modify `source=()`. After such a change, source URL validation or `updpkgsums` fails and aurtomator refuses to push. That failure is safe. In a package with a `SKIP` other than that of a signature, every remote source is `SKIP`, and no step downloads one, so a changed URL there is pushed unnoticed.
 
 ### Packages with changing dependencies
 
@@ -190,7 +212,7 @@ aurtomator includes 14 version detection strategies. Choose by where your upstre
 | Strategy | Source | Best for | Pre-release filter |
 |---|---|---|---|
 | `github-release` | GitHub Releases API | Most GitHub projects | Auto (excludes pre-releases) |
-| `github-tag` | GitHub Tags API | Projects without formal releases | Auto (`v1.2.3` tags only) |
+| `github-tag` | `git ls-remote` | Projects without formal releases | Auto (`v1.2.3` tags only) |
 | `github-nightly` | GitHub Releases API | Nightly/dev builds (4 patterns) | Nightly-specific |
 | `github-asset` | GitHub Releases API | Assets re-uploaded on a fixed tag (model zoos) | N/A (fixed tag) |
 | `gitlab-tag` | GitLab Tags API | GitLab.com, invent.kde.org, self-hosted | Auto (`v1.2.3` tags only) |
@@ -206,8 +228,8 @@ aurtomator includes 14 version detection strategies. Choose by where your upstre
 
 ### Strategy limitations
 
-- **GitHub rate limit:** the GitHub strategies send `GITHUB_TOKEN` when it is set in the environment. The `check-updates` workflow sets it to the workflow token, which allows 1,000 requests per hour per repository. Without a token, the limit is 60 requests per hour.
-- **Retries:** a strategy request tries a timeout, a refused connection and an HTTP 408, 429, 500, 502, 503, 504, 522 or 524 answer twice more, 5 seconds apart. A check that still fails within its time budget runs once more after the other packages and a pause of 60 seconds. A failure on both tries fails the package for that run.
+- **GitHub rate limit:** the GitHub strategies send `GITHUB_TOKEN` when it is set in the environment. The `check-updates` workflow sets it to the workflow token, which allows 1,000 requests per hour per repository. Without a token, the limit is 60 requests per hour. `github-tag` reads the tags with `git ls-remote`, outside this limit.
+- **Retries:** a request that a strategy sends with curl tries a timeout, a refused connection and an HTTP 408, 429, 500, 502, 503, 504, 522 or 524 answer twice more, 5 seconds apart. The git calls of `git-latest` and `github-tag` make one attempt. A check that still fails within its time budget runs once more after the other packages and a pause of 60 seconds. A failure on both tries fails the package for that run.
 - **Tag strategies take only `v1.2.3` and `1.2.3` by default:** without `tag_pattern`, and without `tag_version_regex` for `github-tag`, `github-tag`, `gitlab-tag` and `gitea-tag` leave out every other tag, `latest`, `1.0.0-rc1` and `1.0.0rc1` included. A `tag_pattern` replaces that filter. They pick the highest tag with `sort -V`, which places `1.0.0-rc1` above `1.0.0`, so a pattern that lets pre-release tags through picks them.
 - **`gitea-tag` fetches at most 50 tags:** there is no pagination.
 - **`gitlab-tag` has no authentication:** private GitLab projects cannot be queried.

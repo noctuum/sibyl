@@ -125,7 +125,8 @@ fi
 # UPDATE CHECKSUMS
 # =============================================================================
 
-# updpkgsums would replace a SKIP in any checksum array with a real hash
+# updpkgsums would put a real hash in place of the SKIP of a download,
+# except a signature, which makepkg gives SKIP itself
 if has_skip_checksums "${aur_dir}/PKGBUILD"; then
   log_info "VCS package, skipping checksums"
 else
@@ -181,6 +182,15 @@ if [[ -n "$PREPARE_DIR" ]]; then
   hand_over
   exit 0
 fi
+
+# =============================================================================
+# CHECK THE UPDATE
+# =============================================================================
+
+# The checks that publish-pkg.sh runs, against the files of the clone's HEAD
+aur_files="${tmp_dir}/aur-files"
+aur_export "$aur_dir" "$aur_files" || exit 1
+check_prepared_files "$aur_files" "$aur_dir" "$NEW_VERSION" || exit 1
 
 # =============================================================================
 # DRY RUN CHECK

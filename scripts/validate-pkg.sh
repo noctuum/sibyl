@@ -192,6 +192,15 @@ validate_pkg() {
             ;;
         esac
       fi
+      # The strategy prints r<count>.<hash>. vercmp reads 1.4.0.r47.g0bbf5ad
+      # of git describe as newer than any of those, so each check would be
+      # a downgrade.
+      local current
+      current=$(pkg_get "$file" '.current // ""')
+      if [[ -n "$current" && ! "$current" =~ ^r[0-9]+\.[0-9a-f]+$ ]]; then
+        log_err "$file: current must be r<count>.<hash> for git-latest, the form the strategy prints: $current"
+        ((errors++))
+      fi
       ;;
     pypi | npm | crates)
       local registry
@@ -221,6 +230,13 @@ validate_pkg() {
           log_err "$file: upstream.pattern is not valid ERE regex: $pattern"
           ((errors++))
         fi
+      fi
+      # curl would send the text after a line break as a header of its own
+      local user_agent
+      user_agent=$(pkg_get "$file" '.upstream.user_agent // ""')
+      if [[ -n "$user_agent" ]] && ! (LC_ALL=C && [[ "$user_agent" =~ ^[[:print:]]+$ ]]); then
+        log_err "$file: upstream.user_agent must hold printable ASCII only: ${user_agent@Q}"
+        ((errors++))
       fi
       ;;
     archpkg | repology)

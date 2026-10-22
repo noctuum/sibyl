@@ -130,7 +130,7 @@ upstream:
 
 ### 3.2 github-tag
 
-**What it checks:** GitHub Tags API (`/repos/{owner}/{repo}/tags`).
+**What it checks:** the tags of the repository, read with `git ls-remote --tags --refs https://github.com/{owner}/{repo}.git`.
 
 **When to use:** GitHub projects with tags and no releases.
 
@@ -142,9 +142,9 @@ upstream:
 | `upstream.tag_pattern`       | no       | Glob to filter tags (e.g. `release-*`), replaces the default filter |
 | `upstream.tag_version_regex` | no       | ERE with one capture group, replaces the default filter |
 
-**How the version is extracted:** fetches the first 100 tags. Without `tag_pattern` and `tag_version_regex`, it keeps the tags of the form `v1.2.3` or `1.2.3`, so `latest`, `1.0.0-rc1` and `1.0.0rc1` are left out, and a project without such a tag fails the check with a message that names both fields. `tag_pattern` filters the tags instead, where `*` matches anything and the match is anchored at the start. The strategy strips a leading `v`, or applies `tag_version_regex`, and returns the highest tag by `sort -V`. `sort -V` places `1.0.0-rc1` above `1.0.0`, so a `tag_pattern` that lets pre-release tags through picks them.
+**How the version is extracted:** reads every tag in one request, outside the API rate limit. Without `tag_pattern` and `tag_version_regex`, it keeps the tags of the form `v1.2.3` or `1.2.3`, so `latest`, `1.0.0-rc1` and `1.0.0rc1` are left out, and a project without such a tag fails the check with a message that names both fields. `tag_pattern` filters the tags instead, where `*` matches anything and the match is anchored at the start. The strategy strips a leading `v`, or applies `tag_version_regex`, and returns the highest tag by `sort -V`. `sort -V` places `1.0.0-rc1` above `1.0.0`, so a `tag_pattern` that lets pre-release tags through picks them.
 
-**Authentication:** same as `github-release`.
+**Authentication:** when `GITHUB_TOKEN` is set in the environment, git sends it to `github.com` as `Authorization: Basic` with the user `x-access-token`, which a private repository needs. The header reaches git through `GIT_CONFIG_*` variables, so the token does not appear on a command line. git allows only `https` and asks for no password on the terminal.
 
 **Example YAML:**
 
@@ -322,7 +322,9 @@ upstream:
 | `upstream.project` | depends  | Required for the `github` and `gitlab` types |
 | `upstream.url`     | depends  | Required for the `git` type: full clone URL, `https://` only |
 
-**How the version is extracted:** makes a bare clone into a temporary directory, counts the commits on `HEAD` (`git rev-list --count HEAD`), takes the short hash (`git rev-parse --short=7 HEAD`) and prints the usual `-git` format `r<count>.<shorthash>`, for example `r431.66db9ce`.
+**How the version is extracted:** makes a bare clone into a temporary directory, counts the commits on `HEAD` (`git rev-list --count HEAD`), takes the hash of `HEAD` and prints the usual `-git` format `r<count>.<hash>`, for example `r431.66db9ce`. The hash has as many characters as the hash in `current`, and 7 when `current` is empty. `git rev-parse --short` in a `pkgver()` gives more characters as the repository grows: fabric-git is `r2173.ef2e985d` on the AUR, and `vercmp` reads `r2173.ef2e985` of the same commit as older.
+
+`current` must be empty or of the form `r<count>.<hash>`, and `validate-pkg.sh` refuses any other. `vercmp` reads `1.4.0.r47.g0bbf5ad`, the form of `git describe`, as newer than every `r<count>.<hash>`, so each check would be a downgrade and the package would never update.
 
 The clone runs with `GIT_ALLOW_PROTOCOL=http:https`. A URL in a package YAML that comes with a pull request therefore cannot read a local repository or connect to an ssh host with the SSH key of the machine that runs the check.
 
@@ -415,7 +417,7 @@ upstream:
 |---------------------|----------|------------------------------------|
 | `upstream.registry` | yes      | Crate name (e.g. `serde`, `tokio`) |
 
-**How the version is extracted:** reads `.crate.max_stable_version`, which excludes pre-releases. The request sends `User-Agent: aurtomator/1.0`, as the crates.io API policy requires.
+**How the version is extracted:** reads `.crate.max_stable_version`, which excludes pre-releases. The request sends `User-Agent: aurtomator/1.0`, as every strategy request does and as the crates.io API policy requires.
 
 **Example YAML:**
 
@@ -438,7 +440,7 @@ upstream:
 |---------------------|----------|--------------------------------------------------------------|
 | `upstream.repology` | no       | Repology project name. Defaults to the package `name`.       |
 
-**How the version is extracted:** returns the version of the first entry with `status == "newest"`. The request sends `User-Agent: aurtomator/1.0`, as Repology asks.
+**How the version is extracted:** returns the version of the first entry with `status == "newest"`. The request sends `User-Agent: aurtomator/1.0`, as every strategy request does and as Repology asks.
 
 **Example YAML:**
 
@@ -491,10 +493,11 @@ upstream:
 |--------------------|----------|------------------------------------------------------|
 | `upstream.url`     | yes      | HTTPS URL of the page                                |
 | `upstream.pattern` | yes      | ERE whose first capture group is the version         |
+| `upstream.user_agent` | no    | User-Agent in place of `aurtomator/1.0`, printable ASCII |
 
 **How the version is extracted:**
 
-1. Fetches the page: HTTPS only, at most 5 redirects and 5 MB.
+1. Fetches the page: HTTPS only, at most 5 redirects and 5 MB, with the User-Agent `aurtomator/1.0` or `upstream.user_agent`. SourceForge answers a bare `Mozilla/5.0` with HTTP 403. `validate-pkg.sh` refuses a `user_agent` with a character outside printable ASCII, because curl sends the text after a line break as a header of its own.
 2. Finds every match with `grep -oE`.
 3. Takes the first capture group of each match with bash `[[ =~ ]]`, so the pattern may hold any character, `/` included.
 4. Sorts with `sort -Vu` and returns the highest version.
@@ -566,13 +569,14 @@ check-all.sh [--update | --prepare <dir> | --verify <dir> | --publish <dir>] [--
 4. Warn when the PKGBUILD has no `# Maintainer:` line.
 5. Audit the PKGBUILD. Split packages, `pkgver()` with the wrong strategy and mixed checksums block the update. Patches only warn. See [SUPPORTED-PACKAGES.md](SUPPORTED-PACKAGES.md).
 6. Set `pkgver` with `sed` and reset `pkgrel=1`. When the PKGBUILD does not change, the AUR already has this version: the script writes it to `current` and exits with code 2.
-7. Unless a checksum array holds a `SKIP`, validate every source URL, run `updpkgsums`, and verify the result with `makepkg --verifysource --skippgpcheck`. Any failure stops the update.
+7. Unless a checksum array holds a `SKIP` other than that of a signature, validate every source URL, run `updpkgsums`, and verify the result with `makepkg --verifysource --skippgpcheck`. A signature is a source whose file name ends in `.sig`, `.sign` or `.asc`, and makepkg gives it `SKIP` itself. Any failure stops the update.
 8. Run `namcap` when it is installed. Errors stop the update. Warnings are printed.
 9. Regenerate `.SRCINFO` with `makepkg --printsrcinfo`.
-10. With `--dry-run`, print the PKGBUILD diff and stop.
-11. Commit `PKGBUILD` and `.SRCINFO` as `<new-version> release from <strategy>`, authored by `GIT_AUTHOR_NAME` and `GIT_AUTHOR_EMAIL` (default `aurtomator`). With `GPG_KEY_ID` set, the commit is amended with a signature. When signing fails, the commit is pushed unsigned.
-12. Push, with up to 3 attempts 5 seconds apart.
-13. Write `current` and `last_updated` to the package YAML.
+10. Check `PKGBUILD` and `.SRCINFO` against the files of the clone's `HEAD`, as publish does in steps 4 and 5 of [4.4](#44-prepare-and-publish). A refused file stops the update.
+11. With `--dry-run`, print the PKGBUILD diff and stop.
+12. Commit `PKGBUILD` and `.SRCINFO` as `<new-version> release from <strategy>`, authored by `GIT_AUTHOR_NAME` and `GIT_AUTHOR_EMAIL` (default `aurtomator`). With `GPG_KEY_ID` set, the commit is amended with a signature. When signing fails, the commit is pushed unsigned.
+13. Push, with up to 3 attempts 5 seconds apart.
+14. Write `current` and `last_updated` to the package YAML.
 
 `AURTOMATOR_CLONE_DELAY` and `AURTOMATOR_RETRY_DELAY` change the 2 and the 5 seconds. The tests set both to 0. The anonymous HTTPS clones of prepare and verify, see [4.4](#44-prepare-and-publish), start without the 2 seconds.
 
@@ -651,8 +655,8 @@ A PKGBUILD is a bash script, and every step that reads it executes it: the audit
 2. The prepared `pkgver` must be `<version>`. `check-all.sh --publish` passes the version the check run found, and the prepare run was given the same one, so another `pkgver` stops the publish with exit code 1.
 3. Clone over SSH with `--no-checkout`, and write the AUR copy as step 2 of verify does. When `HEAD` is not `base`, the AUR repo moved after the update was prepared: exit code 3. `PKGBUILD` and `.SRCINFO` in the AUR copy must be regular files, not symlinks.
 4. The prepared `PKGBUILD` may differ from the AUR copy only in `pkgver=`, which must be `<version>`, in `pkgrel=`, which must be `1`, and in the values of the checksum arrays. The arrays keep their names and lengths, hold only quoted hex checksums or `SKIP`, and have a `SKIP` exactly where the AUR copy has one. Comments and line continuations may stand between the checksums, read as bash reads them: a `#` at the start of a line, right after the opening parenthesis, or after a space or a tab comments out the rest of the line, and a backslash that ends a line without a comment, as a word of its own, continues the array on the next line. A backslash on the line that closes the array stops the publish, because bash joins the next line to the assignment.
-5. Each `source` line of the prepared `.SRCINFO`, with or without an arch suffix, must be the line of the AUR copy with the old version replaced by `<version>`. A source that is `SKIP` in every checksum array of its arch may also change the digits in the name it is saved under, the part before `::`, as `neovim-20261014.tar.gz` becomes `neovim-20261016.tar.gz` in a PKGBUILD that names a nightly download by `$(date -u +%Y%m%d)`. Its URL after `::` must still be the AUR URL with the version replaced. Verify never downloads a `SKIP` source, and makepkg takes the sources from the `PKGBUILD`. Any other line must either equal the line of the AUR copy or be that line with the version replaced in the same way, because a license, a dependency or a description can hold the old version without taking it from `pkgver`, as `GPL-2.0` does in a package at version `2.0`. The replacement also covers three forms a PKGBUILD often derives from `pkgver`: dots turned into underscores (`1_86_0`), the part before the first `+` (`0.13.0` of `0.13.0+dev+1853+g6edb38ca98`), and the version without its last component (`6.19` of `6.19.0`, as in `frameworks/${pkgver%.*}/` of KDE Frameworks). The last form counts only while it keeps a dot. Each part of a line is replaced at most once, so `5.1` inside an already replaced `5.10.0` stays. A line built from any other form of the version, a lone major version for example, stops the publish, and so does a line that has the version replaced in one place and kept in another. The package then needs a manual update. `pkgrel` and the checksums follow the rules of step 4.
-6. Any other difference, and a NUL byte in either file, stops the publish with exit code 1. Otherwise the index of the clone takes the tree of `HEAD`, and the two prepared files enter it byte for byte through `git hash-object --no-filters` and `git update-index`, so the commit keeps every other file of the AUR repo. `git add` would pass them through the attributes of the AUR repo, and `working-tree-encoding=UTF-7` there turns `+AAo-` in a comment into a new line that the checks above never saw. Steps 10 to 13 of [4.2](#42-step-by-step) follow. When the prepared files equal the AUR copy, only `current` is written to the YAML and the exit code is 2.
+5. Each `source` line of the prepared `.SRCINFO`, with or without an arch suffix, must be the line of the AUR copy with the old version replaced by `<version>`. A source that is `SKIP` in every checksum array of its arch may also change the digits in the name it is saved under, the part before `::`, as `neovim-20261014.tar.gz` becomes `neovim-20261016.tar.gz` in a PKGBUILD that names a nightly download by `$(date -u +%Y%m%d)`. Its URL after `::` must still be the AUR URL with the version replaced. Verify never downloads a `SKIP` source, and makepkg takes the sources from the `PKGBUILD`. Any other line must either equal the line of the AUR copy or be that line with the version replaced in the same way, because a license, a dependency or a description can hold the old version without taking it from `pkgver`, as `GPL-2.0` does in a package at version `2.0`. The replacement also covers three forms a PKGBUILD often derives from `pkgver`: dots turned into underscores (`1_86_0`), the part before the first `+` (`0.13.0` of `0.13.0+dev+1853+g6edb38ca98`), and the version without its last component (`6.19` of `6.19.0`, as in `frameworks/${pkgver%.*}/` of KDE Frameworks). The last form counts only while it keeps a dot. Each part of a line is replaced at most once, so `5.1` inside an already replaced `5.10.0` stays. A line built from any other form of the version, a lone major version for example, stops the publish, and so does a line that has the version replaced in one place and kept in another. The package then needs a manual update. `pkgrel` and the checksums follow the rules of step 4. When `pkgver` changes and a download over `http`, `https` or `ftp` has a real checksum, at least one source or checksum line has to change as well. Otherwise the new version would hold the files of the old one, as it would with `pkgver="${_pkgver//-/.}"` and sources built from `_pkgver`, or with a download URL without the version whose file has not changed. A VCS source and a `SKIP` checksum do not count, because makepkg fetches them at build time.
+6. Any other difference, and a NUL byte in either file, stops the publish with exit code 1. Otherwise the index of the clone takes the tree of `HEAD`, and the two prepared files enter it byte for byte through `git hash-object --no-filters` and `git update-index`, so the commit keeps every other file of the AUR repo. `git add` would pass them through the attributes of the AUR repo, and `working-tree-encoding=UTF-7` there turns `+AAo-` in a comment into a new line that the checks above never saw. Steps 12 to 14 of [4.2](#42-step-by-step) follow. When the prepared files equal the AUR copy, only `current` is written to the YAML and the exit code is 2.
 
 Step 5 accepts both forms of a line other than `pkgver`, `pkgrel`, `source` and the checksums, because only running the PKGBUILD shows which form it yields. Code that runs in prepare can therefore pick the form of each such line in the `.SRCINFO` of any package updated in the same run, and keep `depends = foo>=1.2` where the PKGBUILD derives `foo>=${pkgver}` for version `1.3`. makepkg reads only the PKGBUILD. The AUR stores the description, the URL, the dependencies, the relations and the licenses from `.SRCINFO` and serves them on the package page and through its RPC interface, and yay parses the `.SRCINFO` of every package it clones. That code comes from whoever can push to the AUR repo of a tracked package, as the first paragraph of this section says.
 
@@ -883,7 +887,7 @@ When the package is up to date, stdout stays empty:
 ./scripts/update-pkg.sh my-package 2.0.0 --dry-run
 ```
 
-It runs the steps of [4.2](#42-step-by-step) up to `.SRCINFO`, prints the PKGBUILD diff and does not push.
+It runs the steps of [4.2](#42-step-by-step) up to the check of `PKGBUILD` and `.SRCINFO`, prints the PKGBUILD diff and does not push.
 
 ### 7.4 Push an update
 
@@ -998,7 +1002,7 @@ echo "$version"
 
 1. **Location:** `strategies/<name>.sh`, executable (`chmod +x`). `<name>` is the value of the YAML `strategy` field.
 2. **Header:** `set -euo pipefail`, then source `scripts/lib/common.sh` for `pkg_file`, `pkg_get` and logging. `tests/strategies.bats` runs every strategy with `common.sh` as the only file of `scripts/`.
-3. **HTTP:** `http_get <url> [curl option]...` from `common.sh`. It runs `curl -sfL --max-time 30` and tries a timeout, a refused connection and an HTTP 408, 429, 500, 502, 503, 504, 522 or 524 answer twice more, 5 seconds apart. `-f` fails on HTTP errors and `-L` follows redirects. A test in `tests/strategies.bats` fails when a strategy calls `curl` itself.
+3. **HTTP:** `http_get <url> [curl option]...` from `common.sh`. It runs `curl -sfL --max-time 30` and tries a timeout, a refused connection and an HTTP 408, 429, 500, 502, 503, 504, 522 or 524 answer twice more, 5 seconds apart. `-f` fails on HTTP errors and `-L` follows redirects. Every request sends the User-Agent in `USER_AGENT`, `aurtomator/1.0` by default. A test in `tests/strategies.bats` fails when a strategy calls `curl` itself.
 4. **Result:** check for an empty string and for `null` from `yq`.
 5. **Prefix:** strip a leading `v` with `${version#v}` when upstream tags look like `v1.0.0`.
 6. **Validation:** add the checks of its required fields to `scripts/validate-pkg.sh`. The name needs no entry: every script in `strategies/` is a valid strategy.

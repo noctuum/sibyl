@@ -68,6 +68,34 @@ teardown() {
   [ "$status" -eq 0 ]
 }
 
+@test "validate: git-latest passes with a current of the form r<count>.<hash>" {
+  local current
+  for current in r504.42cd4ac r2173.ef2e985d; do
+    create_test_package "mypkg" "git-latest" "upstream:
+  type: github
+  project: owner/repo
+current: '$current'"
+    run "$TEST_TMPDIR/scripts/validate-pkg.sh" "mypkg"
+    [ "$status" -eq 0 ]
+  done
+}
+
+# vercmp reads 1.4.0.r47.g0bbf5ad, 1.2.3 and 0 as newer than every
+# r<count>.<hash>, and r1234.g42cd4ac as older than r1234.42cd4ac of the
+# same commit
+@test "validate: git-latest fails on a current of another form" {
+  local current
+  for current in 1.4.0.r47.g0bbf5ad 1.2.3 r1234.g42cd4ac 0; do
+    create_test_package "mypkg" "git-latest" "upstream:
+  type: github
+  project: owner/repo
+current: '$current'"
+    run "$TEST_TMPDIR/scripts/validate-pkg.sh" "mypkg"
+    [ "$status" -eq 1 ]
+    [[ "$output" == *"current must be r<count>.<hash> for git-latest, the form the strategy prints: $current"* ]]
+  done
+}
+
 @test "validate: git-latest git type fails on a URL without HTTPS" {
   create_test_package "mypkg" "git-latest" "upstream:
   type: git
@@ -350,6 +378,36 @@ EOF
   run "$TEST_TMPDIR/scripts/validate-pkg.sh" "mypkg"
   [ "$status" -ne 0 ]
   [[ "$output" == *"requires 'upstream.registry'"* ]]
+}
+
+@test "validate: webpage-scrape passes with upstream.user_agent" {
+  create_test_package "mypkg" "webpage-scrape" "upstream:
+  url: https://example.com/releases
+  pattern: 'pkg-([0-9.]+)\\.tar\\.gz'
+  user_agent: 'Example/2.0 (+https://example.com/bot)'"
+  run "$TEST_TMPDIR/scripts/validate-pkg.sh" "mypkg"
+  [ "$status" -eq 0 ]
+}
+
+# curl would send the text after a line break as a header of its own
+@test "validate: webpage-scrape fails on a user_agent with a control character" {
+  create_test_package "mypkg" "webpage-scrape" "upstream:
+  url: https://example.com/releases
+  pattern: 'pkg-([0-9.]+)\\.tar\\.gz'
+  user_agent: \"Example/2.0\\r\\nX-Extra: 1\""
+  run "$TEST_TMPDIR/scripts/validate-pkg.sh" "mypkg"
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"upstream.user_agent must hold printable ASCII only: \$'Example/2.0\\r\\nX-Extra: 1'"* ]]
+}
+
+@test "validate: webpage-scrape fails on a user_agent outside ASCII" {
+  create_test_package "mypkg" "webpage-scrape" "upstream:
+  url: https://example.com/releases
+  pattern: 'pkg-([0-9.]+)\\.tar\\.gz'
+  user_agent: 'Exämple/2.0'"
+  run env LC_ALL=C.UTF-8 "$TEST_TMPDIR/scripts/validate-pkg.sh" "mypkg"
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"upstream.user_agent must hold printable ASCII only"* ]]
 }
 
 @test "validate: webpage-scrape fails without upstream.url" {
