@@ -56,7 +56,7 @@ upstream:
   project: group/project
 ```
 
-**Why it works:** `git-latest` makes a bare clone and computes `r{count}.{hash}`, for example `r435.abc1234`, the usual AUR format for `-git` versions. aurtomator writes this value to `pkgver=`, skips `SKIP` checksums and pushes.
+**Why it works:** `git-latest` makes a bare clone and computes `r{count}.{hash}`, for example `r435.abc1234`, the usual AUR format for `-git` versions. aurtomator writes this value to `pkgver=`, skips `SKIP` checksums and pushes. A source pinned to `#branch=` needs `upstream.branch` with the same branch, or the count and the hash come from the default branch.
 
 A `pkgver()` function in the PKGBUILD is fine when it produces the same `r{count}.{hash}` format. The hash takes as many characters as the hash in `current`. A `pkgver()` in the form of `git describe`, such as `1.4.0.r47.g0bbf5ad`, does not fit: `vercmp` reads it as newer than every `r{count}.{hash}`, and `validate-pkg.sh` refuses such a `current`. A user who builds the package later gets a newer value when upstream has moved on, as with every `-git` package on the AUR.
 
@@ -105,16 +105,32 @@ upstream:
 
 **Why it works:** the first capture group of the ERE is the version, whatever the format of the tag, for example `0.1.8-stable`, `release-v2.3.0` or `app/v1.5.0`. bash takes the group, so the regex may hold `|`, in a group after the version: `^v?([0-9.]+)(-stable|)$`.
 
+`tag_version_replace` builds the version from more than one group, with `\1` to `\9`. For the date tag `2026-09-10`, `'^([0-9]{4})-([0-9]{2})-([0-9]{2})$'` with `'\1.\2.\3'` gives `2026.09.10`. See [WORKFLOW.md section 3.1](WORKFLOW.md#31-github-release).
+
+### Versions with a dash (pkgver_dash)
+
+npm and crates.io versions can hold a dash, such as `1.9.0-1` or `0.10.26+cargo-0.100.0`, and `pkgver` cannot. `pkgver_dash` names the character that stands for it:
+
+```yaml
+name: nodejs-myapp
+strategy: npm
+upstream:
+  registry: myapp
+pkgver_dash: _
+```
+
+**Why it works:** `check-update.sh` replaces every `-` in the output of the strategy, whatever the strategy, and the PKGBUILD turns it back where a source URL needs it, as nodejs-inshellisense does with `${pkgver//_/-}`. `_` and `.` are allowed, and `vercmp` reads them the same. `crates` with `prerelease: true` needs the field, see [WORKFLOW.md section 3.10](WORKFLOW.md#310-crates).
+
 ### Nightly and prerelease packages
 
 `github-nightly` tracks nightly builds in 4 patterns:
 
 - **Fixed tag**, for example the neovim `nightly` tag, moved daily
-- **Dated tags**, for example `nightly-2026-03-26`
-- **Separate nightly repo**, for example yt-dlp-nightly-builds
+- **Dated tags**, for example `nightly-2026-03-26`, or any tag form with `nightly_tag_regex`
+- **Separate nightly repo**, for example yt-dlp-nightly-builds. It reads `/releases/latest`, which skips pre-releases, so a repository that files its nightlies as pre-releases, such as ruffle, needs dated tags.
 - **Channel filter**, for example the brave-browser Nightly channel
 
-The version comes from the tag name, the release body, the tag date or the publish date. `strategies/github-nightly.sh` lists the fields.
+The version comes from the tag name, the release body, the tag date or the publish date. `strategies/github-nightly.sh` lists the fields. `date_format` sets the form of the two dates, `YYYY.MM.DD` by default, and `'%Y%m%d'` fits a `pkgver` such as `20251213`. See [WORKFLOW.md section 3.3](WORKFLOW.md#33-github-nightly).
 
 A fixed tag keeps its download URL, so a PKGBUILD can save the download under a name with the date, as `neovim-nightly-bin` does with `_date="$(date -u +%Y%m%d)"` and `"$_pkgname-$_date.tar.gz::<url>"`. This works when the checksum of that source is `SKIP`: only the digits of the name may change from one update to the next. See step 5 of publish in [WORKFLOW.md section 4.4](WORKFLOW.md#44-prepare-and-publish).
 
@@ -227,17 +243,17 @@ aurtomator includes 14 version detection strategies. Choose by where your upstre
 | `git-latest` | Bare git clone | `-git` packages (commit tracking) | N/A |
 | `pypi` | PyPI JSON API | Python packages | Auto (stable only) |
 | `npm` | npm registry | Node.js packages | Auto (`latest` tag) |
-| `crates` | crates.io API | Rust packages | Auto (stable only) |
-| `repology` | Repology API | Fallback across distro repositories | Varies |
+| `crates` | crates.io API | Rust packages | Auto (stable only, or `prerelease: true`) |
+| `repology` | Repology API | Fallback across distro repositories, AUR left out | Varies |
 | `archpkg` | Arch package search | Track official repo versions | N/A |
 | `webpage-scrape` | Any HTTPS page + regex | No API available | None (depends on regex) |
-| `kde-tarball` | download.kde.org | KDE/Plasma packages | None |
+| `kde-tarball` | download.kde.org | KDE projects with one directory of tarballs | None |
 
 ### Strategy limitations
 
 - **GitHub rate limit:** the GitHub strategies send `GITHUB_TOKEN` when it is set in the environment. The `check-updates` workflow sets it to the workflow token, which allows 1,000 requests per hour per repository. Without a token, the limit is 60 requests per hour. `github-tag` reads the tags with `git ls-remote`, outside this limit.
 - **Retries:** a request that a strategy sends with curl tries a timeout, a refused connection and an HTTP 408, 429, 500, 502, 503, 504, 522 or 524 answer twice more, 5 seconds apart. The git calls of `git-latest` and `github-tag` make one attempt. A check that still fails within its time budget runs once more after the other packages and a pause of 60 seconds. A failure on both tries fails the package for that run.
-- **Tag strategies take only `v1.2.3` and `1.2.3` by default:** without `tag_pattern` and `tag_version_regex`, `github-tag`, `gitlab-tag` and `gitea-tag` leave out every other tag, `latest`, `1.0.0-rc1` and `1.0.0rc1` included. Either field replaces that filter. They pick the highest tag with `sort -V`, which places `1.0.0-rc1` above `1.0.0`, so a pattern that lets pre-release tags through picks them.
+- **Tag strategies take only `v1.2.3` and `1.2.3` by default:** without `tag_version_regex`, `github-tag`, `gitlab-tag` and `gitea-tag` leave out every other tag, `latest`, `1.0.0-rc1` and `1.0.0rc1` included. `tag_version_regex` replaces that filter. They pick the highest version with `sort -V`, which places `1.0.0-rc1` above `1.0.0`, so a regex that lets pre-release tags through picks them.
 - **`gitea-tag` fetches at most 50 tags:** there is no pagination.
 - **`gitlab-tag` has no authentication:** private GitLab projects cannot be queried.
 

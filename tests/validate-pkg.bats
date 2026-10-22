@@ -19,10 +19,10 @@ teardown() {
   [ "$status" -eq 0 ]
 }
 
-@test "validate: github-tag with pattern passes" {
+@test "validate: github-tag with tag_version_regex passes" {
   create_test_package "mypkg" "github-tag" "upstream:
   project: owner/repo
-  tag_pattern: 'v*'"
+  tag_version_regex: '^v(1\\.[0-9.]+)$'"
   run "$TEST_TMPDIR/scripts/validate-pkg.sh" "mypkg"
   [ "$status" -eq 0 ]
 }
@@ -96,6 +96,41 @@ current: '$current'"
   done
 }
 
+@test "validate: git-latest branch passes" {
+  local branch
+  for branch in feature/x release-0.11; do
+    create_test_package "mypkg" "git-latest" "upstream:
+  type: github
+  project: owner/repo
+  branch: '$branch'"
+    run "$TEST_TMPDIR/scripts/validate-pkg.sh" "mypkg"
+    [ "$status" -eq 0 ]
+  done
+}
+
+# git clone would read -x as an option
+@test "validate: git-latest branch git refuses rejected" {
+  local branch
+  for branch in -x 'a b' a..b HEAD; do
+    create_test_package "mypkg" "git-latest" "upstream:
+  type: github
+  project: owner/repo
+  branch: '$branch'"
+    run "$TEST_TMPDIR/scripts/validate-pkg.sh" "mypkg"
+    [ "$status" -eq 1 ]
+    [[ "$output" == *"upstream.branch is not a valid branch name: $branch"* ]]
+  done
+}
+
+@test "validate: branch for another strategy rejected" {
+  create_test_package "mypkg" "github-tag" "upstream:
+  project: owner/repo
+  branch: main"
+  run "$TEST_TMPDIR/scripts/validate-pkg.sh" "mypkg"
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"upstream.branch applies to the git-latest strategy only"* ]]
+}
+
 @test "validate: git-latest git type fails on a URL without HTTPS" {
   create_test_package "mypkg" "git-latest" "upstream:
   type: git
@@ -153,12 +188,35 @@ current: '$current'"
   [ "$status" -eq 0 ]
 }
 
-@test "validate: kde-tarball fails with an upstream block" {
+@test "validate: kde-tarball project and path pass" {
   create_test_package "mypkg" "kde-tarball" "upstream:
-  project: other-name"
+  project: alkimia
+  path: unstable/alkimia"
   run "$TEST_TMPDIR/scripts/validate-pkg.sh" "mypkg"
-  [ "$status" -ne 0 ]
-  [[ "$output" == *"strategy 'kde-tarball' takes no upstream settings"* ]]
+  [ "$status" -eq 0 ]
+}
+
+@test "validate: kde-tarball project outside the characters of a name rejected" {
+  local project
+  for project in 'a/b' 'a b' '-a' "a'b"; do
+    create_test_package "mypkg" "kde-tarball" "upstream:
+  project: \"$project\""
+    run "$TEST_TMPDIR/scripts/validate-pkg.sh" "mypkg"
+    [ "$status" -eq 1 ]
+    [[ "$output" == *"upstream.project must be a tarball name of A-Za-z0-9@._+-: $project"* ]]
+  done
+}
+
+# The path ends up in https://download.kde.org/<path>/
+@test "validate: kde-tarball path that is not a directory on the server rejected" {
+  local path
+  for path in ../etc stable/../x /stable/x stable//x 'stable/x?y' stable/x/ 'stable/a b'; do
+    create_test_package "mypkg" "kde-tarball" "upstream:
+  path: '$path'"
+    run "$TEST_TMPDIR/scripts/validate-pkg.sh" "mypkg"
+    [ "$status" -eq 1 ]
+    [[ "$output" == *"upstream.path must be a directory on download.kde.org, such as unstable/alkimia: $path"* ]]
+  done
 }
 
 @test "validate: webpage-scrape passes" {
@@ -237,7 +295,7 @@ EOF
 
 @test "validate: github-tag fails without upstream.project" {
   create_test_package "mypkg" "github-tag" "upstream:
-  tag_pattern: 'v*'"
+  tag_version_regex: '^v(.+)$'"
   run "$TEST_TMPDIR/scripts/validate-pkg.sh" "mypkg"
   [ "$status" -ne 0 ]
   [[ "$output" == *"requires 'upstream.project'"* ]]
@@ -539,21 +597,79 @@ allow_downgrade: $value"
   done
 }
 
-@test "validate: tag_pattern valid glob accepted" {
-  create_test_package "mypkg" "github-tag" "upstream:
-  project: owner/repo
-  tag_pattern: 'v*'"
+@test "validate: pkgver_dash _ or . passes" {
+  local value
+  for value in _ .; do
+    create_test_package "mypkg" "npm" "upstream:
+  registry: cli-pride-flags
+pkgver_dash: '$value'"
+    run "$TEST_TMPDIR/scripts/validate-pkg.sh" "mypkg"
+    [ "$status" -eq 0 ]
+  done
+}
+
+@test "validate: pkgver_dash other than _ or . rejected" {
+  local value
+  for value in "'+'" "'-'" "'__'" "''" 1; do
+    create_test_package "mypkg" "npm" "upstream:
+  registry: cli-pride-flags
+pkgver_dash: $value"
+    run "$TEST_TMPDIR/scripts/validate-pkg.sh" "mypkg"
+    [ "$status" -ne 0 ]
+    [[ "$output" == *"pkgver_dash must be _ or ."* ]]
+  done
+}
+
+# === crates prerelease validation ===
+
+@test "validate: crates prerelease with pkgver_dash passes" {
+  create_test_package "mypkg" "crates" "upstream:
+  registry: pijul
+  prerelease: true
+pkgver_dash: ."
   run "$TEST_TMPDIR/scripts/validate-pkg.sh" "mypkg"
   [ "$status" -eq 0 ]
 }
 
-@test "validate: tag_pattern invalid regex rejected" {
-  create_test_package "mypkg" "github-tag" "upstream:
-  project: owner/repo
-  tag_pattern: '[invalid'"
+# A semver pre-release always holds a dash
+@test "validate: crates prerelease without pkgver_dash rejected" {
+  create_test_package "mypkg" "crates" "upstream:
+  registry: pijul
+  prerelease: true"
   run "$TEST_TMPDIR/scripts/validate-pkg.sh" "mypkg"
   [ "$status" -ne 0 ]
-  [[ "$output" == *"not valid as regex"* ]]
+  [[ "$output" == *"upstream.prerelease needs pkgver_dash"* ]]
+}
+
+@test "validate: crates prerelease false without pkgver_dash passes" {
+  create_test_package "mypkg" "crates" "upstream:
+  registry: serde
+  prerelease: false"
+  run "$TEST_TMPDIR/scripts/validate-pkg.sh" "mypkg"
+  [ "$status" -eq 0 ]
+}
+
+@test "validate: prerelease for another strategy rejected" {
+  create_test_package "mypkg" "npm" "upstream:
+  registry: cli-pride-flags
+  prerelease: true
+pkgver_dash: _"
+  run "$TEST_TMPDIR/scripts/validate-pkg.sh" "mypkg"
+  [ "$status" -ne 0 ]
+  [[ "$output" == *"upstream.prerelease applies to the crates strategy only"* ]]
+}
+
+@test "validate: prerelease that is not a boolean rejected" {
+  local value
+  for value in yes '"true"' 1; do
+    create_test_package "mypkg" "crates" "upstream:
+  registry: pijul
+  prerelease: $value
+pkgver_dash: _"
+    run "$TEST_TMPDIR/scripts/validate-pkg.sh" "mypkg"
+    [ "$status" -ne 0 ]
+    [[ "$output" == *"upstream.prerelease must be true or false"* ]]
+  done
 }
 
 # === tag_version_regex validation ===
@@ -602,4 +718,125 @@ allow_downgrade: $value"
   run "$TEST_TMPDIR/scripts/validate-pkg.sh" "mypkg"
   [ "$status" -ne 0 ]
   [[ "$output" == *"capture group"* ]]
+}
+
+# === tag_version_replace validation ===
+
+@test "validate: tag_version_replace with the groups of the regex passes" {
+  create_test_package "mypkg" "github-release" "upstream:
+  project: owner/repo
+  tag_version_regex: '^([0-9]{4})-([0-9]{2})-([0-9]{2})$'
+  tag_version_replace: '\\1.\\2.\\3'"
+  run "$TEST_TMPDIR/scripts/validate-pkg.sh" "mypkg"
+  [ "$status" -eq 0 ]
+}
+
+@test "validate: tag_version_replace without tag_version_regex rejected" {
+  create_test_package "mypkg" "github-release" "upstream:
+  project: owner/repo
+  tag_version_replace: '\\1'"
+  run "$TEST_TMPDIR/scripts/validate-pkg.sh" "mypkg"
+  [ "$status" -ne 0 ]
+  [[ "$output" == *"upstream.tag_version_replace needs upstream.tag_version_regex"* ]]
+}
+
+@test "validate: tag_version_replace with a character a version lacks rejected" {
+  create_test_package "mypkg" "github-release" "upstream:
+  project: owner/repo
+  tag_version_regex: '^([0-9]{4})-([0-9]{2})-([0-9]{2})$'
+  tag_version_replace: '\\1-\\2'"
+  run "$TEST_TMPDIR/scripts/validate-pkg.sh" "mypkg"
+  [ "$status" -ne 0 ]
+  [[ "$output" == *'upstream.tag_version_replace may hold only A-Za-z0-9 . _ + and \1 to \9'* ]]
+}
+
+@test "validate: tag_version_replace naming a group the regex lacks rejected" {
+  create_test_package "mypkg" "github-release" "upstream:
+  project: owner/repo
+  tag_version_regex: '^([0-9]{4})-([0-9]{2})-([0-9]{2})$'
+  tag_version_replace: '\\1.\\4'"
+  run "$TEST_TMPDIR/scripts/validate-pkg.sh" "mypkg"
+  [ "$status" -ne 0 ]
+  [[ "$output" == *"upstream.tag_version_replace names a group tag_version_regex does not have"* ]]
+}
+
+# === nightly_tag_regex validation ===
+
+@test "validate: nightly_tag_regex passes" {
+  create_test_package "mypkg" "github-nightly" "upstream:
+  project: owner/repo
+  nightly_tag_regex: '^[0-9]{4}-[0-9]{2}-[0-9]{2}$'
+  version_source: tag_date"
+  run "$TEST_TMPDIR/scripts/validate-pkg.sh" "mypkg"
+  [ "$status" -eq 0 ]
+}
+
+@test "validate: nightly_tag_regex for another strategy rejected" {
+  create_test_package "mypkg" "github-release" "upstream:
+  project: owner/repo
+  nightly_tag_regex: '^nightly-'"
+  run "$TEST_TMPDIR/scripts/validate-pkg.sh" "mypkg"
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"upstream.nightly_tag_regex applies to the github-nightly strategy only"* ]]
+}
+
+@test "validate: nightly_tag_regex next to nightly_tag or channel rejected" {
+  local field
+  for field in 'nightly_tag: nightly-' 'channel: Nightly'; do
+    create_test_package "mypkg" "github-nightly" "upstream:
+  project: owner/repo
+  nightly_tag_regex: '^nightly-'
+  $field"
+    run "$TEST_TMPDIR/scripts/validate-pkg.sh" "mypkg"
+    [ "$status" -eq 1 ]
+    [[ "$output" == *"upstream.nightly_tag_regex takes the place of nightly_tag and channel"* ]]
+  done
+}
+
+@test "validate: nightly_tag_regex invalid regex rejected" {
+  create_test_package "mypkg" "github-nightly" "upstream:
+  project: owner/repo
+  nightly_tag_regex: '([0-9]'"
+  run "$TEST_TMPDIR/scripts/validate-pkg.sh" "mypkg"
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"upstream.nightly_tag_regex is not valid ERE regex: ([0-9]"* ]]
+}
+
+# === date_format validation ===
+
+@test "validate: date_format with a date version_source passes" {
+  local source
+  for source in tag_date published_date; do
+    create_test_package "mypkg" "github-nightly" "upstream:
+  project: owner/repo
+  version_source: $source
+  date_format: '%Y%m%d'"
+    run "$TEST_TMPDIR/scripts/validate-pkg.sh" "mypkg"
+    [ "$status" -eq 0 ]
+  done
+}
+
+# Without version_source the strategy reads the tag
+@test "validate: date_format with another version_source rejected" {
+  local source
+  for source in 'version_source: tag' 'version_source: release_body' ''; do
+    create_test_package "mypkg" "github-nightly" "upstream:
+  project: owner/repo
+  $source
+  version_pattern: 'v\\K\\S+'
+  date_format: '%Y%m%d'"
+    run "$TEST_TMPDIR/scripts/validate-pkg.sh" "mypkg"
+    [ "$status" -ne 0 ]
+    [[ "$output" == *"upstream.date_format applies to version_source tag_date and published_date only"* ]]
+  done
+}
+
+@test "validate: date_format that gives no valid version rejected" {
+  create_test_package "mypkg" "github-nightly" "upstream:
+  project: owner/repo
+  version_source: tag_date
+  date_format: '%Y-%m-%d'"
+  run "$TEST_TMPDIR/scripts/validate-pkg.sh" "mypkg"
+  [ "$status" -ne 0 ]
+  [[ "$output" == *"upstream.date_format must give a valid version, it gives '2026-01-02'"* ]]
 }

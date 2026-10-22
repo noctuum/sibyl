@@ -77,6 +77,29 @@ teardown() {
   [[ "$output" == *"tag_version_regex 'docker-v(.*)' did not match tag '0.1.8-stable'"* ]]
 }
 
+@test "github-release: tag_version_replace builds the version from the groups" {
+  create_test_package "test-replace" "github-release" "upstream:
+  project: dated-owner/dated-repo
+  tag_version_regex: '^([0-9]{4})-([0-9]{2})-([0-9]{2})$'
+  tag_version_replace: '\\1.\\2.\\3'"
+
+  run "$TEST_TMPDIR/strategies/github-release.sh" "test-replace"
+  [ "$status" -eq 0 ]
+  [ "$output" = "2026.10.21" ]
+}
+
+@test "github-release: tag_version_replace fails on a group the regex lacks" {
+  create_test_package "test-replace" "github-release" "upstream:
+  project: dated-owner/dated-repo
+  tag_version_regex: '^([0-9]{4})-([0-9]{2})-([0-9]{2})$'
+  tag_version_replace: '\\1.\\4'"
+
+  run "$TEST_TMPDIR/strategies/github-release.sh" "test-replace"
+  [ "$status" -eq 1 ]
+  [[ "$output" == *'tag_version_replace names \4, a group tag_version_regex does not have'* ]]
+  [[ "$output" != *"did not match"* ]]
+}
+
 # === github-tag ===
 
 @test "github-tag: returns latest tag sorted by semver" {
@@ -109,6 +132,17 @@ teardown() {
   [ "$output" = "1.3.11" ]
 }
 
+@test "github-tag: tag_version_replace builds the version from the groups" {
+  create_test_package "test-tag-replace" "github-tag" "upstream:
+  project: dated-owner/dated-repo
+  tag_version_regex: '^([0-9]{4})-([0-9]{2})-([0-9]{2})$'
+  tag_version_replace: '\\1.\\2.\\3'"
+
+  run "$TEST_TMPDIR/strategies/github-tag.sh" "test-tag-replace"
+  [ "$status" -eq 0 ]
+  [ "$output" = "2026.09.10" ]
+}
+
 @test "github-tag: takes only tags of the form v1.2.3 by default" {
   create_test_package "test-gh-tag" "github-tag" "upstream:
   project: mixed-owner/mixed-repo"
@@ -118,23 +152,13 @@ teardown() {
   [ "$output" = "2.0.0" ]
 }
 
-@test "github-tag: names both fields when no tag is a release" {
+@test "github-tag: names tag_version_regex when no tag is a release" {
   create_test_package "test-gh-tag" "github-tag" "upstream:
   project: named-owner/named-repo"
 
   run "$TEST_TMPDIR/strategies/github-tag.sh" "test-gh-tag"
   [ "$status" -eq 1 ]
-  [[ "$output" == *"No tag of the form v1.2.3 or 1.2.3; set upstream.tag_pattern or upstream.tag_version_regex"* ]]
-}
-
-@test "github-tag: tag_pattern replaces the default filter" {
-  create_test_package "test-gh-tag" "github-tag" "upstream:
-  project: mixed-owner/mixed-repo
-  tag_pattern: 'latest'"
-
-  run "$TEST_TMPDIR/strategies/github-tag.sh" "test-gh-tag"
-  [ "$status" -eq 0 ]
-  [ "$output" = "latest" ]
+  [[ "$output" == *"No tag of the form v1.2.3 or 1.2.3; set upstream.tag_version_regex"* ]]
 }
 
 @test "github-tag: reads every tag with git ls-remote" {
@@ -217,6 +241,18 @@ teardown() {
   [ "$output" = "26.2.5" ]
 }
 
+@test "gitlab-tag: tag_version_replace builds the version from the groups" {
+  create_test_package "test-gl-tag" "gitlab-tag" "upstream:
+  host: gitlab.com
+  project: dated-group/dated-project
+  tag_version_regex: '^([0-9]{4})-([0-9]{2})-([0-9]{2})$'
+  tag_version_replace: '\\1\\2\\3'"
+
+  run "$TEST_TMPDIR/strategies/gitlab-tag.sh" "test-gl-tag"
+  [ "$status" -eq 0 ]
+  [ "$output" = "20260910" ]
+}
+
 @test "gitlab-tag: takes only tags of the form v1.2.3 by default" {
   create_test_package "test-gl-tag" "gitlab-tag" "upstream:
   host: gitlab.com
@@ -227,14 +263,14 @@ teardown() {
   [ "$output" = "2.0.0" ]
 }
 
-@test "gitlab-tag: names tag_pattern when no tag is a release" {
+@test "gitlab-tag: names tag_version_regex when no tag is a release" {
   create_test_package "test-gl-tag" "gitlab-tag" "upstream:
   host: gitlab.com
   project: named-group/named-project"
 
   run "$TEST_TMPDIR/strategies/gitlab-tag.sh" "test-gl-tag"
   [ "$status" -eq 1 ]
-  [[ "$output" == *"No tag of the form v1.2.3 or 1.2.3; set upstream.tag_pattern"* ]]
+  [[ "$output" == *"No tag of the form v1.2.3 or 1.2.3; set upstream.tag_version_regex"* ]]
 }
 
 # === gitea-tag ===
@@ -261,6 +297,18 @@ teardown() {
   [ "$output" = "26.2.5" ]
 }
 
+@test "gitea-tag: tag_version_replace builds the version from the groups" {
+  create_test_package "test-gitea" "gitea-tag" "upstream:
+  host: codeberg.org
+  project: dated-owner/dated-repo
+  tag_version_regex: '^([0-9]{4})-([0-9]{2})-([0-9]{2})$'
+  tag_version_replace: '\\1.\\2.\\3'"
+
+  run "$TEST_TMPDIR/strategies/gitea-tag.sh" "test-gitea"
+  [ "$status" -eq 0 ]
+  [ "$output" = "2026.09.10" ]
+}
+
 @test "gitea-tag: takes only tags of the form v1.2.3 by default" {
   create_test_package "test-gitea" "gitea-tag" "upstream:
   host: codeberg.org
@@ -271,14 +319,14 @@ teardown() {
   [ "$output" = "2.0.0" ]
 }
 
-@test "gitea-tag: names tag_pattern when no tag is a release" {
+@test "gitea-tag: names tag_version_regex when no tag is a release" {
   create_test_package "test-gitea" "gitea-tag" "upstream:
   host: codeberg.org
   project: named-owner/named-repo"
 
   run "$TEST_TMPDIR/strategies/gitea-tag.sh" "test-gitea"
   [ "$status" -eq 1 ]
-  [[ "$output" == *"No tag of the form v1.2.3 or 1.2.3; set upstream.tag_pattern"* ]]
+  [[ "$output" == *"No tag of the form v1.2.3 or 1.2.3; set upstream.tag_version_regex"* ]]
 }
 
 # === pypi ===
@@ -314,6 +362,29 @@ teardown() {
   [ "$output" = "1.0.204" ]
 }
 
+@test "crates: prerelease reads max_version" {
+  create_test_package "test-crates" "crates" "upstream:
+  registry: pre-crate
+  prerelease: true"
+
+  run "$TEST_TMPDIR/strategies/crates.sh" "test-crates"
+  [ "$status" -eq 0 ]
+  [ "$output" = "1.0.0-beta.24" ]
+}
+
+@test "crates: reads max_stable_version without prerelease" {
+  local field
+  for field in '' 'prerelease: false'; do
+    create_test_package "test-crates" "crates" "upstream:
+  registry: pre-crate
+  $field"
+
+    run "$TEST_TMPDIR/strategies/crates.sh" "test-crates"
+    [ "$status" -eq 0 ]
+    [ "$output" = "0.15.0" ]
+  done
+}
+
 # === repology ===
 
 @test "repology: returns newest version from Repology" {
@@ -323,6 +394,25 @@ teardown() {
   run "$TEST_TMPDIR/strategies/repology.sh" "test-repology"
   [ "$status" -eq 0 ]
   [ "$output" = "5.0.0" ]
+}
+
+# For a package of ours, the AUR entry is our own version
+@test "repology: takes the highest outdated version when only the AUR is newest" {
+  create_test_package "test-repology" "repology" "upstream:
+  repology: aur-ahead"
+
+  run "$TEST_TMPDIR/strategies/repology.sh" "test-repology"
+  [ "$status" -eq 0 ]
+  [ "$output" = "1.140.10" ]
+}
+
+@test "repology: takes newest over an outdated version sort -V ranks higher" {
+  create_test_package "test-repology" "repology" "upstream:
+  repology: rc-order"
+
+  run "$TEST_TMPDIR/strategies/repology.sh" "test-repology"
+  [ "$status" -eq 0 ]
+  [ "$output" = "1.0" ]
 }
 
 # === archpkg ===
@@ -336,6 +426,15 @@ teardown() {
   [ "$output" = "6.10.2" ]
 }
 
+@test "archpkg: prints pkgver without epoch and pkgrel" {
+  create_test_package "test-archpkg" "archpkg" "upstream:
+  archpkg: ffmpeg"
+
+  run "$TEST_TMPDIR/strategies/archpkg.sh" "test-archpkg"
+  [ "$status" -eq 0 ]
+  [ "$output" = "9.0.2" ]
+}
+
 # === kde-tarball ===
 
 @test "kde-tarball: returns latest version from download.kde.org" {
@@ -344,6 +443,37 @@ teardown() {
   run "$TEST_TMPDIR/strategies/kde-tarball.sh" "test-kde"
   [ "$status" -eq 0 ]
   [ "$output" = "1.0.1" ]
+}
+
+@test "kde-tarball: upstream.project names the tarball and the directory" {
+  record_curl
+  create_test_package "kdiff3-mine" "kde-tarball" "upstream:
+  project: kdiff3"
+
+  run "$TEST_TMPDIR/strategies/kde-tarball.sh" "kdiff3-mine"
+  [ "$status" -eq 0 ]
+  [ "$output" = "1.12.6" ]
+  grep -qx 'https://download.kde.org/stable/kdiff3/' "$TEST_TMPDIR/curl.args"
+}
+
+@test "kde-tarball: upstream.path names the directory" {
+  record_curl
+  create_test_package "alkimia-unstable" "kde-tarball" "upstream:
+  project: alkimia
+  path: unstable/alkimia"
+
+  run "$TEST_TMPDIR/strategies/kde-tarball.sh" "alkimia-unstable"
+  [ "$status" -eq 0 ]
+  [ "$output" = "8.1.80" ]
+  grep -qx 'https://download.kde.org/unstable/alkimia/' "$TEST_TMPDIR/curl.args"
+}
+
+@test "kde-tarball: a dot in the name matches a dot alone" {
+  create_test_package "kio.s3" "kde-tarball" ""
+
+  run "$TEST_TMPDIR/strategies/kde-tarball.sh" "kio.s3"
+  [ "$status" -eq 0 ]
+  [ "$output" = "1.0.0" ]
 }
 
 # === webpage-scrape ===
@@ -425,6 +555,39 @@ current: 'r2.$(printf '%0*d' "$len" 0)'"
   done
 }
 
+# makepkg checks out the branch of a source pinned to #branch=
+@test "git-latest: counts the commits of upstream.branch" {
+  fake_git_upstream
+  git -C "$fake_repo" switch -q -c feature HEAD~1
+  local i
+  for i in 4 5; do
+    echo "$i" >"$fake_repo/file.txt"
+    git -C "$fake_repo" commit -q -am "commit $i"
+  done
+  git -C "$fake_repo" switch -q -
+  create_test_package "test-git" "git-latest" "upstream:
+  type: git
+  url: https://git.example.com/repo.git
+  branch: feature"
+
+  run "$TEST_TMPDIR/strategies/git-latest.sh" "test-git"
+  [ "$status" -eq 0 ]
+  [ "$output" = "r4.$(git -C "$fake_repo" rev-parse feature | cut -c1-7)" ]
+}
+
+@test "git-latest: fails on a branch the repository lacks" {
+  fake_git_upstream
+  create_test_package "test-git" "git-latest" "upstream:
+  type: git
+  url: https://git.example.com/repo.git
+  branch: nope"
+
+  run "$TEST_TMPDIR/strategies/git-latest.sh" "test-git"
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"Remote branch nope not found"* ]]
+  [[ "$output" == *"Failed to clone https://git.example.com/repo.git"* ]]
+}
+
 @test "git-latest: refuses a local repository" {
   git init -q "$TEST_TMPDIR/local-repo"
   git -C "$TEST_TMPDIR/local-repo" -c user.name=test -c user.email=test@test \
@@ -478,6 +641,92 @@ EOF
   run "$TEST_TMPDIR/strategies/github-nightly.sh" "test-nightly-b"
   [ "$status" -eq 0 ]
   [ "$output" = "2026.03.26" ]
+}
+
+# Helper: the pages of the releases list that curl fetched
+nightly_pages() {
+  grep -o 'releases?per_page=100&page=[0-9]*' "$TEST_TMPDIR/curl.args" | cut -d= -f3 | tr '\n' ' '
+}
+
+# servo/servo-nightly-builds lists 12 rc releases first, and every release
+# carries the created_at of the tagged commit
+@test "github-nightly: nightly_tag_regex takes the match published last" {
+  record_curl
+  create_test_package "test-nightly-regex" "github-nightly" "upstream:
+  project: dated-nightly/repo
+  nightly_tag_regex: '^[0-9]{4}-[0-9]{2}-[0-9]{2}$'
+  version_source: tag_date
+  date_format: '%Y%m%d'"
+
+  run "$TEST_TMPDIR/strategies/github-nightly.sh" "test-nightly-regex"
+  [ "$status" -eq 0 ]
+  [ "$output" = "20261021" ]
+  [ "$(nightly_pages)" = "1 " ]
+}
+
+@test "github-nightly: nightly_tag_regex reads the next page" {
+  record_curl
+  create_test_package "test-nightly-regex" "github-nightly" "upstream:
+  project: later-nightly/repo
+  nightly_tag_regex: '^[0-9]{4}-[0-9]{2}-[0-9]{2}$'
+  version_source: tag_date"
+
+  run "$TEST_TMPDIR/strategies/github-nightly.sh" "test-nightly-regex"
+  [ "$status" -eq 0 ]
+  [ "$output" = "2026.10.21" ]
+  [ "$(nightly_pages)" = "1 2 " ]
+}
+
+@test "github-nightly: nightly_tag_regex reads 3 pages at most" {
+  record_curl
+  create_test_package "test-nightly-regex" "github-nightly" "upstream:
+  project: no-nightly/repo
+  nightly_tag_regex: '^[0-9]{4}-[0-9]{2}-[0-9]{2}$'
+  version_source: tag_date"
+
+  run "$TEST_TMPDIR/strategies/github-nightly.sh" "test-nightly-regex"
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"No nightly release found for no-nightly/repo"* ]]
+  [ "$(nightly_pages)" = "1 2 3 " ]
+}
+
+@test "github-nightly: nightly_tag_regex stops at the page with a match" {
+  record_curl
+  create_test_package "test-nightly-regex" "github-nightly" "upstream:
+  project: full-nightly/repo
+  nightly_tag_regex: '^[0-9]{4}-[0-9]{2}-[0-9]{2}$'
+  version_source: tag_date"
+
+  run "$TEST_TMPDIR/strategies/github-nightly.sh" "test-nightly-regex"
+  [ "$status" -eq 0 ]
+  [ "$output" = "2026.10.21" ]
+  [ "$(nightly_pages)" = "1 " ]
+}
+
+@test "github-nightly: nightly_tag_regex stops at a page of fewer than 100" {
+  record_curl
+  create_test_package "test-nightly-regex" "github-nightly" "upstream:
+  project: short-nightly/repo
+  nightly_tag_regex: '^[0-9]{4}-[0-9]{2}-[0-9]{2}$'
+  version_source: tag_date"
+
+  run "$TEST_TMPDIR/strategies/github-nightly.sh" "test-nightly-regex"
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"No nightly release found for short-nightly/repo"* ]]
+  [ "$(nightly_pages)" = "1 " ]
+}
+
+@test "github-nightly: nightly_tag_regex stops at an empty page" {
+  record_curl
+  create_test_package "test-nightly-regex" "github-nightly" "upstream:
+  project: empty-nightly/repo
+  nightly_tag_regex: '^[0-9]{4}-[0-9]{2}-[0-9]{2}$'
+  version_source: tag_date"
+
+  run "$TEST_TMPDIR/strategies/github-nightly.sh" "test-nightly-regex"
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"No nightly release found for empty-nightly/repo"* ]]
+  [ "$(nightly_pages)" = "1 " ]
 }
 
 @test "github-nightly: pattern C, separate nightly repo" {
@@ -578,6 +827,67 @@ EOF
   run "$TEST_TMPDIR/strategies/github-nightly.sh" "test-nightly-bar"
   [ "$status" -eq 0 ]
   [ "$output" = "3.5.0" ]
+}
+
+# servo-nightly-bin uses 20251213, which vercmp ranks above 2026.10.21
+@test "github-nightly: tag_version_replace with version_source=tag" {
+  create_test_package "test-nightly-replace" "github-nightly" "upstream:
+  project: dated-owner/dated-repo
+  nightly_tag: latest
+  version_source: tag
+  tag_version_regex: '^([0-9]{4})-([0-9]{2})-([0-9]{2})$'
+  tag_version_replace: '\\1\\2\\3'"
+
+  run "$TEST_TMPDIR/strategies/github-nightly.sh" "test-nightly-replace"
+  [ "$status" -eq 0 ]
+  [ "$output" = "20261021" ]
+}
+
+@test "github-nightly: date_format with tag_date" {
+  create_test_package "test-nightly-format" "github-nightly" "upstream:
+  project: owner/dated-repo
+  nightly_tag: 'nightly-'
+  version_source: tag_date
+  date_format: '%Y%m%d'"
+
+  run "$TEST_TMPDIR/strategies/github-nightly.sh" "test-nightly-format"
+  [ "$status" -eq 0 ]
+  [ "$output" = "20260326" ]
+}
+
+@test "github-nightly: date_format with published_date" {
+  create_test_package "test-nightly-format" "github-nightly" "upstream:
+  project: dated-owner/dated-repo
+  nightly_tag: latest
+  version_source: published_date
+  date_format: '%Y%m%d'"
+
+  run "$TEST_TMPDIR/strategies/github-nightly.sh" "test-nightly-format"
+  [ "$status" -eq 0 ]
+  [ "$output" = "20261022" ]
+}
+
+# Published at 2026-10-22T00:25:00Z, which is still 2026-10-21 at UTC-10
+@test "github-nightly: published_date is the date in UTC" {
+  create_test_package "test-nightly-utc" "github-nightly" "upstream:
+  project: dated-owner/dated-repo
+  nightly_tag: latest
+  version_source: published_date"
+
+  run env TZ=XXX10 "$TEST_TMPDIR/strategies/github-nightly.sh" "test-nightly-utc"
+  [ "$status" -eq 0 ]
+  [ "$output" = "2026.10.22" ]
+}
+
+@test "github-nightly: fails when the release holds no published_at" {
+  create_test_package "test-nightly-nodate" "github-nightly" "upstream:
+  project: owner/repo
+  nightly_tag: latest
+  version_source: published_date"
+
+  run "$TEST_TMPDIR/strategies/github-nightly.sh" "test-nightly-nodate"
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"Could not extract version from nightly release"* ]]
 }
 
 # === YAML regex fields ===
@@ -943,13 +1253,22 @@ curl_agents() {
   [[ "$output" == *"No version found"* ]]
 }
 
-@test "repology: fails when no newest status" {
-  create_test_package "test-nonew" "repology" "upstream:
-  repology: no-newest"
+@test "repology: fails when only the AUR has a version" {
+  create_test_package "test-aur-only" "repology" "upstream:
+  repology: aur-only"
 
-  run "$TEST_TMPDIR/strategies/repology.sh" "test-nonew"
-  [ "$status" -ne 0 ]
-  [[ "$output" == *"No version found"* ]]
+  run "$TEST_TMPDIR/strategies/repology.sh" "test-aur-only"
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"No version found on Repology for aur-only outside the AUR"* ]]
+}
+
+@test "repology: names a project Repology does not know" {
+  create_test_package "test-missing" "repology" "upstream:
+  repology: missing-project"
+
+  run "$TEST_TMPDIR/strategies/repology.sh" "test-missing"
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"Project missing-project not found on Repology"* ]]
 }
 
 @test "archpkg: fails on empty results" {
@@ -1065,6 +1384,40 @@ EOF
   [[ "$output" == *"Failed to fetch"* ]]
 }
 
+@test "github-nightly: nightly_tag_regex fails on curl network error" {
+  create_test_package "test-neterr" "github-nightly" "upstream:
+  project: dated-nightly/repo
+  nightly_tag_regex: '^[0-9]{4}-[0-9]{2}-[0-9]{2}$'
+  version_source: tag_date"
+
+  cat >"$TEST_TMPDIR/mock-bin/curl" <<'EOF'
+#!/usr/bin/env bash
+echo "curl: (7) Failed to connect" >&2
+exit 7
+EOF
+  chmod +x "$TEST_TMPDIR/mock-bin/curl"
+
+  run "$TEST_TMPDIR/strategies/github-nightly.sh" "test-neterr"
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"Failed to fetch releases for dated-nightly/repo"* ]]
+}
+
+@test "repology: fails on curl network error" {
+  create_test_package "test-neterr" "repology" "upstream:
+  repology: firefox"
+
+  cat >"$TEST_TMPDIR/mock-bin/curl" <<'EOF'
+#!/usr/bin/env bash
+echo "curl: (7) Failed to connect" >&2
+exit 7
+EOF
+  chmod +x "$TEST_TMPDIR/mock-bin/curl"
+
+  run "$TEST_TMPDIR/strategies/repology.sh" "test-neterr"
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"Failed to fetch Repology info for firefox"* ]]
+}
+
 @test "github-release: fails on a 404 (curl exit 22)" {
   create_test_package "test-404" "github-release" "upstream:
   project: owner/repo"
@@ -1100,35 +1453,46 @@ EOF
   [[ "$output" == *"Failed to fetch release tag 'models'"* ]]
 }
 
-@test "github-tag: tag_pattern filters out all tags" {
+@test "github-tag: tag_version_regex filters out all tags" {
   create_test_package "test-filter" "github-tag" "upstream:
   project: owner/repo
-  tag_pattern: 'release-*'"
+  tag_version_regex: '^release-(.+)$'"
 
-  # The mock returns v2.0.0, v1.9.0 and v1.0.0, and none matches ^release-.*
+  # The mock returns v2.0.0, v1.9.0 and v1.0.0, and none matches ^release-
   run "$TEST_TMPDIR/strategies/github-tag.sh" "test-filter"
-  [ "$status" -ne 0 ]
-  [[ "$output" == *"No matching tags"* ]]
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"No matching tags found"* ]]
 }
 
-@test "gitlab-tag: tag_pattern filters out all tags" {
+@test "gitlab-tag: tag_version_regex filters out all tags" {
   create_test_package "test-filter" "gitlab-tag" "upstream:
   host: gitlab.com
   project: group/project
-  tag_pattern: 'release-*'"
+  tag_version_regex: '^release-(.+)$'"
 
   run "$TEST_TMPDIR/strategies/gitlab-tag.sh" "test-filter"
-  [ "$status" -ne 0 ]
-  [[ "$output" == *"No matching tags"* ]]
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"No matching tags found"* ]]
 }
 
-@test "gitea-tag: tag_pattern filters out all tags" {
+@test "gitea-tag: tag_version_regex filters out all tags" {
   create_test_package "test-filter" "gitea-tag" "upstream:
   host: codeberg.org
   project: owner/repo
-  tag_pattern: 'release-*'"
+  tag_version_regex: '^release-(.+)$'"
 
   run "$TEST_TMPDIR/strategies/gitea-tag.sh" "test-filter"
-  [ "$status" -ne 0 ]
-  [[ "$output" == *"No matching tags"* ]]
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"No matching tags found"* ]]
+}
+
+# A pin to one release line leaves out v2.0.0 and the v2.1.0 rc tags
+@test "github-tag: tag_version_regex pins a release line" {
+  create_test_package "test-pin" "github-tag" "upstream:
+  project: mixed-owner/mixed-repo
+  tag_version_regex: '^v(1\\.[0-9.]+)$'"
+
+  run "$TEST_TMPDIR/strategies/github-tag.sh" "test-pin"
+  [ "$status" -eq 0 ]
+  [ "$output" = "1.9.0" ]
 }

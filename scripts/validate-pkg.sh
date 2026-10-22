@@ -74,21 +74,60 @@ validate_pkg() {
     ((errors++))
   fi
 
-  # --- Strategy-specific fields ---
-
-  # Validate optional tag_pattern as regex (used by *-tag strategies)
-  local tag_pattern
-  tag_pattern=$(pkg_get "$file" '.upstream.tag_pattern // ""')
-  if [[ -n "$tag_pattern" && "$tag_pattern" != "null" ]]; then
-    # Strategies convert glob to regex: ^${pattern//\*/.*}
-    local tag_regex="^${tag_pattern//\*/.*}"
-    local grep_rc=0
-    echo "" | grep -qE "$tag_regex" 2>/dev/null || grep_rc=$?
-    if [[ "$grep_rc" -eq 2 ]]; then
-      log_err "$file: upstream.tag_pattern is not valid as regex: $tag_pattern"
+  local pkgver_dash=""
+  if [[ $(pkg_get "$file" '.pkgver_dash | tag') != "!!null" ]]; then
+    pkgver_dash=$(pkg_get "$file" '.pkgver_dash')
+    if [[ "$pkgver_dash" != "_" && "$pkgver_dash" != "." ]]; then
+      log_err "$file: pkgver_dash must be _ or ."
       ((errors++))
     fi
   fi
+
+  local branch
+  if [[ $(pkg_get "$file" '.upstream.branch | tag') != "!!null" ]]; then
+    branch=$(pkg_get "$file" '.upstream.branch')
+    if [[ "$strategy" != "git-latest" ]]; then
+      log_err "$file: upstream.branch applies to the git-latest strategy only"
+      ((errors++))
+    # git clone would read a name that starts with - as an option
+    elif ! git check-ref-format --branch "$branch" >/dev/null 2>&1; then
+      log_err "$file: upstream.branch is not a valid branch name: $branch"
+      ((errors++))
+    fi
+  fi
+
+  local nightly_tag_regex
+  nightly_tag_regex=$(pkg_get "$file" '.upstream.nightly_tag_regex // ""')
+  if [[ -n "$nightly_tag_regex" ]]; then
+    if [[ "$strategy" != "github-nightly" ]]; then
+      log_err "$file: upstream.nightly_tag_regex applies to the github-nightly strategy only"
+      ((errors++))
+    elif [[ $(pkg_get "$file" '.upstream | (has("nightly_tag") or has("channel"))') == true ]]; then
+      log_err "$file: upstream.nightly_tag_regex takes the place of nightly_tag and channel"
+      ((errors++))
+    elif ! ere_valid "$nightly_tag_regex"; then
+      log_err "$file: upstream.nightly_tag_regex is not valid ERE regex: $nightly_tag_regex"
+      ((errors++))
+    fi
+  fi
+
+  local prerelease
+  prerelease=$(pkg_get "$file" '.upstream.prerelease | tag')
+  if [[ "$prerelease" != "!!null" ]]; then
+    if [[ "$prerelease" != "!!bool" ]]; then
+      log_err "$file: upstream.prerelease must be true or false"
+      ((errors++))
+    elif [[ "$strategy" != "crates" ]]; then
+      log_err "$file: upstream.prerelease applies to the crates strategy only"
+      ((errors++))
+    # A semver pre-release always holds a dash
+    elif [[ $(pkg_get "$file" '.upstream.prerelease') == true && -z "$pkgver_dash" ]]; then
+      log_err "$file: upstream.prerelease needs pkgver_dash"
+      ((errors++))
+    fi
+  fi
+
+  # --- Strategy-specific fields ---
 
   # Validate optional tag_version_regex (used by github-release, github-tag,
   # github-nightly, gitlab-tag and gitea-tag)
@@ -102,6 +141,39 @@ validate_pkg() {
     # Then check that bash compiles it, as tag_versions needs
     elif ! ere_valid "$tag_version_regex"; then
       log_err "$file: upstream.tag_version_regex is not valid ERE regex: $tag_version_regex"
+      ((errors++))
+    fi
+  fi
+
+  local tag_version_replace
+  tag_version_replace=$(pkg_get "$file" '.upstream.tag_version_replace // ""')
+  if [[ -n "$tag_version_replace" ]]; then
+    if [[ -z "$tag_version_regex" ]]; then
+      log_err "$file: upstream.tag_version_replace needs upstream.tag_version_regex"
+      ((errors++))
+    elif [[ ! "$tag_version_replace" =~ ^([A-Za-z0-9._+]|\\[1-9])+$ ]]; then
+      log_err "$file: upstream.tag_version_replace may hold only A-Za-z0-9 . _ + and \\1 to \\9: $tag_version_replace"
+      ((errors++))
+    # $regex|^ matches the empty string and fills BASH_REMATCH with every
+    # group of the regex, so tag_version_fill finds a missing group as it
+    # does at run time
+    elif ere_valid "$tag_version_regex" &&
+      ! { [[ "" =~ $tag_version_regex|^ ]] && tag_version_fill "$tag_version_replace" >/dev/null 2>&1; }; then
+      log_err "$file: upstream.tag_version_replace names a group tag_version_regex does not have: $tag_version_replace"
+      ((errors++))
+    fi
+  fi
+
+  local date_format version_source sample
+  date_format=$(pkg_get "$file" '.upstream.date_format')
+  if [[ "$date_format" != "null" ]]; then
+    version_source=$(pkg_get "$file" '.upstream.version_source // "tag"')
+    sample=$(date -u -d 2026-01-02 +"$date_format")
+    if [[ "$version_source" != "tag_date" && "$version_source" != "published_date" ]]; then
+      log_err "$file: upstream.date_format applies to version_source tag_date and published_date only"
+      ((errors++))
+    elif ! validate_pkgver "$sample" 2>/dev/null; then
+      log_err "$file: upstream.date_format must give a valid version, it gives ${sample@Q}"
       ((errors++))
     fi
   fi
@@ -243,9 +315,17 @@ validate_pkg() {
       # No required strategy-specific fields
       ;;
     kde-tarball)
-      # The strategy reads no YAML: the package name is the directory
-      if [[ "$(pkg_get "$file" '.upstream | tag')" != "!!null" ]]; then
-        log_err "$file: strategy 'kde-tarball' takes no upstream settings, the package name is the directory on download.kde.org"
+      local project path
+      project=$(pkg_get "$file" '.upstream.project // ""')
+      path=$(pkg_get "$file" '.upstream.path // ""')
+      if [[ -n "$project" && ! "$project" =~ ^[A-Za-z0-9][A-Za-z0-9@._+-]*$ ]]; then
+        log_err "$file: upstream.project must be a tarball name of A-Za-z0-9@._+-: $project"
+        ((errors++))
+      fi
+      # The path ends up in https://download.kde.org/<path>/. A segment that
+      # starts with a dot would allow ..
+      if [[ -n "$path" && ! "$path" =~ ^[A-Za-z0-9_+-][A-Za-z0-9._+-]*(/[A-Za-z0-9_+-][A-Za-z0-9._+-]*)*$ ]]; then
+        log_err "$file: upstream.path must be a directory on download.kde.org, such as unstable/alkimia: $path"
         ((errors++))
       fi
       ;;

@@ -37,17 +37,52 @@ case "$url" in
   *crates.io/api/v1/crates/null-crate)
     echo '{"crate": {"max_stable_version": null}}'
     ;;
-  # Repology: no newest status
-  *repology.org/api/v1/project/no-newest)
-    echo '[{"status": "outdated", "version": "1.0"}, {"status": "devel", "version": "2.0-rc1"}]'
+  # Repology: the AUR alone is newest, as for bluemail, and a second AUR
+  # package lags behind it. sort -V puts 1.140.10 above 1.140.9, a string
+  # sort does not.
+  *repology.org/api/v1/project/aur-ahead)
+    echo '[{"repo": "aur", "status": "newest", "version": "1.143.44"}, {"repo": "aur", "status": "outdated", "version": "1.142.0"}, {"repo": "nix_stable_24_05", "status": "outdated", "version": "1.140.9"}, {"repo": "nix_unstable", "status": "outdated", "version": "1.140.10"}]'
+    ;;
+  # Repology: libversion puts 1.0rc1 below 1.0, sort -V above it
+  *repology.org/api/v1/project/rc-order)
+    echo '[{"repo": "debian_13", "status": "outdated", "version": "1.0rc1"}, {"repo": "arch", "status": "newest", "version": "1.0"}]'
+    ;;
+  # Repology: no newest or outdated entry outside the AUR
+  *repology.org/api/v1/project/aur-only)
+    echo '[{"repo": "aur", "status": "newest", "version": "2.0"}, {"repo": "debian_unstable", "status": "devel", "version": "2.1rc1"}, {"repo": "debian_12", "status": "legacy", "version": "0.9"}]'
+    ;;
+  # Repology: a project it does not know, as wingide
+  *repology.org/api/v1/project/missing-project)
+    echo '[]'
     ;;
   # Arch repos: empty results
   *archlinux.org/packages/search/json*name=no-such-pkg*)
     echo '{"results": []}'
     ;;
+  # Arch repos: an entry with an epoch, as ffmpeg 2:9.0.2-2
+  *archlinux.org/packages/search/json*name=ffmpeg*)
+    echo '{"results": [{"repo": "extra", "epoch": 2, "pkgver": "9.0.2", "pkgrel": "2"}]}'
+    ;;
   # KDE tarball: no versions in listing
   *download.kde.org/stable/no-versions-here/*)
     echo '<html><body>Parent Directory</body></html>'
+    ;;
+  # KDE tarball: a flat directory with builds for other systems, as kdiff3
+  *download.kde.org/stable/kdiff3/)
+    echo '<a href="kdiff3-1.12.6-macos-arm64.dmg">kdiff3-1.12.6-macos-arm64.dmg</a>'
+    echo '<a href="kdiff3-1.12.5.tar.xz">kdiff3-1.12.5.tar.xz</a>'
+    echo '<a href="kdiff3-1.12.6.tar.xz">kdiff3-1.12.6.tar.xz</a>'
+    ;;
+  # KDE tarball: a flat directory of pre-releases outside stable/
+  *download.kde.org/unstable/alkimia/)
+    echo '<a href="alkimia-8.1.76.tar.xz">alkimia-8.1.76.tar.xz</a>'
+    echo '<a href="alkimia-8.1.80.tar.xz">alkimia-8.1.80.tar.xz</a>'
+    echo '<a href="alkimia-8.1.80.tar.xz.sig">alkimia-8.1.80.tar.xz.sig</a>'
+    ;;
+  # KDE tarball: a dot in the name must match a dot alone
+  *download.kde.org/stable/kio.s3/)
+    echo '<a href="kioXs3-9.9.9.tar.xz">kioXs3-9.9.9.tar.xz</a>'
+    echo '<a href="kio.s3-1.0.0.tar.xz">kio.s3-1.0.0.tar.xz</a>'
     ;;
   # Webpage scrape: no matching versions
   *example.com/empty-page*)
@@ -67,6 +102,42 @@ case "$url" in
   # Pattern A: fixed nightly tag
   *api.github.com/repos/*/releases/tags/nightly)
     printf '{"tag_name": "nightly", "body": "NVIM v0.12.0-dev+2713+g925e9e8722\\nSome other text", "published_at": "2026-03-27T05:43:19Z"}'
+    ;;
+  # Pattern B with a regex, as servo/servo-nightly-builds: the rc releases
+  # come first, the API order is not the publish order, and a draft holds
+  # no published_at
+  *"api.github.com/repos/dated-nightly/repo/releases?per_page=100&page=1")
+    echo '[{"tag_name": "v0.7.0-rc1", "published_at": "2026-10-01T20:28:19Z"}, {"tag_name": "2026-10-20", "published_at": "2026-10-21T00:00:29Z"}, {"tag_name": "2026-10-21", "published_at": "2026-10-22T00:25:00Z"}, {"tag_name": "2026-10-22", "published_at": null}, {"tag_name": "2026-10-19", "published_at": "2026-10-19T23:28:58Z"}]'
+    ;;
+  # A last page of 2 releases without a match
+  *"api.github.com/repos/short-nightly/repo/releases?per_page=100&page=1")
+    echo '[{"tag_name": "v0.7.0-rc1", "published_at": "2026-10-01T20:28:19Z"}, {"tag_name": "v0.6.0-rc2", "published_at": "2026-09-24T16:52:22Z"}]'
+    ;;
+  # A full page of 100 releases with the match among them
+  *"api.github.com/repos/full-nightly/repo/releases?per_page=100&page=1")
+    printf '[{"tag_name": "2026-10-21", "published_at": "2026-10-22T00:25:00Z"}'
+    for i in $(seq 1 99); do
+      printf ', {"tag_name": "v0.%d-rc1", "published_at": "2026-01-01T00:00:00Z"}' "$i"
+    done
+    printf ']\n'
+    ;;
+  # A page of 100 releases without a match, and the match on page 2
+  *"api.github.com/repos/later-nightly/repo/releases?per_page=100&page=2")
+    echo '[{"tag_name": "2026-10-21", "published_at": "2026-10-22T00:25:00Z"}]'
+    ;;
+  *"api.github.com/repos/later-nightly/repo/releases?per_page=100&page="* | \
+    *"api.github.com/repos/no-nightly/repo/releases?per_page=100&page="*)
+    sep=""
+    printf '['
+    for i in $(seq 1 100); do
+      printf '%s{"tag_name": "v0.%d-rc1", "published_at": "2026-01-01T00:00:00Z"}' "$sep" "$i"
+      sep=", "
+    done
+    printf ']\n'
+    ;;
+  # GitHub answered [] for a page of ruffle-rs/ruffle that a retry filled
+  *"api.github.com/repos/empty-nightly/repo/releases?per_page=100&page="*)
+    echo '[]'
     ;;
   # Pattern B+D: release names and tags that hold a double quote
   *api.github.com/repos/owner/quoted-repo/releases\?per_page=20)
@@ -93,6 +164,15 @@ case "$url" in
   # Custom suffix tag format
   *api.github.com/repos/custom-suffix/repo/releases/latest)
     echo '{"tag_name": "0.1.8-stable"}'
+    ;;
+  # Date tags, as servo names its nightlies and vinceliuice its themes.
+  # servo published 2026-10-21 after midnight UTC.
+  *api.github.com/repos/dated-owner/dated-repo/releases/latest)
+    echo '{"tag_name": "2026-10-21", "published_at": "2026-10-22T00:25:00Z"}'
+    ;;
+  *gitlab.com/api/v4/projects/dated-group%2Fdated-project/repository/tags* | \
+    *codeberg.org/api/v1/repos/dated-owner/dated-repo/tags*)
+    echo '[{"name": "2025-12-27"}, {"name": "v2025-02-10"}, {"name": "2026-09-10"}]'
     ;;
   # Tags with a prefix, as mesa names its releases
   *gitlab.com/api/v4/projects/prefix-group%2Fprefix-project/repository/tags* | \
@@ -130,6 +210,10 @@ case "$url" in
   # npm registry
   *registry.npmjs.org/*/latest)
     echo '{"version": "4.0.0"}'
+    ;;
+  # A crate whose highest version is a pre-release, as pijul
+  *crates.io/api/v1/crates/pre-crate)
+    echo '{"crate": {"max_version": "1.0.0-beta.24", "max_stable_version": "0.15.0"}}'
     ;;
   # crates.io API
   *crates.io/api/v1/crates/*)

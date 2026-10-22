@@ -73,10 +73,11 @@ Each package has a file at `packages/<name>.yml`. The file name, the `name` fiel
 |----------------|----------|-----------------------------------------------------------------------------|
 | `name`         | yes      | `pkgbase` on the AUR, equal to the file name without `.yml`                 |
 | `strategy`     | yes      | Version detection strategy: a script name in `strategies/` without `.sh`    |
-| `upstream`     | depends  | Strategy-specific settings. `archpkg` and `repology` need none, and `kde-tarball` takes none. |
+| `upstream`     | depends  | Strategy-specific settings. `archpkg`, `repology` and `kde-tarball` need none. |
 | `current`      | no       | Currently tracked version. Written after every push.                        |
 | `last_updated` | no       | Date of the last push, `YYYY-MM-DD`. Written after every push.              |
 | `allow_downgrade` | no    | `true` publishes an upstream version lower than `current`. Default `false`, see [4.3](#43-downgrade-behavior). |
+| `pkgver_dash`  | no       | `_` or `.`, the character that stands for each `-` of the upstream version, see below |
 
 Example:
 
@@ -87,6 +88,8 @@ upstream:
   project: owner/repo
 current: "2.1.0"
 ```
+
+`pkgver` cannot hold a dash, so `check-update.sh` refuses a version such as `1.9.0-1` from npm or `1.0.0-beta.24` from crates.io. With `pkgver_dash`, it replaces every `-` in the output of the strategy before that check. The PKGBUILD turns the character back where a source URL needs the dash, as `${pkgver//_/-}` does for `_`. `vercmp` reads `_` and `.` the same. `.` fits a PKGBUILD that already writes the dash as a dot, such as pijul with `_pkgver=${pkgver/.beta/-beta}`. A version given to `update-pkg.sh` by hand is taken as it is.
 
 ## 3. Strategies
 
@@ -104,6 +107,7 @@ aurtomator ships 14 strategies. A strategy is a bash script in `strategies/`. It
 |------------------------------|----------|-------------------------------------|
 | `upstream.project`           | yes      | `owner/repo` format                 |
 | `upstream.tag_version_regex` | no       | ERE whose first capture group is the version, see below |
+| `upstream.tag_version_replace` | no     | The version built from the groups of `tag_version_regex` (default: `\1`), see below |
 
 **How the version is extracted:** reads `.tag_name` of the latest release and strips a leading `v`. The endpoint skips drafts and pre-releases.
 
@@ -118,7 +122,7 @@ upstream:
   project: owner/repo
 ```
 
-**Custom tag format:** for tags like `MeshLab-2025.07` or `0.1.8-stable`, set `tag_version_regex`. The text of its first capture group becomes the version. bash `[[ =~ ]]` takes the group, so the regex may hold `|`. A group of alternatives has to come after the version, as in `^v?([0-9.]+)(-stable|)$`, because bash knows no group that does not capture: `^(mesa-)?([0-9.]+)$` gives `mesa-`. It also works with `github-tag`, `github-nightly`, `gitlab-tag` and `gitea-tag`.
+**Custom tag format:** for tags like `MeshLab-2025.07` or `0.1.8-stable`, set `tag_version_regex`. The text of its first capture group becomes the version. bash `[[ =~ ]]` takes the group, so the regex may hold `|`. A group of alternatives has to come after the version, as in `^v?([0-9.]+)(-stable|)$`, because bash knows no group that does not capture: `^(mesa-)?([0-9.]+)$` gives `mesa-`.
 
 ```yaml
 name: meshlab-bin
@@ -127,6 +131,19 @@ upstream:
   project: cnr-isti-vclab/meshlab
   tag_version_regex: 'MeshLab-(.*)'
 ```
+
+`tag_version_replace` builds the version from more than one group. `\1` to `\9` stand for the groups of `tag_version_regex`, and every other character is copied. The tag `2026-09-10` gives `2026.09.10` here:
+
+```yaml
+name: whitesur-icon-theme
+strategy: github-release
+upstream:
+  project: vinceliuice/WhiteSur-icon-theme
+  tag_version_regex: '^([0-9]{4})-([0-9]{2})-([0-9]{2})$'
+  tag_version_replace: '\1.\2.\3'
+```
+
+`validate-pkg.sh` refuses `tag_version_replace` without `tag_version_regex`, with a character other than `A-Za-z0-9._+` outside `\1` to `\9`, or with a group the regex does not have. Both fields also work with `github-tag`, `github-nightly`, `gitlab-tag` and `gitea-tag`.
 
 ### 3.2 github-tag
 
@@ -139,10 +156,10 @@ upstream:
 | Field                        | Required | Description                              |
 |------------------------------|----------|------------------------------------------|
 | `upstream.project`           | yes      | `owner/repo` format                      |
-| `upstream.tag_pattern`       | no       | Glob to filter tags (e.g. `release-*`), replaces the default filter |
 | `upstream.tag_version_regex` | no       | ERE whose first capture group is the version, replaces the default filter |
+| `upstream.tag_version_replace` | no     | The version built from the groups of `tag_version_regex`, see [3.1](#31-github-release) |
 
-**How the version is extracted:** reads every tag in one request, outside the API rate limit. Without `tag_pattern` and `tag_version_regex`, it keeps the tags of the form `v1.2.3` or `1.2.3`, so `latest`, `1.0.0-rc1` and `1.0.0rc1` are left out, and a project without such a tag fails the check with a message that names both fields. `tag_pattern` filters the tags instead, where `*` matches anything and the match is anchored at the start. The strategy strips a leading `v`, or applies `tag_version_regex`, and returns the highest tag by `sort -V`. `sort -V` places `1.0.0-rc1` above `1.0.0`, so a `tag_pattern` that lets pre-release tags through picks them.
+**How the version is extracted:** reads every tag in one request, outside the API rate limit. Without `tag_version_regex`, it keeps the tags of the form `v1.2.3` or `1.2.3`, so `latest`, `1.0.0-rc1` and `1.0.0rc1` are left out, and a project without such a tag fails the check with a message that names the field. `tag_version_regex` keeps the tags it matches instead. The strategy strips a leading `v`, or applies `tag_version_regex` and `tag_version_replace`, and returns the highest version by `sort -V`. `sort -V` places `1.0.0-rc1` above `1.0.0`, so a `tag_version_regex` that lets pre-release tags through picks them.
 
 **Authentication:** when `GITHUB_TOKEN` is set in the environment, git sends it to `github.com` as `Authorization: Basic` with the user `x-access-token`, which a private repository needs. The header reaches git through `GIT_CONFIG_*` variables, so the token does not appear on a command line. git allows only `https` and asks for no password on the terminal.
 
@@ -155,14 +172,26 @@ upstream:
   project: owner/repo
 ```
 
+A package that follows one release line pins it with the regex. kubernetes gives `1.36.5` here, and `1.37.1` without the field:
+
+```yaml
+name: my-kubectl-1.36
+strategy: github-tag
+upstream:
+  project: kubernetes/kubernetes
+  tag_version_regex: '^v(1\.36\.[0-9]+)$'
+```
+
 ### 3.3 github-nightly
 
 **What it checks:** GitHub releases of nightly or prerelease builds, in 4 patterns. The fields select the pattern:
 
 - **Pattern A, fixed tag** (default): `nightly_tag` names one tag that moves, as in neovim, ghostty or yazi.
-- **Pattern B, dated tags**: `nightly_tag` is a prefix with a dash, such as `nightly-`. The newest of the last 20 releases whose tag contains it wins (ruffle, servo).
+- **Pattern B, dated tags**: `nightly_tag` is a prefix with a dash, such as `nightly-`. Of the first 20 releases the API lists, the first whose tag contains it wins (ruffle). With `nightly_tag_regex` in place of `nightly_tag`, the strategy reads up to 3 pages of 100 releases and takes the release published last among those whose tag matches the ERE (servo).
 - **Pattern C, separate nightly repo**: `nightly_tag: latest` reads `/releases/latest` of a dedicated build repo (yt-dlp).
 - **Pattern D, channel filter**: `channel` picks the newest of the last 20 releases whose name contains it (brave).
+
+Patterns B and C depend on how a repository files its releases. `/releases/latest` skips pre-releases, and ruffle-rs/ruffle files its nightlies as pre-releases, so pattern C gives its stable `v0.7.1`. `/releases/latest` also sorts by `created_at`, which GitHub sets to the date of the tagged commit, not of the release. Every release of servo/servo-nightly-builds carries `2024-02-14` there, and its release list starts with 12 `v0.x` rc releases, so `nightly_tag: '-'` picks `v0.7.0-rc1`. `nightly_tag_regex` ranks the matches by `published_at` and depends on neither order. A page with fewer than 100 releases, an empty one included, is the last page it reads.
 
 Pattern A:
 
@@ -215,12 +244,29 @@ upstream:
 |-------|----------|-------------|
 | `upstream.project` | yes | `owner/repo` |
 | `upstream.nightly_tag` | no | Tag name or prefix (default: `"nightly"`, `"latest"` for pattern C) |
+| `upstream.nightly_tag_regex` | no | ERE for the tag in pattern B, in place of `nightly_tag` and `channel` |
 | `upstream.version_source` | no | `"tag"` (default), `"release_body"`, `"tag_date"`, `"published_date"` |
 | `upstream.version_pattern` | for `release_body` | Perl regex for the version in the release body. Dashes in the match become `+`. |
 | `upstream.tag_version_regex` | no | ERE whose first capture group is the version, for `version_source: tag` |
+| `upstream.tag_version_replace` | no | The version built from the groups of `tag_version_regex`, see [3.1](#31-github-release) |
+| `upstream.date_format` | no | Format of `date` for `tag_date` and `published_date` (default: `%Y.%m.%d`) |
 | `upstream.channel` | for pattern D | Text that the release name must contain |
 
-`tag_date` takes the `YYYY-MM-DD` date in the tag and `published_date` the release date, both rendered as `YYYY.MM.DD`.
+`tag_date` takes the `YYYY-MM-DD` date in the tag and `published_date` the UTC date of `published_at`. `date -u` renders both with `date_format`, `YYYY.MM.DD` by default. The two dates can differ: the servo release `2026-10-21` was published at `2026-10-22T00:25:00Z`.
+
+A package whose `pkgver` has the form `20251213` needs `date_format: '%Y%m%d'`, because `vercmp` ranks `20251213` above `2026.10.21` and the default form never counts as newer:
+
+```yaml
+name: servo-nightly-bin
+strategy: github-nightly
+upstream:
+  project: servo/servo-nightly-builds
+  nightly_tag_regex: '^[0-9]{4}-[0-9]{2}-[0-9]{2}$'
+  version_source: tag_date
+  date_format: '%Y%m%d'
+```
+
+`validate-pkg.sh` refuses `date_format` with another `version_source` and a format whose output is not a valid version, such as `%Y-%m-%d`. It refuses `nightly_tag_regex` next to `nightly_tag` or `channel`, and one that bash cannot compile.
 
 **Authentication:** same as `github-release`.
 
@@ -267,10 +313,10 @@ upstream:
 |------------------------|----------|-------------------------------------------------------|
 | `upstream.host`        | yes      | GitLab hostname (e.g. `invent.kde.org`, `gitlab.com`) |
 | `upstream.project`     | yes      | Project path (e.g. `network/my-kde-app`)              |
-| `upstream.tag_pattern` | no       | Glob to filter tags, replaces the default filter      |
 | `upstream.tag_version_regex` | no | ERE whose first capture group is the version, replaces the default filter, see [3.1](#31-github-release) |
+| `upstream.tag_version_replace` | no | The version built from the groups of `tag_version_regex`, see [3.1](#31-github-release) |
 
-**How the version is extracted:** URL-encodes the project path (`/` becomes `%2F`) and fetches the first 100 tags. Without `tag_pattern` and `tag_version_regex`, it keeps the tags of the form `v1.2.3` or `1.2.3`, and a project without such a tag fails the check with a message that names both fields. `tag_pattern` filters the tags instead. It strips a leading `v`, or applies `tag_version_regex`, and returns the highest by `sort -V`. There is no authentication, so private projects cannot be queried.
+**How the version is extracted:** URL-encodes the project path (`/` becomes `%2F`) and fetches the first 100 tags. Without `tag_version_regex`, it keeps the tags of the form `v1.2.3` or `1.2.3`, and a project without such a tag fails the check with a message that names the field. It strips a leading `v`, or applies `tag_version_regex` and `tag_version_replace`, and returns the highest version by `sort -V`. There is no authentication, so private projects cannot be queried.
 
 **Example YAML:**
 
@@ -305,10 +351,10 @@ upstream:
 |------------------------|----------|------------------------------------------|
 | `upstream.host`        | yes      | Instance hostname (e.g. `codeberg.org`)  |
 | `upstream.project`     | yes      | `owner/repo` format                      |
-| `upstream.tag_pattern` | no       | Glob to filter tags, replaces the default filter |
 | `upstream.tag_version_regex` | no | ERE whose first capture group is the version, replaces the default filter, see [3.1](#31-github-release) |
+| `upstream.tag_version_replace` | no | The version built from the groups of `tag_version_regex`, see [3.1](#31-github-release) |
 
-**How the version is extracted:** fetches up to 50 tags without pagination. Without `tag_pattern` and `tag_version_regex`, it keeps the tags of the form `v1.2.3` or `1.2.3`, and a project without such a tag fails the check with a message that names both fields. `tag_pattern` filters the tags instead. It strips a leading `v`, or applies `tag_version_regex`, and returns the highest by `sort -V`.
+**How the version is extracted:** fetches up to 50 tags without pagination. Without `tag_version_regex`, it keeps the tags of the form `v1.2.3` or `1.2.3`, and a project without such a tag fails the check with a message that names the field. It strips a leading `v`, or applies `tag_version_regex` and `tag_version_replace`, and returns the highest version by `sort -V`.
 
 **Example YAML:**
 
@@ -334,8 +380,9 @@ upstream:
 | `upstream.host`    | depends  | Required for the `gitlab` type               |
 | `upstream.project` | depends  | Required for the `github` and `gitlab` types |
 | `upstream.url`     | depends  | Required for the `git` type: full clone URL, `https://` only |
+| `upstream.branch`  | no       | The branch of a source pinned to `#branch=`. Default: the default branch of the repository |
 
-**How the version is extracted:** makes a bare clone into a temporary directory, counts the commits on `HEAD` (`git rev-list --count HEAD`), takes the hash of `HEAD` and prints the usual `-git` format `r<count>.<hash>`, for example `r431.66db9ce`. The hash has as many characters as the hash in `current`, and 7 when `current` is empty. `git rev-parse --short` in a `pkgver()` gives more characters as the repository grows: fabric-git is `r2173.ef2e985d` on the AUR, and `vercmp` reads `r2173.ef2e985` of the same commit as older.
+**How the version is extracted:** makes a bare clone into a temporary directory, counts the commits on `HEAD` (`git rev-list --count HEAD`), takes the hash of `HEAD` and prints the usual `-git` format `r<count>.<hash>`, for example `r431.66db9ce`. With `upstream.branch`, the clone takes `--branch`, and `HEAD` is that branch, as makepkg checks it out for `#branch=`: sharkdp/fd gives `r2061.9e90463` on `master` and `r1925.cf8a48a` with `branch: abort-on-panic`. A branch the repository does not have fails the clone. `validate-pkg.sh` refuses a name that `git check-ref-format --branch` refuses, such as one that starts with `-`. The hash has as many characters as the hash in `current`, and 7 when `current` is empty. `git rev-parse --short` in a `pkgver()` gives more characters as the repository grows: fabric-git is `r2173.ef2e985d` on the AUR, and `vercmp` reads `r2173.ef2e985` of the same commit as older.
 
 `current` must be empty or of the form `r<count>.<hash>`, and `validate-pkg.sh` refuses any other. `vercmp` reads `1.4.0.r47.g0bbf5ad`, the form of `git describe`, as newer than every `r<count>.<hash>`, so each check would be a downgrade and the package would never update.
 
@@ -429,8 +476,9 @@ upstream:
 | Field               | Required | Description                        |
 |---------------------|----------|------------------------------------|
 | `upstream.registry` | yes      | Crate name (e.g. `serde`, `tokio`) |
+| `upstream.prerelease` | no     | `true` reads `max_version`, pre-releases included. Needs `pkgver_dash`. Default `false`. |
 
-**How the version is extracted:** reads `.crate.max_stable_version`, which excludes pre-releases. The request sends `User-Agent: aurtomator/1.0`, as every strategy request does and as the crates.io API policy requires.
+**How the version is extracted:** reads `.crate.max_stable_version`, which excludes pre-releases, or `.crate.max_version` with `prerelease: true`. The request sends `User-Agent: aurtomator/1.0`, as every strategy request does and as the crates.io API policy requires.
 
 **Example YAML:**
 
@@ -439,6 +487,17 @@ name: rust-serde
 strategy: crates
 upstream:
   registry: serde
+```
+
+A semver pre-release such as `1.0.0-beta.24` holds a dash, so `validate-pkg.sh` refuses `prerelease: true` without `pkgver_dash`, see [section 2](#2-package-yaml-format). pijul gives `1.0.0.beta.24` with:
+
+```yaml
+name: pijul
+strategy: crates
+upstream:
+  registry: pijul
+  prerelease: true
+pkgver_dash: .
 ```
 
 ### 3.11 repology
@@ -453,7 +512,9 @@ upstream:
 |---------------------|----------|--------------------------------------------------------------|
 | `upstream.repology` | no       | Repology project name. Defaults to the package `name`.       |
 
-**How the version is extracted:** returns the version of the first entry with `status == "newest"`. The request sends `User-Agent: aurtomator/1.0`, as every strategy request does and as Repology asks.
+**How the version is extracted:** returns the version of the first entry with `status == "newest"` outside the AUR. The AUR entries are left out, because for a package of ours they hold our own version. When only the AUR is newest, the strategy returns the highest `outdated` version outside the AUR by `sort -V`, and a `current` above it reads as a downgrade, see [4.3](#43-downgrade-behavior). The version is the normalized `version` field of Repology: the OpenBSD entry of qodem gives `1.0.1`, and its `origversion` is `1.0.1p1`. The request sends `User-Agent: aurtomator/1.0`, as every strategy request does and as Repology asks.
+
+The version lags behind upstream until a distribution other than the AUR packages the new release. A project that Repology does not know, such as `wingide` in place of `wing-ide`, fails the check with `Project <name> not found on Repology`. A project with no `newest` or `outdated` entry outside the AUR fails with `No version found on Repology for <name> outside the AUR`.
 
 **Example YAML:**
 
@@ -475,7 +536,7 @@ strategy: repology
 
 **What it checks:** Arch Linux package search API (`https://archlinux.org/packages/search/json/?name={name}`).
 
-**When to use:** AUR packages that follow an official Arch package, for example a package that needs a rebuild when a dependency in the official repos is updated.
+**When to use:** AUR packages that follow the `pkgver` of an official Arch package, for example an addon released together with it.
 
 **YAML fields:**
 
@@ -483,7 +544,7 @@ strategy: repology
 |--------------------|----------|----------------------------------------------------------------|
 | `upstream.archpkg` | no       | Package name in the official repos. Defaults to the package `name`. |
 
-**How the version is extracted:** reads `.results[0].pkgver`, the version without `pkgrel`.
+**How the version is extracted:** reads `.results[0].pkgver`, the version without `epoch` and `pkgrel`: ffmpeg `2:9.0.2-2` gives `9.0.2`. A rebuild in the official repos raises only `pkgrel`, so it gives no new version, and aurtomator has no update that raises `pkgrel` alone, see [SUPPORTED-PACKAGES.md](SUPPORTED-PACKAGES.md#packages-needing-a-pkgrel-bump).
 
 **Example YAML:**
 
@@ -542,19 +603,34 @@ upstream:
 
 ### 3.14 kde-tarball
 
-**What it checks:** the KDE download server listing (`https://download.kde.org/stable/{name}/`).
+**What it checks:** the KDE download server listing (`https://download.kde.org/{path}/`).
 
-**When to use:** KDE and Plasma packages that publish release tarballs on download.kde.org.
+**When to use:** KDE projects that publish release tarballs in one directory on download.kde.org, such as `stable/kio-s3/kio-s3-1.0.2.tar.xz`. Projects with a directory per version, such as Plasma under `stable/plasma/6.6.3/` or krita under `stable/krita/6.0.4/`, do not fit: the strategy reads one listing.
 
-**YAML fields:** none. The package `name` is the directory on the server, and `validate-pkg.sh` refuses an `upstream` block.
+**YAML fields:**
 
-**How the version is extracted:** matches `{name}-{version}.tar.xz` links on the listing, where the version is digits and dots (`[0-9]+\.[0-9]+(\.[0-9]+)*`), and returns the highest by `sort -Vu`.
+| Field              | Required | Description                                                  |
+|--------------------|----------|--------------------------------------------------------------|
+| `upstream.project` | no       | Tarball name. Defaults to the package `name`.                |
+| `upstream.path`    | no       | Directory on download.kde.org. Defaults to `stable/{project}`. |
+
+**How the version is extracted:** matches `{project}-{version}.tar.xz` links on the listing, where the version is digits and dots (`[0-9]+\.[0-9]+(\.[0-9]+)*`), and returns the highest by `sort -Vu`. A dot or a plus in `project` matches itself. `validate-pkg.sh` refuses a `project` with a character outside `A-Za-z0-9@._+-`, and a `path` with an empty segment, a segment that starts with a dot, or a character outside `A-Za-z0-9._+-`.
 
 **Example YAML:**
 
 ```yaml
 name: my-kde-app
 strategy: kde-tarball
+```
+
+The pre-releases of alkimia, `8.2.70` at the time of writing, live in `unstable/alkimia/`:
+
+```yaml
+name: alkimia-unstable
+strategy: kde-tarball
+upstream:
+  project: alkimia
+  path: unstable/alkimia
 ```
 
 ## 4. Update Process
@@ -971,7 +1047,7 @@ A strategy is a bash script in `strategies/` that finds the latest upstream vers
 - **Input:** one positional argument, the package name.
 - **Success:** the version on stdout as one line, exit code 0.
 - **Failure:** an error on stderr, a non-zero exit code.
-- **Version format:** `check-update.sh` rejects a version with any character outside `A-Za-z0-9._+`, and a version without a digit, such as `latest`.
+- **Version format:** `check-update.sh` rejects a version with any character outside `A-Za-z0-9._+`, and a version without a digit, such as `latest`. `pkgver_dash` replaces the dashes before that check, see [section 2](#2-package-yaml-format).
 
 The script can rely on `yq` and `curl`. `scripts/lib/common.sh` provides YAML helpers, `http_get` for requests and logging, and sets `AURTOMATOR_DIR` to the project root.
 
@@ -1042,8 +1118,9 @@ echo "$version"
 | `github_api <url>`              | `http_get` with an `Authorization` header from `GITHUB_TOKEN` when it is set |
 | `validate_pkgver <version>`     | Returns 1 for an empty version, one with a character outside `A-Za-z0-9._+` or one without a digit |
 | `release_tags <tags>`           | Prints the tags of the form `v1.2.3` or `1.2.3`, one per line |
-| `tag_versions <ere>`            | Prints the version in each tag of stdin: the first capture group of the ERE, or the tag without a leading `v` when the ERE is empty |
-| `latest_tag_version <tags> <tag_pattern> <ere>` | Prints the highest version among the tags, filtered as the tag strategies filter them |
+| `tag_version_fill <template>`   | Prints the template with `\1` to `\9` replaced by the groups in `BASH_REMATCH`, returns 1 for a group the last match does not have |
+| `tag_versions <ere> [template]` | Prints the version in each tag of stdin: the template filled from the groups of the ERE (default: `\1`), or the tag without a leading `v` when the ERE is empty |
+| `latest_tag_version <tags> <ere> [template]` | Prints the highest version among the tags, filtered as the tag strategies filter them |
 | `capture_matches <ere>`         | Prints the first capture group of every match of the ERE in stdin |
 | `ere_valid <ere>`               | Succeeds when bash can compile the ERE              |
 | `log_ok <msg>`                  | Prints a green check mark and the message to stderr |

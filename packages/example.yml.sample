@@ -7,6 +7,12 @@
 #   strategy   - version detection strategy, see the list below (required)
 #   upstream   - strategy-specific settings, see the examples below
 #
+# Optional:
+#   allow_downgrade - true publishes a version lower than current
+#   pkgver_dash     - _ or ., stands for each - of the upstream version,
+#                     which pkgver cannot hold; the PKGBUILD turns it back
+#                     where a URL needs the dash, as in ${pkgver//_/-}
+#
 # Written by update-pkg.sh after every push, do not edit by hand:
 #   current      - last pushed version
 #   last_updated - date of the last push, YYYY-MM-DD
@@ -23,7 +29,7 @@
 #   npm              npm registry
 #   crates           crates.io API
 #   repology         Repology API (fallback)
-#   archpkg          Arch official repos (for rebuild triggers)
+#   archpkg          Arch official repos, pkgver only
 #   kde-tarball      download.kde.org directory listing
 #   webpage-scrape   any HTTPS page + regex
 #
@@ -50,16 +56,21 @@ upstream:
 # upstream:
 #   project: owner/repo                    # required, "owner/repo" format
 #   tag_version_regex: '(.+)-stable'       # optional, ERE with a capture group
+#   tag_version_replace: '\1'              # optional, \1 to \9 are the groups
+#
+# A date tag such as 2026-09-10 becomes 2026.09.10 with:
+#   tag_version_regex: '^([0-9]{4})-([0-9]{2})-([0-9]{2})$'
+#   tag_version_replace: '\1.\2.\3'
 
 # --- github-tag -------------------------------------------------------------
-# Reads up to 100 tags from /repos/{project}/tags and keeps v1.2.3 and 1.2.3.
-# tag_pattern or tag_version_regex replaces that filter.
+# Reads every tag with git ls-remote and keeps v1.2.3 and 1.2.3.
+# tag_version_regex replaces that filter, here to pin the 1.36 line.
 #
 # strategy: github-tag
 # upstream:
 #   project: owner/repo                    # required
-#   tag_pattern: 'release-*'               # optional, glob filter
-#   tag_version_regex: 'release-(.+)'      # optional, ERE with a capture group
+#   tag_version_regex: '^v(1\.36\.[0-9]+)$'  # optional, ERE with a capture group
+#   tag_version_replace: '\1'              # optional, \1 to \9 are the groups
 
 # --- github-nightly ---------------------------------------------------------
 # Tracks nightly/prerelease builds in four patterns:
@@ -71,11 +82,14 @@ upstream:
 #
 #   B) Dated tags like "nightly-2026-03-26":
 #      nightly_tag: nightly-
-#      version_source: tag_date             # converts YYYY-MM-DD to YYYY.MM.DD
+#      version_source: tag_date             # YYYY-MM-DD in the tag, as date_format
+#
+#      or any tag form, the match published last of up to 300 releases:
+#      nightly_tag_regex: '^[0-9]{4}-[0-9]{2}-[0-9]{2}$'
 #
 #   C) Separate nightly repo (e.g. yt-dlp/yt-dlp-nightly-builds):
 #      project: yt-dlp/yt-dlp-nightly-builds
-#      nightly_tag: latest
+#      nightly_tag: latest                  # /releases/latest skips pre-releases
 #
 #   D) Channel filter (e.g. brave "Nightly" channel):
 #      channel: Nightly
@@ -89,6 +103,9 @@ upstream:
 #   version_pattern: 'NVIM v\K\S+'         # required if version_source=release_body
 #   channel: Nightly                       # optional, filter by release name
 #   tag_version_regex: '(.+)'              # optional, for version_source=tag
+#   tag_version_replace: '\1'              # optional, for version_source=tag
+#   date_format: '%Y%m%d'                  # optional, for tag_date and published_date,
+#                                          # default %Y.%m.%d
 
 # --- github-asset -----------------------------------------------------------
 # Tracks assets on a release whose tag never moves (model zoos, rolling
@@ -105,23 +122,25 @@ upstream:
 
 # --- gitlab-tag -------------------------------------------------------------
 # Any GitLab instance, public API only (no authentication). Keeps the tags
-# v1.2.3 and 1.2.3; tag_pattern replaces that filter.
+# v1.2.3 and 1.2.3; tag_version_regex replaces that filter.
 #
 # strategy: gitlab-tag
 # upstream:
 #   host: gitlab.com                       # required, hostname without protocol
 #   project: group/subgroup/project        # required, full path
-#   tag_pattern: 'release-*'               # optional
+#   tag_version_regex: '^mesa-([0-9.]+)$'  # optional, ERE with a capture group
+#   tag_version_replace: '\1'              # optional, \1 to \9 are the groups
 
 # --- gitea-tag --------------------------------------------------------------
 # Codeberg, self-hosted Gitea/Forgejo. Reads at most 50 tags and keeps
-# v1.2.3 and 1.2.3; tag_pattern replaces that filter.
+# v1.2.3 and 1.2.3; tag_version_regex replaces that filter.
 #
 # strategy: gitea-tag
 # upstream:
 #   host: codeberg.org                     # required
 #   project: owner/repo                    # required
-#   tag_pattern: 'release-*'               # optional
+#   tag_version_regex: '^release-(.+)$'      # optional, ERE with a capture group
+#   tag_version_replace: '\1'              # optional, \1 to \9 are the groups
 
 # --- git-latest -------------------------------------------------------------
 # For -git packages. Produces rCOUNT.HASH (e.g. r435.abc1234).
@@ -132,10 +151,12 @@ upstream:
 #   project: owner/repo                    # required for github|gitlab
 #   host: gitlab.example.com               # required for gitlab
 #   url: https://example.com/repo.git      # required for type=git, https only
+#   branch: develop                        # optional, as #branch= in source;
+#                                          # default: the default branch
 
 # --- pypi / npm / crates ----------------------------------------------------
-# Language registries. PyPI and crates return stable releases only.
-# npm returns the "latest" dist-tag.
+# Language registries. PyPI returns stable releases only, and crates too
+# unless prerelease is true. npm returns the "latest" dist-tag.
 #
 # strategy: pypi
 # upstream:
@@ -148,29 +169,36 @@ upstream:
 # strategy: crates
 # upstream:
 #   registry: serde                        # required, crate name
+#   prerelease: true                       # optional, reads max_version;
+#                                          # needs pkgver_dash
 
 # --- repology ---------------------------------------------------------------
 # Fallback when nothing else fits. Returns the version of the first entry
-# with status "newest".
+# with status "newest" outside the AUR, or the highest "outdated" one when
+# only the AUR is newest. Lags until a distribution packages the release.
 #
 # strategy: repology
 # upstream:
 #   repology: project-name                 # optional, defaults to `name` above
 
 # --- archpkg ----------------------------------------------------------------
-# Follows a package in the Arch official repos. Useful for an AUR package
-# that needs a rebuild when a dependency updates.
+# Follows the pkgver of a package in the Arch official repos, without
+# epoch and pkgrel. A rebuild there raises only pkgrel and gives no new
+# version.
 #
 # strategy: archpkg
 # upstream:
 #   archpkg: qt6-base                      # optional, defaults to `name` above
 
 # --- kde-tarball ------------------------------------------------------------
-# Reads https://download.kde.org/stable/<name>/ for *.tar.xz releases.
-# Takes no upstream settings: the package name is the directory, and
-# validate-pkg.sh refuses an upstream block.
+# Reads one directory on https://download.kde.org/ for
+# <project>-<version>.tar.xz releases. A directory per version, as for
+# Plasma, does not fit.
 #
 # strategy: kde-tarball
+# upstream:
+#   project: alkimia                       # optional, defaults to `name` above
+#   path: unstable/alkimia                 # optional, defaults to stable/<project>
 
 # --- webpage-scrape ---------------------------------------------------------
 # Any HTTPS page + regex, for upstreams without an API.
