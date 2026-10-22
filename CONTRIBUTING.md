@@ -34,14 +34,14 @@ bats tests/ --recursive
 CI runs these commands:
 
 ```sh
-shellcheck -x -S warning scripts/*.sh strategies/*.sh
-shfmt -d -i 2 -ci scripts/*.sh strategies/*.sh
+shellcheck -x -S warning scripts/*.sh scripts/lib/*.sh strategies/*.sh
+shfmt -d -i 2 -ci scripts/*.sh scripts/lib/*.sh strategies/*.sh
 actionlint
 for action in .github/actions/*/action.yml; do yq '.runs.steps[] | select(has("run")) | .run' "$action" | shellcheck -s bash -; done
 bats tests/ --recursive
 ```
 
-CI runs the suite under bashcov, as `bashcov -- bats tests/ --recursive`. bashcov passes `errexit`, `nounset` and `pipefail` to every script a test starts, so a mock has to work under `set -euo pipefail`.
+CI runs the suite under bashcov, as `bashcov -- tests/helpers/bashcov-bats.sh tests/ --recursive`. bashcov passes `errexit`, `nounset` and `pipefail` to every script a test starts, so a mock has to work under `set -euo pipefail`.
 
 ## PR workflow
 

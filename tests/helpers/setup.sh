@@ -13,11 +13,12 @@ setup_test_env() {
   # Create mock package dir structure
   mkdir -p "$TEST_TMPDIR/packages"
   mkdir -p "$TEST_TMPDIR/strategies"
-  mkdir -p "$TEST_TMPDIR/scripts"
+  mkdir -p "$TEST_TMPDIR/scripts/lib"
   mkdir -p "$TEST_TMPDIR/.status"
 
   # Symlink all scripts and strategies for bashcov coverage tracking
   ln -sf "$PROJECT_DIR/scripts/"*.sh "$TEST_TMPDIR/scripts/"
+  ln -sf "$PROJECT_DIR/scripts/lib/"*.sh "$TEST_TMPDIR/scripts/lib/"
   ln -sf "$PROJECT_DIR/strategies/"*.sh "$TEST_TMPDIR/strategies/"
 
   # Put mock curl first in PATH
@@ -37,8 +38,12 @@ setup_test_env() {
   export GIT_CONFIG_GLOBAL="$TEST_TMPDIR/gitconfig"
 }
 
+# bashcov-bats.sh sets AURTOMATOR_KEEP_TEST_DIRS: bashcov reads the trace
+# of a test after the test, and needs the links in $TEST_TMPDIR then
 teardown_test_env() {
-  rm -rf "$TEST_TMPDIR"
+  if [[ -z "${AURTOMATOR_KEEP_TEST_DIRS:-}" ]]; then
+    rm -rf "$TEST_TMPDIR"
+  fi
 }
 
 # Create a test package YAML
