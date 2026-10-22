@@ -779,7 +779,7 @@ The color is `brightgreen` with no failures and `red` otherwise.
 A `git push` from the workflow would show as unverified, so the step commits through the GitHub Git Data API:
 
 1. List the changed tracked files with `git diff --name-only -z`, and stop when there is none. The job writes only `README.md` and `packages/<package-name>.yml`, so a change to any other tracked file fails the step and nothing is committed.
-2. Read the branch head and its tree.
+2. Read the branch head and its tree. A head other than the commit the job checked out means a commit was pushed during the run. The step then lists the tree of the new head, and when a changed file differs there from the checked-out commit, or is gone, it prints a notice and commits nothing, because the tree of step 3 replaces each file as a whole and would drop that change. The next run starts from the new head and writes the statuses again. A package that this run pushed to the AUR keeps its old `last_updated`: the next run finds the version in the AUR and writes only `current`. When the pushed commits changed none of these files, the step commits on the new head.
 3. Create a blob for every changed file, a tree on the base tree, and a commit.
 4. Move the branch ref with `force=false`.
 
@@ -825,7 +825,7 @@ actionlint
 
 ### 6.2 Test job
 
-15-minute timeout. It runs in the image that the `image` job of `ci.yml` reads, the same job as in [5.2](#52-permissions-and-container). It upgrades `archlinux-keyring`, installs `bash bats git go-yq curl openssh namcap ruby ruby-erb` and the gems `bashcov` 4.0.0 and `simplecov-cobertura` 4.0.0, then runs:
+15-minute timeout. It runs in the image that the `image` job of `ci.yml` reads, the same job as in [5.2](#52-permissions-and-container). It upgrades `archlinux-keyring`, installs `bash bats git go-yq jq curl openssh namcap ruby ruby-erb` and the gems `bashcov` 4.0.0 and `simplecov-cobertura` 4.0.0, then runs:
 
 ```bash
 ./scripts/validate-pkg.sh --all
