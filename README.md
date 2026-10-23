@@ -24,7 +24,7 @@ Automated AUR package updates from a single GitHub repo.
 | [memos-bin](https://aur.archlinux.org/pkgbase/memos-bin) | 0.31.0 | github-release | 2026-09-19 | ✅ up to date |
 | [miniflux-bin](https://aur.archlinux.org/pkgbase/miniflux-bin) | 2.3.4 | github-release | 2026-10-20 | ✅ up to date |
 | [neovim-nightly-bin](https://aur.archlinux.org/pkgbase/neovim-nightly-bin) | 0.13.0+dev+1943+gd714648b8e | github-nightly | 2026-10-22 | ✅ up to date |
-| [sherpa-onnx-bin](https://aur.archlinux.org/pkgbase/sherpa-onnx-bin) | 1.13.8 | github-release | — | ✅ up to date |
+| [sherpa-onnx-bin](https://aur.archlinux.org/pkgbase/sherpa-onnx-bin) | 2.0.0 | github-release | 2026-10-23 | 🔄 updated to 2.0.0 |
 | [sherpa-onnx-piper-voice-ru-denis](https://aur.archlinux.org/pkgbase/sherpa-onnx-piper-voice-ru-denis) | 20251202 | github-asset | — | ✅ up to date |
 | [sherpa-onnx-piper-voice-ru-dmitri](https://aur.archlinux.org/pkgbase/sherpa-onnx-piper-voice-ru-dmitri) | 20251202 | github-asset | — | ✅ up to date |
 | [sherpa-onnx-piper-voice-ru-ruslan](https://aur.archlinux.org/pkgbase/sherpa-onnx-piper-voice-ru-ruslan) | 20251202 | github-asset | — | ✅ up to date |
