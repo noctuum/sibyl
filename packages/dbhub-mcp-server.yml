@@ -1,0 +1,4 @@
+name: dbhub-mcp-server
+strategy: npm
+upstream:
+  registry: "@bytebase/dbhub"
