@@ -1,0 +1,4 @@
+name: pgtui-bin
+strategy: github-release
+upstream:
+  project: pgplex/pgtui
