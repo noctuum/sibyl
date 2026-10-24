@@ -42,6 +42,16 @@ pkg_set() {
   yq -i "${query} = ${value}" "$file"
 }
 
+# The pkgver_dash of a package: _ or ., drop for '', which drops the dash,
+# and nothing when the package does not set it
+# Usage: pkgver_dash packages/my-package.yml
+pkgver_dash() {
+  local file="$1" dash
+  [[ $(pkg_get "$file" '.pkgver_dash | tag') != "!!null" ]] || return 0
+  dash=$(pkg_get "$file" '.pkgver_dash')
+  printf '%s\n' "${dash:-drop}"
+}
+
 # =============================================================================
 # CONFIG
 # =============================================================================
@@ -229,9 +239,33 @@ remote_tags() {
     git ls-remote --tags --refs "$1" | cut -f2 | sed 's|^refs/tags/||'
 }
 
+# The newest of the versions on stdin, one per line, in the order of
+# pacman: vercmp puts 2.1.0rc1 below 2.1.0, where sort -V puts it above.
+# vercmp reads a dash as the pkgrel separator, so the comparison drops a
+# dash before a letter, as pkgver_dash: '' does, and takes any other dash
+# for a dot: 2.1.0-rc1 is below 2.1.0, and 2025-04-03 is 2025.04.03.
+newest_version() {
+  local version key newest="" newest_key=""
+  while IFS= read -r version; do
+    [[ -n "$version" ]] || continue
+    key=$version
+    while [[ "$key" =~ ^(.*)-([A-Za-z].*)$ ]]; do
+      key=${BASH_REMATCH[1]}${BASH_REMATCH[2]}
+    done
+    key=${key//-/.}
+    if [[ -z "$newest" ]] || (($(vercmp "$key" "$newest_key") > 0)); then
+      newest=$version
+      newest_key=$key
+    fi
+  done
+  if [[ -n "$newest" ]]; then
+    printf '%s\n' "$newest"
+  fi
+}
+
 # The tags of the form v1.2.3 or 1.2.3, for a tag strategy without
-# tag_version_regex. sort -V puts latest, 2.1.0-rc1 and 2.1.0rc1 above
-# 2.1.0, so they are left out.
+# tag_version_regex. latest, 2.1.0-rc1 and 2.1.0rc1 are left out, so a
+# pre-release is never the version.
 # Args: $1=tags, one per line
 release_tags() {
   grep -E '^v?[0-9]+(\.[0-9]+)*$' <<<"$1" || true
@@ -289,7 +323,7 @@ latest_tag_version() {
       return 1
     fi
   fi
-  version=$(tag_versions "$regex" "$replace" <<<"$tags" | sort -V | tail -1)
+  version=$(tag_versions "$regex" "$replace" <<<"$tags" | newest_version)
   if [[ -z "$version" ]]; then
     echo "No matching tags found" >&2
     return 1

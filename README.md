@@ -115,13 +115,13 @@ All packages run in one workflow run. `check` runs every time, `prepare` and `ve
 
 ## Alternatives
 
-| Tool              | Best for                 | Approach                                         |
-|-------------------|--------------------------|--------------------------------------------------|
-| [nvchecker]       | Version detection only   | Python, 40+ sources, no AUR push                 |
-| [lilac]           | Large repos (archlinuxcn)| Full build bot, needs own infra                  |
-| [aur-auto-update] | Centralized service      | Requires bot co-maintainer on AUR                |
-| [Renovate]        | Multi-ecosystem          | Enterprise-grade, heavy config                   |
-| **aurtomator**    | Individual maintainers   | Fork and go, bash, zero dependencies beyond Arch |
+| Tool              | Best for                  | Approach                          |
+|-------------------|---------------------------|-----------------------------------|
+| [nvchecker]       | Version detection only    | Python, 40+ sources, no AUR push  |
+| [lilac]           | Large repos (archlinuxcn) | Full build bot, needs own infra   |
+| [aur-auto-update] | Centralized service       | Requires bot co-maintainer on AUR |
+| [Renovate]        | Multi-ecosystem           | Enterprise-grade, heavy config    |
+| **aurtomator**    | Individual maintainers    | Fork and go                       |
 
 [nvchecker]: https://github.com/lilydjwg/nvchecker
 [lilac]: https://github.com/archlinuxcn/lilac

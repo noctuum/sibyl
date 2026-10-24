@@ -60,6 +60,38 @@ teardown() {
   [ "$output" = "owner/repo" ]
 }
 
+# vercmp puts an empty string above a version of letters only
+@test "lib.sh: newest_version skips an empty line" {
+  source "$TEST_TMPDIR/scripts/lib.sh"
+  run newest_version <<<$'nightly\n\nlatest'
+  [ "$status" -eq 0 ]
+  [ "$output" = "nightly" ]
+}
+
+# vercmp reads a dash as the pkgrel separator and finds 2.5.0-rc1 equal to
+# 2.5.0. Dropped, as pkgver_dash: '' does, the dash gives 2.5.0rc1.
+@test "lib.sh: newest_version puts a pre-release after a dash below its release" {
+  source "$TEST_TMPDIR/scripts/lib.sh"
+  run newest_version <<<$'2.5.0\n2.5.0-rc1\n2.4.6'
+  [ "$output" = "2.5.0" ]
+  run newest_version <<<$'2.5.0-rc1\n2.5.0'
+  [ "$output" = "2.5.0" ]
+  run newest_version <<<$'2.4.6\n2.5.0-rc1\n2.5.0-rc2'
+  [ "$output" = "2.5.0-rc2" ]
+  run newest_version <<<$'1.0.0-beta.3\n1.0.0-beta.24'
+  [ "$output" = "1.0.0-beta.24" ]
+}
+
+@test "lib.sh: newest_version reads a dash before a digit as a dot" {
+  source "$TEST_TMPDIR/scripts/lib.sh"
+  run newest_version <<<$'2025-12-27\n2026-01-05\n2025-04-03'
+  [ "$output" = "2026-01-05" ]
+  run newest_version <<<$'1.9.0\n1.9.0-1'
+  [ "$output" = "1.9.0-1" ]
+  run newest_version <<<$'1.2-3\n1.3'
+  [ "$output" = "1.3" ]
+}
+
 # === audit_pkgbuild ===
 
 @test "audit_pkgbuild: passes normal binary package" {
@@ -148,6 +180,40 @@ EOF
   run audit_pkgbuild "$TEST_TMPDIR/test.PKGBUILD" "github-asset"
   [ "$status" -eq 1 ]
   [[ "$output" == *"Drop pkgver() so that sed sets pkgver, or use 'git-latest' for a package built from git."* ]]
+}
+
+# Helper: test.PKGBUILD at 2.2.0 whose pkgver() has the given body
+write_pkgver_pkgbuild() {
+  # shellcheck disable=SC2016
+  printf '%s\n' 'pkgname=test' 'pkgver=2.2.0' 'pkgrel=1' 'arch=(any)' \
+    'source=("https://example.com/test-$pkgver.tar.gz")' "sha256sums=('abc123')" \
+    'pkgver() {' "$1" '}' >"$TEST_TMPDIR/test.PKGBUILD"
+}
+
+# streamrip on the AUR: pkgver holds no dash, so its pkgver() prints the
+# pkgver that sed sets
+@test "audit_pkgbuild: allows a pkgver() that only prints pkgver" {
+  source "$TEST_TMPDIR/scripts/lib.sh"
+  local body
+  # shellcheck disable=SC2016
+  for body in $'  cd streamrip\n  printf "${pkgver//-/.}"' $'  cd "$srcdir/streamrip" || return\n  echo $pkgver' '  echo "${pkgver}"'; do
+    write_pkgver_pkgbuild "$body"
+    run audit_pkgbuild "$TEST_TMPDIR/test.PKGBUILD" "github-tag"
+    [ "$status" -eq 0 ]
+  done
+}
+
+@test "audit_pkgbuild: blocks a pkgver() that does more than print pkgver" {
+  source "$TEST_TMPDIR/scripts/lib.sh"
+  local body
+  # shellcheck disable=SC2016
+  for body in '  printf "${pkgver//_/.}"' '  echo "${pkgver}rc1"' $'  echo "$pkgver"\n  echo "$pkgver"' \
+    '  echo "$pkgver" | tr . _' $'  cd streamrip && git pull\n  echo "$pkgver"'; do
+    write_pkgver_pkgbuild "$body"
+    run audit_pkgbuild "$TEST_TMPDIR/test.PKGBUILD" "github-tag"
+    [ "$status" -eq 1 ]
+    [[ "$output" == *"BLOCKED: pkgver() function detected with strategy 'github-tag'."* ]]
+  done
 }
 
 @test "audit_pkgbuild: allows pkgver() with git-latest strategy" {
@@ -948,6 +1014,17 @@ pkgver_dash: ."
   [ "$result" = "1.0.0.beta.24" ]
 }
 
+# vercmp puts 1.0.0beta24 below 1.0.0, so the release needs no epoch
+@test "check-update: pkgver_dash '' drops every dash in the version" {
+  stand_in_strategy dash 1.0.0-beta-24
+  create_test_package "mypkg" "dash" "current: '1.0'
+pkgver_dash: ''"
+
+  run --separate-stderr "$TEST_TMPDIR/scripts/check-update.sh" "mypkg"
+  [ "$status" -eq 0 ]
+  [ "$output" = "1.0.0beta24" ]
+}
+
 @test "check-update: pkgver_format puts the version of the strategy into pkgver" {
   stand_in_strategy build 4216
   create_test_package "mypkg" "build" "current: '4.4215'
@@ -1085,7 +1162,7 @@ make_spaced_project() {
   git -C "$SPACED" init -q
   run "$SPACED/scripts/update-readme.sh"
   [ "$status" -eq 0 ]
-  grep -q '\[pkg\]' "$SPACED/README.md"
+  grep -qF '>pkg</a>' "$SPACED/README.md"
 }
 
 # === update-readme.sh ===
@@ -1125,7 +1202,27 @@ current: '2.0.0'"
   git -C "$TEST_TMPDIR" init -q
   run "$TEST_TMPDIR/scripts/update-readme.sh"
   [ "$status" -eq 0 ]
-  grep -qF '| [pkg-a](https://aur.archlinux.org/pkgbase/pkg-a) |' "$TEST_TMPDIR/README.md"
+  grep -qF '<td><a href="https://aur.archlinux.org/pkgbase/pkg-a">pkg-a</a></td>' "$TEST_TMPDIR/README.md"
+}
+
+# GitHub keeps nowrap on an HTML table cell, and a Markdown cell takes none
+@test "update-readme: keeps strategy, date and status on one line" {
+  create_test_package "pkg-a" "github-release" "upstream:
+  project: owner/repo
+current: '1.0.0'
+last_updated: '2026-10-22'"
+  echo "up_to_date" >"$TEST_TMPDIR/.status/pkg-a"
+  printf '%s\n' "# test" "<!-- PACKAGES:START -->" "<!-- PACKAGES:END -->" >"$TEST_TMPDIR/README.md"
+  git -C "$TEST_TMPDIR" init -q
+
+  run "$TEST_TMPDIR/scripts/update-readme.sh"
+  [ "$status" -eq 0 ]
+  [ "$(sed -n '/PACKAGES:START/,/PACKAGES:END/p' "$TEST_TMPDIR/README.md" | sed '1,2d')" = '
+<table>
+<tr><th>Package</th><th>Version</th><th>Strategy</th><th>Updated</th><th>Status</th></tr>
+<tr><td><a href="https://aur.archlinux.org/pkgbase/pkg-a">pkg-a</a></td><td>1.0.0</td><td nowrap>github-release</td><td nowrap>2026-10-22</td><td nowrap>✅ up to date</td></tr>
+</table>
+<!-- PACKAGES:END -->' ]
 }
 
 @test "update-readme: shows failed status from .status/" {
@@ -1497,7 +1594,11 @@ EOF
 EOF
   git -C "$TEST_TMPDIR" init -q
   "$TEST_TMPDIR/scripts/update-readme.sh" 2>/dev/null
-  grep -q "No packages configured" "$TEST_TMPDIR/README.md"
+  [ "$(sed -n '/<table>/,$p' "$TEST_TMPDIR/README.md")" = '<table>
+<tr><th>Package</th><th>Version</th><th>Strategy</th><th>Updated</th><th>Status</th></tr>
+<tr><td><em>No packages configured</em></td><td>—</td><td nowrap>—</td><td nowrap>—</td><td nowrap>—</td></tr>
+</table>
+<!-- PACKAGES:END -->' ]
 }
 
 @test "update-readme: preserves content outside markers" {
@@ -1648,7 +1749,7 @@ current: '1.0.0'"
 
   run "$TEST_TMPDIR/scripts/update-readme.sh"
   [ "$status" -eq 0 ]
-  grep -qF '| 1.0.0 | github-release | — | ✅ tracking |' "$TEST_TMPDIR/README.md"
+  grep -qF '<td>1.0.0</td><td nowrap>github-release</td><td nowrap>—</td><td nowrap>✅ tracking</td>' "$TEST_TMPDIR/README.md"
   grep -qF 'packages-1%2F1-brightgreen' "$TEST_TMPDIR/README.md"
 }
 
@@ -1660,7 +1761,7 @@ current: '1.0.0'"
 
   run "$TEST_TMPDIR/scripts/update-readme.sh"
   [ "$status" -eq 0 ]
-  grep -qF '| [pkg-new](https://aur.archlinux.org/pkgbase/pkg-new) | — | github-release | — | 🆕 new |' "$TEST_TMPDIR/README.md"
+  grep -qF '<tr><td><a href="https://aur.archlinux.org/pkgbase/pkg-new">pkg-new</a></td><td>—</td><td nowrap>github-release</td><td nowrap>—</td><td nowrap>🆕 new</td></tr>' "$TEST_TMPDIR/README.md"
 }
 
 # A package that has not been checked yet has failed nothing
@@ -1710,8 +1811,7 @@ current: '1.0.0'"
 EOF
   git -C "$TEST_TMPDIR" init -q
   "$TEST_TMPDIR/scripts/update-readme.sh" 2>/dev/null
-  # Table should have 5 columns with dash for missing last_updated
-  grep -q "| — |" "$TEST_TMPDIR/README.md"
+  grep -qF '<td nowrap>github-release</td><td nowrap>—</td>' "$TEST_TMPDIR/README.md"
 }
 
 # === update-pkg.sh: argument validation ===
