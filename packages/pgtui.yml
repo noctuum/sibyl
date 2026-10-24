@@ -2,3 +2,4 @@ name: pgtui
 strategy: github-release
 upstream:
   project: pgplex/pgtui
+current: 0.3.0
