@@ -1,0 +1,4 @@
+name: pgconsole
+strategy: npm
+upstream:
+  registry: "@pgplex/pgconsole"
