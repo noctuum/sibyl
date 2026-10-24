@@ -62,7 +62,7 @@ The setup script configures your identity (git author for AUR commits), SSH acce
 
 ## Strategies
 
-14 built-in version detection strategies:
+15 built-in version detection strategies:
 
 | Strategy           | Source              | Use for                              |
 |--------------------|---------------------|--------------------------------------|
@@ -72,6 +72,7 @@ The setup script configures your identity (git author for AUR commits), SSH acce
 | `github-asset`     | GitHub Releases API | Assets re-uploaded on a fixed tag    |
 | `gitlab-tag`       | GitLab Tags API     | Any GitLab instance                  |
 | `gitea-tag`        | Gitea/Forgejo API   | Codeberg, self-hosted Gitea          |
+| `git-tag`          | `git ls-remote`     | Any HTTPS git host, such as sourcehut |
 | `git-latest`       | `git clone --bare`  | `-git` packages, any HTTPS git repo  |
 | `pypi`             | PyPI JSON API       | Python packages                      |
 | `npm`              | npm registry        | Node.js packages                     |
@@ -79,7 +80,7 @@ The setup script configures your identity (git author for AUR commits), SSH acce
 | `repology`         | Repology API        | Universal fallback (120+ repos)      |
 | `archpkg`          | Arch repos API      | The pkgver of an official package    |
 | `webpage-scrape`   | URL + regex         | Anything not covered above           |
-| `kde-tarball`      | download.kde.org    | KDE projects, one tarball directory  |
+| `kde-tarball`      | download.kde.org    | KDE projects, Plasma and Gear too    |
 
 See [docs/WORKFLOW.md](docs/WORKFLOW.md) for strategy details, YAML examples, and how to write custom strategies.
 
@@ -88,8 +89,9 @@ See [docs/WORKFLOW.md](docs/WORKFLOW.md) for strategy details, YAML examples, an
 aurtomator only sets `pkgver`, resets `pkgrel` to 1, and updates checksums and `.SRCINFO`. It does not build packages or check dependencies. These cases are detected and blocked:
 
 - **`pkgver()` with the wrong strategy**: use `git-latest` for VCS packages
-- **A `SKIP` next to a real checksum of a remote source**: such a `SKIP` turns off `updpkgsums`, and the real checksum would go stale. The `SKIP` of a signature (`.sig`, `.sign`, `.asc`) does not count, because makepkg gives it `SKIP` itself
-- **Source URLs returning HTML**: detected by the `Content-Type` check, which runs only when no checksum is `SKIP` other than that of a signature
+- **A `SKIP` next to a real checksum of a remote source**: such a `SKIP` turns off `updpkgsums`, and the real checksum would go stale. The `SKIP` of a signature (`.sig`, `.sign`, `.asc`) and that of a VCS source without a `#commit=`, `#tag=` or `#revision=` pin do not count, because makepkg gives them `SKIP` itself
+- **Sources that do not follow `pkgver`**: when a download has a real checksum or a VCS source is pinned, a bump has to change a source URL or a checksum, or the new version would hold the old files. Make `pkgver` the literal and derive the other variable from it
+- **Source URLs returning HTML** or an error status: a HEAD request checks every `http` and `https` source, also one with a `SKIP` checksum
 
 Patches in `source=()` trigger a warning and are not blocked.
 
@@ -98,6 +100,8 @@ Patches in `source=()` trigger a warning and are not blocked.
 ## Downgrades
 
 aurtomator publishes a version older than the tracked one only when the package YAML sets `allow_downgrade: true`. Without it, the downgrade is skipped: the latest release of a GitHub project can be a maintenance release of an older line. A downgrade is logged with the literal keyword `DOWNGRADE` and shown in the package table with a `⬇️` icon. It counts as a successful run, so the badge stays green. Details are in [docs/WORKFLOW.md section 4.3](docs/WORKFLOW.md#43-downgrade-behavior).
+
+An update whose first number has at least two digits more than that of the tracked version, such as `13 → 2026102100`, is skipped the same way unless the package YAML sets `allow_version_jump: true`. Such a step is more often another version scheme of the upstream, as build tags next to release tags, than a release. It is shown with a `⬆️` icon.
 
 ## Resource usage
 

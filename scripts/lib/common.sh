@@ -78,12 +78,56 @@ pkg_file() {
 # Mozilla/5.0 with HTTP 403. webpage-scrape.sh sets upstream.user_agent here.
 USER_AGENT="aurtomator/1.0"
 
+# What curl writes to stderr on a failure: the URL of the last answer, the
+# error and the cf-mitigated header, which Cloudflare sets to "challenge"
+# on the page of its bot check
+HTTP_FAILURE='%{onerror}%{stderr}%{url_effective}\t%{errormsg}\t%header{cf-mitigated}'
+
+# Args: $1=URL, the rest: curl options
+_curl_get() {
+  curl -sfL --max-time 30 --retry 2 --retry-delay 5 --retry-connrefused \
+    -A "$USER_AGENT" -w "$HTTP_FAILURE" "${@:2}" "$1"
+}
+
 # GET a URL for a strategy. curl tries a timeout, a refused connection and
-# an HTTP 408, 429, 500, 502, 503, 504, 522 or 524 answer twice more.
+# an HTTP 408, 429, 500, 502, 503, 504, 522 or 524 answer twice more. A
+# failure prints the URL of the last answer after redirects and the error.
 # Usage: http_get <url> [curl option]...
 http_get() {
-  curl -sfL --max-time 30 --retry 2 --retry-delay 5 --retry-connrefused \
-    -A "$USER_AGENT" "${@:2}" "$1"
+  local failure rc=0 url error mitigated
+  # The answer goes out through fd 3, and stderr into failure
+  { failure=$(_curl_get "$@" 2>&1 >&3 3>&-); } 3>&1 || rc=$?
+  if ((rc == 0)); then
+    return 0
+  fi
+  if [[ "$failure" == *$'\t'* ]]; then
+    IFS=$'\t' read -r url error mitigated <<<"$failure"
+    failure="${url}: ${error}"
+    if [[ "$mitigated" == challenge ]]; then
+      failure+=", a Cloudflare challenge, which only a browser passes"
+    fi
+  elif [[ -z "$failure" ]]; then
+    failure="${1}: curl exit ${rc}"
+  fi
+  printf '%s\n' "$failure" >&2
+  return "$rc"
+}
+
+# GET a URL that answers JSON and print the answer. The bot check of a
+# site answers an HTML page with HTTP 200, often after a redirect, so an
+# answer that is not a JSON object or array fails and names the URL it
+# came from.
+# Usage: http_get_json <url> [curl option]...
+http_get_json() {
+  local answer url
+  answer=$(http_get "$@" -w "\n%{url_effective}${HTTP_FAILURE}") || return
+  url=${answer##*$'\n'}
+  answer=${answer%$'\n'*}
+  if [[ ! "$(yq 'tag' <<<"$answer" 2>/dev/null)" =~ ^!!(map|seq)$ ]]; then
+    printf '%s: the answer is not JSON\n' "$url" >&2
+    return 1
+  fi
+  printf '%s\n' "$answer"
 }
 
 # GET a GitHub API URL, with GITHUB_TOKEN when it is set. curl reads the
@@ -96,6 +140,43 @@ github_api() {
     auth=(-H @-)
   fi
   http_get "$1" "${auth[@]}" <<<"Authorization: Bearer ${GITHUB_TOKEN:-}"
+}
+
+# Args: $1=releases JSON, $2=ERE, $3=yq filter of the releases
+_latest_release_tag() {
+  local published tag
+  yq -r ".[] | $3 | [.published_at, .tag_name] | @tsv" <<<"$1" |
+    while IFS=$'\t' read -r published tag; do
+      if [[ "$tag" =~ $2 ]]; then
+        printf '%s\t%s\n' "$published" "$tag"
+      fi
+    done | sort | tail -1 | cut -f2
+}
+
+# Print the release published last whose tag matches the ERE, as JSON, or
+# nothing. Reads pages of 100 releases until a page has a match or holds
+# fewer than 100, at most the given number of pages. The API lists releases
+# by created_at, the date of the tagged commit, so the match published last
+# wins. A draft holds no published_at.
+# Args: $1=API URL of the repository, $2=ERE, $3=most pages to read,
+#       $4="stable" to leave out pre-releases
+# Returns: 1 when a request fails
+github_release_matching() {
+  local filter='select(.published_at != null)' page json tag
+  if [[ "${4:-}" == stable ]]; then
+    filter+=' | select(.prerelease != true)'
+  fi
+  for ((page = 1; page <= $3; page++)); do
+    json=$(github_api "$1/releases?per_page=100&page=${page}") || return 1
+    tag=$(_latest_release_tag "$json" "$2" "$filter") || return 1
+    if [[ -n "$tag" ]]; then
+      TAG="$tag" yq -r '[.[] | select(.tag_name == strenv(TAG))][0]' <<<"$json"
+      return 0
+    fi
+    if (($(yq 'length' <<<"$json") < 100)); then
+      return 0
+    fi
+  done
 }
 
 # =============================================================================
@@ -125,6 +206,27 @@ validate_pkgver() {
     log_err "Version string rejected, it holds no digit: ${ver@Q}"
     return 1
   fi
+}
+
+# Args: $1=current version, $2=new version
+# Returns: 0 when the first number in the new version has at least two
+#          digits more than the first number in the current one, as in
+#          13 → 2026102100 or 4.4215 → 4215, 1 otherwise
+version_jump() {
+  local old new
+  [[ "$1" =~ [0-9]+ ]] || return 1
+  old="${BASH_REMATCH[0]}"
+  [[ "$2" =~ [0-9]+ ]] || return 1
+  new="${BASH_REMATCH[0]}"
+  ((${#new} >= ${#old} + 2))
+}
+
+# Print every tag name of a git repository, one per line, from git
+# ls-remote over https only and without a terminal prompt
+# Args: $1=HTTPS URL of the repository
+remote_tags() {
+  GIT_ALLOW_PROTOCOL=https GIT_TERMINAL_PROMPT=0 \
+    git ls-remote --tags --refs "$1" | cut -f2 | sed 's|^refs/tags/||'
 }
 
 # The tags of the form v1.2.3 or 1.2.3, for a tag strategy without

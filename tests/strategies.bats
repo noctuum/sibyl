@@ -1,6 +1,7 @@
 #!/usr/bin/env bats
 
 load helpers/setup.sh
+bats_require_minimum_version 1.5.0
 
 setup() {
   setup_test_env
@@ -74,7 +75,111 @@ teardown() {
 
   run "$TEST_TMPDIR/strategies/github-release.sh" "test-nomatch"
   [ "$status" -ne 0 ]
-  [[ "$output" == *"tag_version_regex 'docker-v(.*)' did not match tag '0.1.8-stable'"* ]]
+  [[ "$output" == *"No release of custom-suffix/repo outside pre-releases among the newest 1000 has a tag that tag_version_regex 'docker-v(.*)' matches"* ]]
+}
+
+# tutao/tutanota releases a web, a desktop and mobile apps
+@test "github-release: tag_version_regex takes the matching release published last" {
+  record_curl
+  create_test_package "test-multi" "github-release" "upstream:
+  project: multi-product/repo
+  tag_version_regex: '^app-desktop-release-(.*)$'"
+
+  run "$TEST_TMPDIR/strategies/github-release.sh" "test-multi"
+  [ "$status" -eq 0 ]
+  [ "$output" = "362.0" ]
+  [ "$(nightly_pages)" = "1 " ]
+  [ "$(grep -c 'releases/latest' "$TEST_TMPDIR/curl.args")" = "0" ]
+}
+
+@test "github-release: tag_version_regex reads the next page" {
+  record_curl
+  create_test_package "test-pages" "github-release" "upstream:
+  project: later-nightly/repo
+  tag_version_regex: '^([0-9]{4})-([0-9]{2})-([0-9]{2})$'
+  tag_version_replace: '\\1.\\2.\\3'"
+
+  run "$TEST_TMPDIR/strategies/github-release.sh" "test-pages"
+  [ "$status" -eq 0 ]
+  [ "$output" = "2026.10.21" ]
+  [ "$(nightly_pages)" = "1 2 " ]
+}
+
+@test "github-release: tag_version_regex stops at a full page with a match" {
+  record_curl
+  create_test_package "test-pages" "github-release" "upstream:
+  project: full-nightly/repo
+  tag_version_regex: '^([0-9-]+)$'"
+
+  run "$TEST_TMPDIR/strategies/github-release.sh" "test-pages"
+  [ "$status" -eq 0 ]
+  [ "$output" = "2026-10-21" ]
+  [ "$(nightly_pages)" = "1 " ]
+}
+
+@test "github-release: tag_version_regex stops at a short page" {
+  record_curl
+  create_test_package "test-pages" "github-release" "upstream:
+  project: short-nightly/repo
+  tag_version_regex: '^([0-9-]+)$'"
+
+  run "$TEST_TMPDIR/strategies/github-release.sh" "test-pages"
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"No release of short-nightly/repo outside pre-releases among the newest 1000"* ]]
+  [ "$(nightly_pages)" = "1 " ]
+}
+
+@test "github-release: tag_version_regex reads at most 10 pages" {
+  record_curl
+  create_test_package "test-pages" "github-release" "upstream:
+  project: no-nightly/repo
+  tag_version_regex: '^([0-9-]+)$'"
+
+  run "$TEST_TMPDIR/strategies/github-release.sh" "test-pages"
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"github-nightly with nightly_tag_regex reads pre-releases"* ]]
+  [ "$(nightly_pages)" = "1 2 3 4 5 6 7 8 9 10 " ]
+}
+
+@test "github-release: tag_version_regex fails when the list cannot be read" {
+  create_test_package "test-pages" "github-release" "upstream:
+  project: owner/repo
+  tag_version_regex: '^v(.*)$'"
+  printf '#!/usr/bin/env bash\nexit 7\n' >"$TEST_TMPDIR/mock-bin/curl"
+  chmod +x "$TEST_TMPDIR/mock-bin/curl"
+
+  run "$TEST_TMPDIR/strategies/github-release.sh" "test-pages"
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"Failed to fetch releases for owner/repo"* ]]
+}
+
+# FreeTubeApp/FreeTube files every release as a pre-release
+@test "github-release: names github-nightly for a project with pre-releases only" {
+  create_test_package "test-pre" "github-release" "upstream:
+  project: prerelease-only/repo"
+
+  run "$TEST_TMPDIR/strategies/github-release.sh" "test-pre"
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"prerelease-only/repo has no release outside pre-releases, which /releases/latest leaves out; github-nightly with nightly_tag_regex reads pre-releases"* ]]
+}
+
+@test "github-release: names github-tag for a project without releases" {
+  create_test_package "test-none" "github-release" "upstream:
+  project: no-releases/repo"
+
+  run "$TEST_TMPDIR/strategies/github-release.sh" "test-none"
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"no-releases/repo has no releases; github-tag reads its tags"* ]]
+}
+
+@test "github-release: keeps the fetch error when the list has a release" {
+  create_test_package "test-stable" "github-release" "upstream:
+  project: stable-list/repo"
+
+  run "$TEST_TMPDIR/strategies/github-release.sh" "test-stable"
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"Failed to fetch latest release for stable-list/repo"* ]]
+  [[ "$output" != *"pre-releases"* ]]
 }
 
 @test "github-release: tag_version_replace builds the version from the groups" {
@@ -202,7 +307,7 @@ teardown() {
   grep -qx 'GIT_CONFIG_COUNT=1' "$TEST_TMPDIR/ls-remote.env"
   grep -qx 'GIT_CONFIG_KEY_0=http.https://github.com/.extraHeader' "$TEST_TMPDIR/ls-remote.env"
   grep -qx "GIT_CONFIG_VALUE_0=Authorization: Basic $basic" "$TEST_TMPDIR/ls-remote.env"
-  ! grep -q -e standin-token -e "$basic" "$TEST_TMPDIR/ls-remote.args"
+  run ! grep -q -e standin-token -e "$basic" "$TEST_TMPDIR/ls-remote.args"
 }
 
 @test "github-tag: gives git no token without GITHUB_TOKEN" {
@@ -213,7 +318,79 @@ teardown() {
   run "$TEST_TMPDIR/strategies/github-tag.sh" "test-gh-tag"
   [ "$status" -eq 0 ]
   [ -s "$TEST_TMPDIR/ls-remote.env" ]
-  ! grep -qE '^GIT_CONFIG_(COUNT|KEY_0|VALUE_0)=' "$TEST_TMPDIR/ls-remote.env"
+  run ! grep -qE '^GIT_CONFIG_(COUNT|KEY_0|VALUE_0)=' "$TEST_TMPDIR/ls-remote.env"
+}
+
+# === git-tag ===
+
+@test "git-tag: returns the latest release tag of any git host" {
+  create_test_package "test-git-tag" "git-tag" "upstream:
+  url: https://git.example.org/~owner/repo"
+
+  run "$TEST_TMPDIR/strategies/git-tag.sh" "test-git-tag"
+  [ "$status" -eq 0 ]
+  [ "$output" = "0.20" ]
+}
+
+@test "git-tag: reads every tag with git ls-remote over https, without a terminal prompt" {
+  create_test_package "test-git-tag" "git-tag" "upstream:
+  url: https://git.example.org/~owner/repo"
+
+  run "$TEST_TMPDIR/strategies/git-tag.sh" "test-git-tag"
+  [ "$status" -eq 0 ]
+  [ "$(cat "$TEST_TMPDIR/ls-remote.args")" = "ls-remote --tags --refs https://git.example.org/~owner/repo" ]
+  grep -qx 'GIT_ALLOW_PROTOCOL=https' "$TEST_TMPDIR/ls-remote.env"
+  grep -qx 'GIT_TERMINAL_PROMPT=0' "$TEST_TMPDIR/ls-remote.env"
+}
+
+@test "git-tag: tag_version_replace builds the version from the groups" {
+  create_test_package "test-git-tag" "git-tag" "upstream:
+  url: https://git.example.org/~owner/prefixed
+  tag_version_regex: '^release-([0-9]+)\\.([0-9]+)$'
+  tag_version_replace: '\\1.\\2.0'"
+
+  run "$TEST_TMPDIR/strategies/git-tag.sh" "test-git-tag"
+  [ "$status" -eq 0 ]
+  [ "$output" = "1.10.0" ]
+}
+
+@test "git-tag: sends the host no GITHUB_TOKEN" {
+  create_test_package "test-git-tag" "git-tag" "upstream:
+  url: https://git.example.org/~owner/repo"
+  export GITHUB_TOKEN=standin-token
+
+  run "$TEST_TMPDIR/strategies/git-tag.sh" "test-git-tag"
+  [ "$status" -eq 0 ]
+  [ -s "$TEST_TMPDIR/ls-remote.env" ]
+  run ! grep -qE '^GIT_CONFIG_(COUNT|KEY_0|VALUE_0)=' "$TEST_TMPDIR/ls-remote.env"
+}
+
+@test "git-tag: fails when git cannot read the tags" {
+  create_test_package "test-git-tag" "git-tag" "upstream:
+  url: https://git.example.org/~owner/missing"
+
+  run "$TEST_TMPDIR/strategies/git-tag.sh" "test-git-tag"
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"Failed to fetch tags from https://git.example.org/~owner/missing"* ]]
+}
+
+@test "git-tag: fails on a repository without tags" {
+  create_test_package "test-git-tag" "git-tag" "upstream:
+  url: https://git.example.org/~owner/empty"
+
+  run "$TEST_TMPDIR/strategies/git-tag.sh" "test-git-tag"
+  [ "$status" -eq 1 ]
+  [ "$output" = "No tags found at https://git.example.org/~owner/empty" ]
+}
+
+@test "git-tag: refuses a URL other than HTTPS" {
+  create_test_package "test-git-tag" "git-tag" "upstream:
+  url: http://git.example.org/~owner/repo"
+
+  run "$TEST_TMPDIR/strategies/git-tag.sh" "test-git-tag"
+  [ "$status" -eq 1 ]
+  [ "$output" = "Only HTTPS URLs supported: http://git.example.org/~owner/repo" ]
+  [ ! -e "$TEST_TMPDIR/ls-remote.args" ]
 }
 
 # === gitlab-tag ===
@@ -476,6 +653,83 @@ teardown() {
   [ "$output" = "1.0.0" ]
 }
 
+@test "kde-tarball: reads the newest version directory" {
+  record_curl
+  create_test_package "xcursor-oxygen" "kde-tarball" "upstream:
+  project: oxygen
+  path: stable/plasma"
+
+  run "$TEST_TMPDIR/strategies/kde-tarball.sh" "xcursor-oxygen"
+  [ "$status" -eq 0 ]
+  [ "$output" = "6.10.0" ]
+  grep -qx 'https://download.kde.org/stable/plasma/6.10.0/' "$TEST_TMPDIR/curl.args"
+  ! grep -q '6\.9\.5' "$TEST_TMPDIR/curl.args"
+}
+
+@test "kde-tarball: a series directory holds the newest version" {
+  create_test_package "kio" "kde-tarball" "upstream:
+  path: stable/frameworks"
+
+  run "$TEST_TMPDIR/strategies/kde-tarball.sh" "kio"
+  [ "$status" -eq 0 ]
+  [ "$output" = "6.10.1" ]
+}
+
+@test "kde-tarball: reads src/ of the newest version directory" {
+  record_curl
+  create_test_package "okular" "kde-tarball" "upstream:
+  path: stable/release-service"
+
+  run "$TEST_TMPDIR/strategies/kde-tarball.sh" "okular"
+  [ "$status" -eq 0 ]
+  [ "$output" = "26.08.2" ]
+  grep -qx 'https://download.kde.org/stable/release-service/26.08.2/src/' "$TEST_TMPDIR/curl.args"
+}
+
+@test "kde-tarball: skips directories that are not versions" {
+  record_curl
+  create_test_package "krita" "kde-tarball" ""
+
+  run "$TEST_TMPDIR/strategies/kde-tarball.sh" "krita"
+  [ "$status" -eq 0 ]
+  [ "$output" = "6.0.4" ]
+  ! grep -q -e 'updates/' -e 'FastSketchPlugin' "$TEST_TMPDIR/curl.args"
+}
+
+@test "kde-tarball: a version directory beats older tarballs beside it" {
+  create_test_package "moved" "kde-tarball" ""
+
+  run "$TEST_TMPDIR/strategies/kde-tarball.sh" "moved"
+  [ "$status" -eq 0 ]
+  [ "$output" = "2.0.0" ]
+}
+
+@test "kde-tarball: a newer tarball beats older version directories beside it" {
+  create_test_package "flat-again" "kde-tarball" ""
+
+  run "$TEST_TMPDIR/strategies/kde-tarball.sh" "flat-again"
+  [ "$status" -eq 0 ]
+  [ "$output" = "3.0.0" ]
+}
+
+@test "kde-tarball: names the newest version directory when the project is not in it" {
+  create_test_package "dropped" "kde-tarball" "upstream:
+  path: stable/plasma"
+
+  run "$TEST_TMPDIR/strategies/kde-tarball.sh" "dropped"
+  [ "$status" -eq 1 ]
+  [ "$output" = "No dropped-<version>.tar.xz in the newest version directory https://download.kde.org/stable/plasma/6.10.0/" ]
+}
+
+@test "kde-tarball: fails when the newest version directory cannot be read" {
+  create_test_package "broken" "kde-tarball" "upstream:
+  path: unstable/broken"
+
+  run "$TEST_TMPDIR/strategies/kde-tarball.sh" "broken"
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"Failed to fetch https://download.kde.org/unstable/broken/2.0.0/"* ]]
+}
+
 # === webpage-scrape ===
 
 @test "webpage-scrape: returns version matched by pattern" {
@@ -509,7 +763,7 @@ fake_git_upstream() {
   git -C "$fake_repo" config user.email "test@test"
   git -C "$fake_repo" config user.name "test"
   for i in 1 2 3; do
-    echo "$i" > "$fake_repo/file.txt"
+    echo "$i" >"$fake_repo/file.txt"
     git -C "$fake_repo" add file.txt
     git -C "$fake_repo" commit -q -m "commit $i"
   done
@@ -540,6 +794,30 @@ EOF
 
 # fabric-git is r2173.ef2e985d on the AUR: rev-parse --short grows with the
 # repository, and r2173.ef2e985 reads as older
+@test "git-latest: clones github.com for the github type" {
+  fake_git_upstream
+  create_test_package "test-git" "git-latest" "upstream:
+  type: github
+  project: owner/repo"
+
+  run "$TEST_TMPDIR/strategies/git-latest.sh" "test-git"
+  [ "$status" -eq 0 ]
+  [ "$(cat "$TEST_TMPDIR/git-clone")" = "http:https https://github.com/owner/repo.git" ]
+}
+
+@test "git-latest: fails on a repository without commits" {
+  fake_git_upstream
+  rm -rf "$fake_repo"
+  git init -q "$fake_repo"
+  create_test_package "test-git" "git-latest" "upstream:
+  type: git
+  url: https://git.example.com/repo.git"
+
+  run "$TEST_TMPDIR/strategies/git-latest.sh" "test-git"
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"Failed to count commits"* ]]
+}
+
 @test "git-latest: takes the length of the hash from current" {
   fake_git_upstream
   local len
@@ -618,6 +896,103 @@ EOF
   [ ! -e "$TEST_TMPDIR/ssh.args" ]
 }
 
+# The git recipes of the Arch package guidelines for VCS packages:
+# git describe --long [--tags] --abbrev=7 | sed 's/\([^-]*-g\)/r\1/;s/-/./g',
+# with a prefix of the tag cut first as 's/^v//'
+@test "git-latest: describe tags prints what the recipe prints" {
+  fake_git_upstream
+  git -C "$fake_repo" tag v1.2.0 HEAD~2
+  create_test_package "test-git" "git-latest" "upstream:
+  type: git
+  url: https://git.example.com/repo.git
+  describe: tags
+  tag_prefix: v"
+
+  run "$TEST_TMPDIR/strategies/git-latest.sh" "test-git"
+  [ "$status" -eq 0 ]
+  [ "$output" = "1.2.0.r2.g$(git -C "$fake_repo" rev-parse --short=7 HEAD)" ]
+  [ "$output" = "$(git -C "$fake_repo" describe --long --tags --abbrev=7 | sed 's/^v//;s/\([^-]*-g\)/r\1/;s/-/./g')" ]
+}
+
+@test "git-latest: describe annotated skips a lightweight tag" {
+  fake_git_upstream
+  git -C "$fake_repo" tag -a -m "release" 1.0.0 HEAD~2
+  git -C "$fake_repo" tag 1.1.0 HEAD~1
+  local hash
+  hash=$(git -C "$fake_repo" rev-parse --short=7 HEAD)
+
+  create_test_package "test-git" "git-latest" "upstream:
+  type: git
+  url: https://git.example.com/repo.git
+  describe: annotated"
+  run "$TEST_TMPDIR/strategies/git-latest.sh" "test-git"
+  [ "$status" -eq 0 ]
+  [ "$output" = "1.0.0.r2.g$hash" ]
+
+  create_test_package "test-git" "git-latest" "upstream:
+  type: git
+  url: https://git.example.com/repo.git
+  describe: tags"
+  run "$TEST_TMPDIR/strategies/git-latest.sh" "test-git"
+  [ "$status" -eq 0 ]
+  [ "$output" = "1.1.0.r1.g$hash" ]
+}
+
+@test "git-latest: describe cuts the prefix and turns the dashes of the tag into dots" {
+  fake_git_upstream
+  git -C "$fake_repo" tag foo-6.1-rc1 HEAD~2
+  create_test_package "test-git" "git-latest" "upstream:
+  type: git
+  url: https://git.example.com/repo.git
+  describe: tags
+  tag_prefix: foo-"
+
+  run "$TEST_TMPDIR/strategies/git-latest.sh" "test-git"
+  [ "$status" -eq 0 ]
+  [ "$output" = "6.1.rc1.r2.g$(git -C "$fake_repo" rev-parse --short=7 HEAD)" ]
+}
+
+# --long keeps the count and the hash on a tagged commit, as android-udev-git
+# 20260922.r0.gf45ef6c on the AUR
+@test "git-latest: describe on a tagged commit prints r0" {
+  fake_git_upstream
+  git -C "$fake_repo" tag 20260922 HEAD
+  create_test_package "test-git" "git-latest" "upstream:
+  type: git
+  url: https://git.example.com/repo.git
+  describe: tags"
+
+  run "$TEST_TMPDIR/strategies/git-latest.sh" "test-git"
+  [ "$status" -eq 0 ]
+  [ "$output" = "20260922.r0.g$(git -C "$fake_repo" rev-parse --short=7 HEAD)" ]
+}
+
+@test "git-latest: describe takes the length of the hash from current" {
+  fake_git_upstream
+  git -C "$fake_repo" tag 1.2.0 HEAD~2
+  create_test_package "test-git" "git-latest" "upstream:
+  type: git
+  url: https://git.example.com/repo.git
+  describe: tags
+current: '1.2.0.r1.g0000000000'"
+
+  run "$TEST_TMPDIR/strategies/git-latest.sh" "test-git"
+  [ "$status" -eq 0 ]
+  [ "$output" = "1.2.0.r2.g$(git -C "$fake_repo" rev-parse HEAD | cut -c1-10)" ]
+}
+
+@test "git-latest: describe fails when no tag is reachable" {
+  fake_git_upstream
+  create_test_package "test-git" "git-latest" "upstream:
+  type: git
+  url: https://git.example.com/repo.git
+  describe: tags"
+
+  run "$TEST_TMPDIR/strategies/git-latest.sh" "test-git"
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"git describe finds no tag reachable from HEAD of https://git.example.com/repo.git"* ]]
+}
+
 # === github-nightly ===
 
 @test "github-nightly: pattern A, fixed tag, version from body" {
@@ -662,6 +1037,18 @@ nightly_pages() {
   [ "$status" -eq 0 ]
   [ "$output" = "20261021" ]
   [ "$(nightly_pages)" = "1 " ]
+}
+
+# FreeTubeApp/FreeTube files every release as a pre-release
+@test "github-nightly: nightly_tag_regex takes a pre-release" {
+  create_test_package "test-nightly-pre" "github-nightly" "upstream:
+  project: prerelease-only/repo
+  nightly_tag_regex: '^v[0-9.]+-beta$'
+  tag_version_regex: '^v([0-9.]+)-beta$'"
+
+  run "$TEST_TMPDIR/strategies/github-nightly.sh" "test-nightly-pre"
+  [ "$status" -eq 0 ]
+  [ "$output" = "0.25.3" ]
 }
 
 @test "github-nightly: nightly_tag_regex reads the next page" {
@@ -1096,14 +1483,14 @@ run_github_strategies() {
   calls=$(wc -l <"$TEST_TMPDIR/curl.args")
   [ "$(grep -c -- '-H @-' "$TEST_TMPDIR/curl.args")" -eq "$calls" ]
   [ "$(grep -cx 'Authorization: Bearer standin-token' "$TEST_TMPDIR/curl.stdin")" -eq "$calls" ]
-  ! grep -q standin-token "$TEST_TMPDIR/curl.args"
+  run ! grep -q standin-token "$TEST_TMPDIR/curl.args"
 }
 
 @test "github strategies: send no Authorization header without GITHUB_TOKEN" {
   setup_github_strategies
   unset GITHUB_TOKEN
   run_github_strategies
-  ! grep -q -- '-H' "$TEST_TMPDIR/curl.args"
+  run ! grep -q -- '-H' "$TEST_TMPDIR/curl.args"
 }
 
 @test "github strategies: try a failed request again" {
@@ -1163,7 +1550,7 @@ curl_agents() {
   [ "$status" -eq 0 ]
   [ "$(curl_agents | wc -l)" -eq 4 ]
   [ "$(curl_agents | sort -u)" = "aurtomator/1.0" ]
-  ! grep -qi 'user-agent' "$TEST_TMPDIR/curl.args"
+  run ! grep -qi 'user-agent' "$TEST_TMPDIR/curl.args"
 }
 
 @test "webpage-scrape: sends upstream.user_agent in place of aurtomator/1.0" {
@@ -1224,6 +1611,28 @@ curl_agents() {
   run "$TEST_TMPDIR/strategies/gitea-tag.sh" "test-empty"
   [ "$status" -ne 0 ]
   [[ "$output" == *"No tags found"* ]]
+}
+
+@test "gitlab-tag: names the page a bot check answers in place of the tags" {
+  create_test_package "test-gated" "gitlab-tag" "upstream:
+  host: gitlab.com
+  project: gated-group/gated-project"
+
+  run "$TEST_TMPDIR/strategies/gitlab-tag.sh" "test-gated"
+  [ "$status" -eq 1 ]
+  [ "$output" = "https://gitlab.com/402.html: the answer is not JSON
+Failed to fetch tags from gitlab.com/gated-group/gated-project" ]
+}
+
+@test "gitea-tag: names the page a bot check answers in place of the tags" {
+  create_test_package "test-gated" "gitea-tag" "upstream:
+  host: codeberg.org
+  project: gated-owner/gated-repo"
+
+  run "$TEST_TMPDIR/strategies/gitea-tag.sh" "test-gated"
+  [ "$status" -eq 1 ]
+  [ "$output" = "https://codeberg.org/402.html: the answer is not JSON
+Failed to fetch tags from codeberg.org/gated-owner/gated-repo" ]
 }
 
 @test "pypi: fails on null version" {
@@ -1293,8 +1702,8 @@ curl_agents() {
   pattern: 'pkg-([0-9.]+)'"
 
   run "$TEST_TMPDIR/strategies/webpage-scrape.sh" "test-nourl"
-  [ "$status" -ne 0 ]
-  [[ "$output" == *"Only HTTPS URLs supported: null"* ]]
+  [ "$status" -eq 1 ]
+  [ "$output" = "Missing upstream.url or upstream.pattern in package YAML" ]
 }
 
 @test "webpage-scrape: fails on missing pattern" {
@@ -1302,8 +1711,8 @@ curl_agents() {
   url: https://example.com/releases"
 
   run "$TEST_TMPDIR/strategies/webpage-scrape.sh" "test-nopat"
-  [ "$status" -ne 0 ]
-  [[ "$output" == *"No versions matched pattern 'null'"* ]]
+  [ "$status" -eq 1 ]
+  [ "$output" = "Missing upstream.url or upstream.pattern in package YAML" ]
 }
 
 @test "webpage-scrape: fails on non-HTTPS url" {
@@ -1432,6 +1841,100 @@ EOF
   run "$TEST_TMPDIR/strategies/github-release.sh" "test-404"
   [ "$status" -eq 1 ]
   [[ "$output" == *"Failed to fetch latest release for owner/repo"* ]]
+}
+
+# Helper: a curl that fails to connect, as for a network failure
+curl_fails() {
+  cat >"$TEST_TMPDIR/mock-bin/curl" <<'EOF'
+#!/usr/bin/env bash
+echo "curl: (7) Failed to connect" >&2
+exit 7
+EOF
+  chmod +x "$TEST_TMPDIR/mock-bin/curl"
+}
+
+@test "github-nightly: each pattern names the fetch that failed" {
+  curl_fails
+  local yaml expected
+  while IFS='|' read -r yaml expected; do
+    create_test_package "test-neterr" "github-nightly" "upstream:
+  project: owner/repo
+  $yaml"
+    run "$TEST_TMPDIR/strategies/github-nightly.sh" "test-neterr"
+    [ "$status" -eq 1 ]
+    [[ "$output" == *"$expected"* ]]
+  done <<'EOF'
+nightly_tag: latest|Failed to fetch latest release for owner/repo
+channel: Nightly|Failed to fetch releases for owner/repo
+nightly_tag: nightly-|Failed to fetch releases for owner/repo
+nightly_tag: nightly|Failed to fetch release tag 'nightly' for owner/repo
+EOF
+}
+
+@test "github-nightly: release_body needs version_pattern" {
+  create_test_package "test-nopattern" "github-nightly" "upstream:
+  project: owner/repo
+  version_source: release_body"
+
+  run "$TEST_TMPDIR/strategies/github-nightly.sh" "test-nopattern"
+  [ "$status" -eq 1 ]
+  [ "$output" = "version_pattern required for release_body source" ]
+}
+
+@test "github-nightly: fails on an unknown version_source" {
+  create_test_package "test-badsource" "github-nightly" "upstream:
+  project: owner/repo
+  version_source: bogus"
+
+  run "$TEST_TMPDIR/strategies/github-nightly.sh" "test-badsource"
+  [ "$status" -eq 1 ]
+  [ "$output" = "Unknown version_source: bogus" ]
+}
+
+@test "webpage-scrape: fails on curl network error" {
+  curl_fails
+  create_test_package "test-neterr" "webpage-scrape" "upstream:
+  url: https://example.com/releases
+  pattern: 'pkg-([0-9.]+)'"
+
+  run "$TEST_TMPDIR/strategies/webpage-scrape.sh" "test-neterr"
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"Failed to fetch https://example.com/releases"* ]]
+}
+
+@test "archpkg: fails on curl network error" {
+  curl_fails
+  create_test_package "test-neterr" "archpkg" "upstream:
+  archpkg: qt6-base"
+
+  run "$TEST_TMPDIR/strategies/archpkg.sh" "test-neterr"
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"Failed to fetch Arch package info for qt6-base"* ]]
+}
+
+@test "archpkg: fails on an entry without pkgver" {
+  create_test_package "test-nopkgver" "archpkg" "upstream:
+  archpkg: no-pkgver"
+
+  run "$TEST_TMPDIR/strategies/archpkg.sh" "test-nopkgver"
+  [ "$status" -eq 1 ]
+  [ "$output" = "No version found for no-pkgver" ]
+}
+
+@test "pypi, npm and crates name the registry on a curl network error" {
+  curl_fails
+  local strategy expected
+  while IFS='|' read -r strategy expected; do
+    create_test_package "test-neterr" "$strategy" "upstream:
+  registry: some-package"
+    run "$TEST_TMPDIR/strategies/$strategy.sh" "test-neterr"
+    [ "$status" -eq 1 ]
+    [[ "$output" == *"$expected"* ]]
+  done <<'EOF'
+pypi|Failed to fetch PyPI info for some-package
+npm|Failed to fetch npm info for some-package
+crates|Failed to fetch crates.io info for some-package
+EOF
 }
 
 @test "github-asset: fails on curl network error" {

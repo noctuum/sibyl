@@ -5,12 +5,27 @@
 # IMPORTANT: Specific patterns MUST come before wildcard patterns
 # to avoid shellcheck SC2221/SC2222 (pattern ordering).
 
+# The URL is the last argument. curl takes the last -w.
+write_out=""
+prev=""
 for arg in "$@"; do
+  if [[ "$prev" == -w ]]; then
+    write_out="$arg"
+  fi
+  prev="$arg"
   url="$arg"
 done
 
 case "$url" in
   # --- Specific error/null patterns (must be before wildcards) ---
+
+  # The bot check of a site, as on forge.soutade.fr: a redirect to an HTML
+  # page that answers 200
+  *codeberg.org/api/v1/repos/gated-owner/gated-repo/tags* | \
+    *gitlab.com/api/v4/projects/gated-group%2Fgated-project/repository/tags*)
+    effective_url="${url%%/api/*}/402.html"
+    echo '<!DOCTYPE html><html><body><h1>Are you Human?</h1></body></html>'
+    ;;
 
   # GitHub Release: a body without tag_name. A real 404 is exit 22 with
   # no body, see the tests of curl exit codes.
@@ -59,6 +74,10 @@ case "$url" in
   *archlinux.org/packages/search/json*name=no-such-pkg*)
     echo '{"results": []}'
     ;;
+  # Arch repos: an entry without pkgver
+  *archlinux.org/packages/search/json*name=no-pkgver*)
+    echo '{"results": [{"repo": "extra", "pkgname": "no-pkgver"}]}'
+    ;;
   # Arch repos: an entry with an epoch, as ffmpeg 2:9.0.2-2
   *archlinux.org/packages/search/json*name=ffmpeg*)
     echo '{"results": [{"repo": "extra", "epoch": 2, "pkgver": "9.0.2", "pkgrel": "2"}]}'
@@ -83,6 +102,68 @@ case "$url" in
   *download.kde.org/stable/kio.s3/)
     echo '<a href="kioXs3-9.9.9.tar.xz">kioXs3-9.9.9.tar.xz</a>'
     echo '<a href="kio.s3-1.0.0.tar.xz">kio.s3-1.0.0.tar.xz</a>'
+    ;;
+  # KDE tarball: a directory per version, as Plasma. sort -V puts 6.10.0
+  # above 6.9.5, a string sort does not.
+  *download.kde.org/stable/plasma/)
+    echo '<a href="6.9.5/">6.9.5/</a>'
+    echo '<a href="6.10.0/">6.10.0/</a>'
+    ;;
+  *download.kde.org/stable/plasma/6.10.0/)
+    echo '<a href="oxygen-6.10.0.tar.xz">oxygen-6.10.0.tar.xz</a>'
+    echo '<a href="oxygen-6.10.0.tar.xz.sig">oxygen-6.10.0.tar.xz.sig</a>'
+    ;;
+  # KDE tarball: a directory per series, as Frameworks
+  *download.kde.org/stable/frameworks/)
+    echo '<a href="6.9/">6.9/</a>'
+    echo '<a href="6.10/">6.10/</a>'
+    ;;
+  *download.kde.org/stable/frameworks/6.10/)
+    echo '<a href="kio-6.10.0.tar.xz">kio-6.10.0.tar.xz</a>'
+    echo '<a href="kio-6.10.1.tar.xz">kio-6.10.1.tar.xz</a>'
+    ;;
+  # KDE tarball: the sources of a version under src/, as Gear
+  *download.kde.org/stable/release-service/)
+    echo '<a href="26.08.1/">26.08.1/</a>'
+    echo '<a href="26.08.2/">26.08.2/</a>'
+    ;;
+  *download.kde.org/stable/release-service/26.08.2/)
+    echo '<a href="macos/">macos/</a>'
+    echo '<a href="src/">src/</a>'
+    echo '<a href="windows/">windows/</a>'
+    ;;
+  *download.kde.org/stable/release-service/26.08.2/src/)
+    echo '<a href="okular-26.08.2.tar.xz">okular-26.08.2.tar.xz</a>'
+    ;;
+  # KDE tarball: version directories beside others, as krita
+  *download.kde.org/stable/krita/)
+    echo '<a href="6.0.4/">6.0.4/</a>'
+    echo '<a href="FastSketchPlugin-1.1.0/">FastSketchPlugin-1.1.0/</a>'
+    echo '<a href="updates/">updates/</a>'
+    ;;
+  *download.kde.org/stable/krita/6.0.4/)
+    echo '<a href="krita-6.0.4.tar.gz">krita-6.0.4.tar.gz</a>'
+    echo '<a href="krita-6.0.4.tar.xz">krita-6.0.4.tar.xz</a>'
+    ;;
+  # KDE tarball: old tarballs beside a newer version directory
+  *download.kde.org/stable/moved/)
+    echo '<a href="moved-1.9.0.tar.xz">moved-1.9.0.tar.xz</a>'
+    echo '<a href="2.0.0/">2.0.0/</a>'
+    ;;
+  *download.kde.org/stable/moved/2.0.0/)
+    echo '<a href="moved-2.0.0.tar.xz">moved-2.0.0.tar.xz</a>'
+    ;;
+  # KDE tarball: a newer tarball beside older version directories
+  *download.kde.org/stable/flat-again/)
+    echo '<a href="2.0.0/">2.0.0/</a>'
+    echo '<a href="flat-again-3.0.0.tar.xz">flat-again-3.0.0.tar.xz</a>'
+    ;;
+  *download.kde.org/stable/flat-again/2.0.0/)
+    echo '<a href="flat-again-2.0.0.tar.xz">flat-again-2.0.0.tar.xz</a>'
+    ;;
+  # KDE tarball: a version directory whose listing fails
+  *download.kde.org/unstable/broken/)
+    echo '<a href="2.0.0/">2.0.0/</a>'
     ;;
   # Webpage scrape: no matching versions
   *example.com/empty-page*)
@@ -161,14 +242,45 @@ case "$url" in
   *api.github.com/repos/custom-prefix/repo/releases/latest)
     echo '{"tag_name": "MeshLab-2025.07"}'
     ;;
+  *"api.github.com/repos/custom-prefix/repo/releases?per_page=100&page=1")
+    echo '[{"tag_name": "MeshLab-2025.07", "published_at": "2025-07-01T00:00:00Z", "prerelease": false}]'
+    ;;
   # Custom suffix tag format
   *api.github.com/repos/custom-suffix/repo/releases/latest)
     echo '{"tag_name": "0.1.8-stable"}'
+    ;;
+  *"api.github.com/repos/custom-suffix/repo/releases?per_page=100&page=1")
+    echo '[{"tag_name": "0.1.8-stable", "published_at": "2025-10-27T17:18:07Z", "prerelease": false}]'
     ;;
   # Date tags, as servo names its nightlies and vinceliuice its themes.
   # servo published 2026-10-21 after midnight UTC.
   *api.github.com/repos/dated-owner/dated-repo/releases/latest)
     echo '{"tag_name": "2026-10-21", "published_at": "2026-10-22T00:25:00Z"}'
+    ;;
+  *"api.github.com/repos/dated-owner/dated-repo/releases?per_page=100&page=1")
+    echo '[{"tag_name": "2026-10-21", "published_at": "2026-10-22T00:25:00Z", "prerelease": false}]'
+    ;;
+  # Several products in one repository, as tutao/tutanota: an older match
+  # first in the API order, a newer pre-release and a draft of the product
+  *"api.github.com/repos/multi-product/repo/releases?per_page=100&page=1")
+    echo '[{"tag_name": "app-desktop-release-361.0", "published_at": "2026-10-12T08:34:32Z", "prerelease": false}, {"tag_name": "app-web-release-362.0", "published_at": "2026-10-21T08:32:50Z", "prerelease": false}, {"tag_name": "app-desktop-release-363.0", "published_at": "2026-10-22T00:00:00Z", "prerelease": true}, {"tag_name": "app-desktop-release-362.0", "published_at": "2026-10-21T08:33:13Z", "prerelease": false}, {"tag_name": "app-desktop-release-364.0", "published_at": null, "prerelease": false}]'
+    ;;
+  # /releases/latest answers 404 when every release is a pre-release, as
+  # for FreeTubeApp/FreeTube, and when there is no release at all
+  *api.github.com/repos/prerelease-only/repo/releases/latest | \
+    *api.github.com/repos/no-releases/repo/releases/latest | \
+    *api.github.com/repos/stable-list/repo/releases/latest)
+    exit 22
+    ;;
+  *"api.github.com/repos/prerelease-only/repo/releases?per_page=100" | \
+    *"api.github.com/repos/prerelease-only/repo/releases?per_page=100&page=1")
+    echo '[{"tag_name": "v0.25.3-beta", "published_at": "2026-10-01T00:00:00Z", "prerelease": true}]'
+    ;;
+  *"api.github.com/repos/no-releases/repo/releases?per_page=100")
+    echo '[]'
+    ;;
+  *"api.github.com/repos/stable-list/repo/releases?per_page=100")
+    echo '[{"tag_name": "v2.0.0", "published_at": "2026-10-01T00:00:00Z", "prerelease": false}]'
     ;;
   *gitlab.com/api/v4/projects/dated-group%2Fdated-project/repository/tags* | \
     *codeberg.org/api/v1/repos/dated-owner/dated-repo/tags*)
@@ -245,3 +357,8 @@ case "$url" in
     exit 1
     ;;
 esac
+
+# http_get_json asks for the URL of the last answer after the body
+if [[ "$write_out" == '\n%{url_effective}'* ]]; then
+  printf '\n%s' "${effective_url:-$url}"
+fi

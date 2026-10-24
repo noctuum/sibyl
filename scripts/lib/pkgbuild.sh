@@ -37,6 +37,38 @@ has_skip_checksums() {
     END { exit !found }'
 }
 
+# Args: $1=pkgbuild path
+# Returns: 0 when a checksum is SKIP for a source makepkg would give a real
+#          hash, 1 otherwise. makepkg gives SKIP itself to a signature and to
+#          a VCS source without a #commit=, #tag= or #revision= pin.
+has_fixed_skip() {
+  pkgbuild_checksums "$1" | awk -F'\t' '
+    $1 != "SKIP" { next }
+    { name = $2; sub(/::.*/, "", name) }
+    name ~ /\.(sig|sign|asc)$/ { next }
+    {
+      url = $2
+      sub(/^[^:]*::/, "", url)
+      proto = url
+      if (!sub(/:\/\/.*/, "", proto)) { found = 1; next }
+      sub(/\+.*/, "", proto)
+      if (proto !~ /^(bzr|fossil|git|hg|svn)$/) { found = 1; next }
+      key = url
+      if (!sub(/^[^#]*#/, "", key)) next
+      sub(/=.*/, "", key)
+      if (key ~ /^(commit|tag|revision)$/) found = 1
+    }
+    END { exit !found }'
+}
+
+# Args: $1=pkgbuild path
+# Returns: 0 when a remote source, one with ://, has a real checksum
+has_remote_hash() {
+  pkgbuild_checksums "$1" | awk -F'\t' '
+    $1 != "SKIP" && $2 ~ /:\/\// { found = 1 }
+    END { exit !found }'
+}
+
 # =============================================================================
 # PKGBUILD AUDIT
 # =============================================================================
@@ -56,21 +88,19 @@ audit_pkgbuild() {
     if [[ "$strategy" != "git-latest" && "$strategy" != "github-nightly" ]]; then
       log_err "BLOCKED: pkgver() function detected with strategy '$strategy'."
       log_err "  pkgver() computes version at build time, sed replacement is meaningless."
-      log_err "  Use strategy 'git-latest' or 'github-nightly' for these packages."
+      log_err "  Drop pkgver() so that sed sets pkgver, or use 'git-latest' for a package built from git."
       fatals=$((fatals + 1))
     fi
   fi
 
   # FATAL: SKIP mixed with real hashes for REMOTE sources.
-  # A SKIP other than that of a signature makes update-pkg.sh skip
+  # A SKIP that makepkg would replace with a hash makes update-pkg.sh skip
   # updpkgsums, so a real hash for a remote source would go stale on the
   # version bump. Real hashes for local files (no ://) are fine: they live
   # in the AUR repo and do not change between versions.
-  if has_skip_checksums "$pkgbuild" && pkgbuild_checksums "$pkgbuild" | awk -F'\t' '
-    $1 != "SKIP" && $2 ~ /:\/\// { found = 1 }
-    END { exit !found }'; then
+  if has_fixed_skip "$pkgbuild" && has_remote_hash "$pkgbuild"; then
     log_err "BLOCKED: SKIP checksums mixed with real hashes for remote sources."
-    log_err "  A SKIP other than that of a signature (.sig, .sign, .asc) turns off updpkgsums."
+    log_err "  A SKIP other than that of a signature (.sig, .sign, .asc) or of a VCS source without a pin turns off updpkgsums."
     log_err "  Remote source hashes would become stale on version bump."
     fatals=$((fatals + 1))
   fi
@@ -100,8 +130,10 @@ validate_source_urls() {
   local pkgbuild="$1"
   local errors=0
 
+  # makepkg sets CARCH from makepkg.conf, which on x86_64 and aarch64 is what
+  # uname -m prints, and a PKGBUILD may build a URL from it
   local urls
-  urls=$(bash -c '
+  urls=$(CARCH="${CARCH:-$(uname -m)}" bash -c '
     source "$1" 2>/dev/null
     for arr in source $(compgen -A variable | grep "^source_"); do
       declare -n ref="$arr"

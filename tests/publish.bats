@@ -139,6 +139,7 @@ current: '1.0.0'"
   write_srcinfo "$TEST_TMPDIR/old.SRCINFO" 1.0.0 1 SKIP SKIP
   make_aur_remote demo "$OLD" "$TEST_TMPDIR/old.SRCINFO"
   mock_pkg_tools
+  mock_source_tools
 
   run "$TEST_TMPDIR/scripts/update-pkg.sh" demo 1.1.0 --prepare "$TEST_TMPDIR/out"
   [ "$status" -eq 0 ]
@@ -176,12 +177,122 @@ current: '1.0.0'"
   write_srcinfo "$TEST_TMPDIR/new.SRCINFO" 1.1.0 1 SKIP SKIP
   make_aur_remote demo "$OLD" "$TEST_TMPDIR/old.SRCINFO"
   mock_pkg_tools "$TEST_TMPDIR/new.SRCINFO"
+  mock_source_tools
 
   run "$TEST_TMPDIR/scripts/update-pkg.sh" demo 1.1.0
   [ "$status" -eq 0 ]
   git -C "$AUR_REMOTE" show HEAD:PKGBUILD | grep -qx 'pkgver=1.1.0'
   [ "$(git -C "$AUR_REMOTE" show HEAD:.SRCINFO)" = "$(cat "$TEST_TMPDIR/new.SRCINFO")" ]
   [ "$(pkg_get "$TEST_TMPDIR/packages/demo.yml" .current)" = "1.1.0" ]
+}
+
+@test "update-pkg --dry-run: shows the PKGBUILD diff and pushes nothing" {
+  create_test_package "demo" "github-nightly" "upstream:
+  project: owner/repo
+current: '1.0.0'"
+  write_pkgbuild "$OLD" 1.0.0 1 "sha256sums=('SKIP' 'SKIP')"
+  write_srcinfo "$TEST_TMPDIR/old.SRCINFO" 1.0.0 1 SKIP SKIP
+  write_srcinfo "$TEST_TMPDIR/new.SRCINFO" 1.1.0 1 SKIP SKIP
+  make_aur_remote demo "$OLD" "$TEST_TMPDIR/old.SRCINFO"
+  mock_pkg_tools "$TEST_TMPDIR/new.SRCINFO"
+  mock_source_tools
+
+  run "$TEST_TMPDIR/scripts/update-pkg.sh" demo 1.1.0 --dry-run
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"[DRY RUN] Would push demo 1.1.0 to AUR"* ]]
+  [[ "$output" == *"-pkgver=1.0.0"*"+pkgver=1.1.0"* ]]
+  [ "$(git -C "$AUR_REMOTE" rev-parse HEAD)" = "$AUR_BASE" ]
+  [ "$(pkg_get "$TEST_TMPDIR/packages/demo.yml" .current)" = "1.0.0" ]
+}
+
+@test "update-pkg: writes current when the AUR already has the version" {
+  create_test_package "demo" "github-nightly" "upstream:
+  project: owner/repo
+current: '0.9.0'"
+  write_pkgbuild "$OLD" 1.0.0 1 "sha256sums=('SKIP' 'SKIP')"
+  write_srcinfo "$TEST_TMPDIR/old.SRCINFO" 1.0.0 1 SKIP SKIP
+  make_aur_remote demo "$OLD" "$TEST_TMPDIR/old.SRCINFO"
+  mock_pkg_tools
+
+  run "$TEST_TMPDIR/scripts/update-pkg.sh" demo 1.0.0
+  [ "$status" -eq 2 ]
+  [ "$(pkg_get "$TEST_TMPDIR/packages/demo.yml" .current)" = "1.0.0" ]
+  [ "$(git -C "$AUR_REMOTE" rev-parse HEAD)" = "$AUR_BASE" ]
+}
+
+@test "update-pkg: refuses an unknown option" {
+  run "$TEST_TMPDIR/scripts/update-pkg.sh" demo 1.1.0 --bogus
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"Unknown option: --bogus"* ]]
+}
+
+@test "update-pkg: fails when the AUR repo holds no PKGBUILD" {
+  create_test_package "demo" "github-nightly" "upstream:
+  project: owner/repo
+current: '1.0.0'"
+  write_pkgbuild "$OLD" 1.0.0 1 "sha256sums=('SKIP' 'SKIP')"
+  write_srcinfo "$TEST_TMPDIR/old.SRCINFO" 1.0.0 1 SKIP SKIP
+  make_aur_remote demo "$OLD" "$TEST_TMPDIR/old.SRCINFO"
+  local work="$TEST_TMPDIR/aur-work-demo"
+  git -C "$work" rm -q PKGBUILD
+  git -C "$work" -c user.name=aur -c user.email=aur@example.invalid \
+    -c commit.gpgsign=false commit -qm "drop PKGBUILD"
+  git -C "$work" push -q "$AUR_REMOTE" master
+
+  run "$TEST_TMPDIR/scripts/update-pkg.sh" demo 1.1.0 --prepare "$TEST_TMPDIR/out"
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"No PKGBUILD found in AUR repo"* ]]
+}
+
+# Helper: demo 1.0.0 on the AUR with real checksums, a source check that
+# passes and an updpkgsums that keeps the checksums
+setup_hashed_demo() {
+  create_test_package "demo" "github-release" "upstream:
+  project: owner/repo
+current: '1.0.0'"
+  write_pkgbuild "$OLD" 1.0.0 1 "sha256sums=('$H1' '$H2')"
+  write_srcinfo "$TEST_TMPDIR/old.SRCINFO" 1.0.0 1 "$H1" "$H2"
+  make_aur_remote demo "$OLD" "$TEST_TMPDIR/old.SRCINFO"
+  mock_pkg_tools
+  mock_source_tools
+}
+
+@test "update-pkg: stops when updpkgsums fails" {
+  setup_hashed_demo
+  printf '#!/usr/bin/env bash\nexit 1\n' >"$MOCK_DIR/updpkgsums"
+
+  run "$TEST_TMPDIR/scripts/update-pkg.sh" demo 1.1.0 --prepare "$TEST_TMPDIR/out"
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"updpkgsums failed, refusing to push stale checksums"* ]]
+  [ ! -e "$TEST_TMPDIR/out/demo" ]
+}
+
+@test "update-pkg: stops when makepkg --verifysource fails" {
+  setup_hashed_demo
+  cat >"$MOCK_DIR/makepkg" <<'EOF'
+#!/usr/bin/env bash
+[[ " $* " == *" --verifysource "* ]] && exit 1
+echo "pkgbase = demo"
+EOF
+
+  run "$TEST_TMPDIR/scripts/update-pkg.sh" demo 1.1.0 --prepare "$TEST_TMPDIR/out"
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"Checksum verification failed, aborting"* ]]
+  [ ! -e "$TEST_TMPDIR/out/demo" ]
+}
+
+@test "update-pkg: stops when makepkg --printsrcinfo fails" {
+  setup_hashed_demo
+  cat >"$MOCK_DIR/makepkg" <<'EOF'
+#!/usr/bin/env bash
+[[ " $* " == *" --printsrcinfo "* ]] && exit 1
+exit 0
+EOF
+
+  run "$TEST_TMPDIR/scripts/update-pkg.sh" demo 1.1.0 --prepare "$TEST_TMPDIR/out"
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"makepkg --printsrcinfo failed"* ]]
+  [ ! -e "$TEST_TMPDIR/out/demo" ]
 }
 
 # Helper: PKGBUILD whose pkgver= line is <pkgver line> and whose one source
@@ -207,7 +318,7 @@ EOF
 }
 
 # pkgver="${_pkgver//-/.}" with the source built from _pkgver
-@test "update-pkg: refuses a bump that changes no source and no checksum" {
+@test "update-pkg: refuses a bump that changes no source URL and no checksum" {
   create_test_package "demo" "github-tag" "upstream:
   project: owner/repo
 current: '2025.04.03'"
@@ -223,7 +334,7 @@ current: '2025.04.03'"
 
   run "$TEST_TMPDIR/scripts/update-pkg.sh" demo 2026.09.10
   [ "$status" -eq 1 ]
-  [[ "$output" == *"Prepared .SRCINFO changes no source and no checksum"* ]]
+  [[ "$output" == *"Prepared .SRCINFO changes no source URL and no checksum"* ]]
   [ "$(git -C "$AUR_REMOTE" rev-parse HEAD)" = "$AUR_BASE" ]
 }
 
@@ -321,6 +432,148 @@ current: '1.0.0'"
   write_split_pkgbuild "$NEW" 1.1.0 1 "$new_sum"
   [ "$(git -C "$AUR_REMOTE" show HEAD:PKGBUILD)" = "$(cat "$NEW")" ]
   [ "$(git -C "$AUR_REMOTE" show HEAD:.SRCINFO)" = "$(cat "$TEST_TMPDIR/new.SRCINFO")" ]
+}
+
+# Helper: the AUR at 0.0.1_rc.20 of a package with pkgver_dash: _, whose
+# source restores the dash, and the .SRCINFO makepkg prints for 0.0.4 in
+# new.SRCINFO. Sets OLD_SUM and NEW_SUM, the checksums of the two downloads.
+setup_dash_package() {
+  create_test_package "demo" "npm" "upstream:
+  registry: demo
+current: '0.0.1_rc.20'
+pkgver_dash: _"
+  OLD_SUM=$(printf 'source of %s\n' https://example.com/demo-0.0.1-rc.20.tgz | sha256sum | cut -d' ' -f1)
+  NEW_SUM=$(printf 'source of %s\n' https://example.com/demo-0.0.4.tgz | sha256sum | cut -d' ' -f1)
+  cat >"$OLD" <<EOF
+pkgname=demo
+pkgver=0.0.1_rc.20
+pkgrel=1
+pkgdesc="demo"
+arch=('any')
+url="https://example.com"
+license=('MIT')
+source=("https://example.com/demo-\${pkgver//_/-}.tgz")
+sha256sums=('$OLD_SUM')
+
+package() {
+  :
+}
+EOF
+  write_srcinfo_sources "$TEST_TMPDIR/old.SRCINFO" 0.0.1_rc.20 https://example.com/demo-0.0.1-rc.20.tgz "$OLD_SUM"
+  write_srcinfo_sources "$TEST_TMPDIR/new.SRCINFO" 0.0.4 https://example.com/demo-0.0.4.tgz "$NEW_SUM"
+  make_aur_remote demo "$OLD" "$TEST_TMPDIR/old.SRCINFO"
+  mock_pkg_tools "$TEST_TMPDIR/new.SRCINFO"
+  mock_source_tools
+  printf '#!/usr/bin/env bash\nsed -i s/%s/%s/ PKGBUILD\n' "$OLD_SUM" "$NEW_SUM" >"$MOCK_DIR/updpkgsums"
+}
+
+@test "a package with pkgver_dash goes through prepare, verify and publish" {
+  setup_dash_package
+  run "$TEST_TMPDIR/scripts/update-pkg.sh" demo 0.0.4 --prepare "$TEST_TMPDIR/out"
+  [ "$status" -eq 0 ]
+  mock_downloads
+  run "$TEST_TMPDIR/scripts/verify-pkg.sh" demo "$TEST_TMPDIR/out/demo"
+  [ "$status" -eq 0 ]
+  run "$TEST_TMPDIR/scripts/publish-pkg.sh" demo 0.0.4 "$TEST_TMPDIR/out/demo"
+  [ "$status" -eq 0 ]
+  [ "$(git -C "$AUR_REMOTE" show HEAD:.SRCINFO)" = "$(cat "$TEST_TMPDIR/new.SRCINFO")" ]
+}
+
+@test "update-pkg: pushes a package with pkgver_dash" {
+  setup_dash_package
+  run "$TEST_TMPDIR/scripts/update-pkg.sh" demo 0.0.4
+  [ "$status" -eq 0 ]
+  [ "$(git -C "$AUR_REMOTE" show HEAD:.SRCINFO)" = "$(cat "$TEST_TMPDIR/new.SRCINFO")" ]
+}
+
+# Helper: the AUR at 4.4215 of a package with pkgver_format: '4.%s', whose
+# source takes the build from ${pkgver#4.}, and the .SRCINFO makepkg prints
+# for 4.4216 in new.SRCINFO. Sets OLD_SUM and NEW_SUM, the checksums of the
+# two downloads.
+setup_format_package() {
+  create_test_package "demo" "webpage-scrape" "upstream:
+  url: https://example.com/updates.json
+  pattern: 'latest_version: ([0-9]+)'
+current: '4.4215'
+pkgver_format: '4.%s'"
+  OLD_SUM=$(printf 'source of %s\n' https://example.com/demo_build_4215.tar.xz | sha256sum | cut -d' ' -f1)
+  NEW_SUM=$(printf 'source of %s\n' https://example.com/demo_build_4216.tar.xz | sha256sum | cut -d' ' -f1)
+  cat >"$OLD" <<EOF
+pkgname=demo
+pkgver=4.4215
+pkgrel=1
+pkgdesc="demo"
+arch=('any')
+url="https://example.com"
+license=('MIT')
+source=("https://example.com/demo_build_\${pkgver#4.}.tar.xz")
+sha256sums=('$OLD_SUM')
+
+package() {
+  :
+}
+EOF
+  write_srcinfo_sources "$TEST_TMPDIR/old.SRCINFO" 4.4215 https://example.com/demo_build_4215.tar.xz "$OLD_SUM"
+  write_srcinfo_sources "$TEST_TMPDIR/new.SRCINFO" 4.4216 https://example.com/demo_build_4216.tar.xz "$NEW_SUM"
+  make_aur_remote demo "$OLD" "$TEST_TMPDIR/old.SRCINFO"
+  mock_pkg_tools "$TEST_TMPDIR/new.SRCINFO"
+  mock_source_tools
+  printf '#!/usr/bin/env bash\nsed -i s/%s/%s/ PKGBUILD\n' "$OLD_SUM" "$NEW_SUM" >"$MOCK_DIR/updpkgsums"
+}
+
+@test "a package with pkgver_format goes through prepare, verify and publish" {
+  setup_format_package
+  run "$TEST_TMPDIR/scripts/update-pkg.sh" demo 4.4216 --prepare "$TEST_TMPDIR/out"
+  [ "$status" -eq 0 ]
+  mock_downloads
+  run "$TEST_TMPDIR/scripts/verify-pkg.sh" demo "$TEST_TMPDIR/out/demo"
+  [ "$status" -eq 0 ]
+  run "$TEST_TMPDIR/scripts/publish-pkg.sh" demo 4.4216 "$TEST_TMPDIR/out/demo"
+  [ "$status" -eq 0 ]
+  [ "$(git -C "$AUR_REMOTE" show HEAD:.SRCINFO)" = "$(cat "$TEST_TMPDIR/new.SRCINFO")" ]
+}
+
+@test "update-pkg: pushes a package with pkgver_format" {
+  setup_format_package
+  run "$TEST_TMPDIR/scripts/update-pkg.sh" demo 4.4216
+  [ "$status" -eq 0 ]
+  [ "$(git -C "$AUR_REMOTE" show HEAD:.SRCINFO)" = "$(cat "$TEST_TMPDIR/new.SRCINFO")" ]
+}
+
+@test "update-pkg: updates the checksums next to the SKIP of a VCS source" {
+  create_test_package "demo" "github-release" "upstream:
+  project: owner/repo
+current: '1.0.0'"
+  cat >"$OLD" <<EOF
+pkgname=demo
+pkgver=1.0.0
+pkgrel=1
+pkgdesc="demo"
+arch=('any')
+url="https://example.com"
+license=('MIT')
+source=("demo::git+https://example.com/demo.git"
+        "https://example.com/data-\${pkgver}.tar.gz")
+sha256sums=('SKIP'
+            '$H1')
+
+package() {
+  :
+}
+EOF
+  write_srcinfo_sources "$TEST_TMPDIR/old.SRCINFO" 1.0.0 \
+    demo::git+https://example.com/demo.git SKIP https://example.com/data-1.0.0.tar.gz "$H1"
+  write_srcinfo_sources "$TEST_TMPDIR/new.SRCINFO" 1.1.0 \
+    demo::git+https://example.com/demo.git SKIP https://example.com/data-1.1.0.tar.gz "$H2"
+  make_aur_remote demo "$OLD" "$TEST_TMPDIR/old.SRCINFO"
+  mock_pkg_tools "$TEST_TMPDIR/new.SRCINFO"
+  mock_source_tools
+  printf '#!/usr/bin/env bash\nsed -i s/%s/%s/ PKGBUILD\n' "$H1" "$H2" >"$MOCK_DIR/updpkgsums"
+
+  run "$TEST_TMPDIR/scripts/update-pkg.sh" demo 1.1.0
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"Updating checksums"* ]]
+  git -C "$AUR_REMOTE" show HEAD:PKGBUILD | grep -qx "            '$H2')"
 }
 
 # The tarball and signature pair of lib32-gettext
@@ -993,6 +1246,19 @@ current: '1.0.0'"
   [ "$(cat "$TEST_TMPDIR/out/status/_error_count")" = "0" ]
 }
 
+@test "check-all --prepare: prepares no version jump the check run skipped" {
+  create_test_package "jumpy" "github-release" "upstream:
+  project: owner/repo
+current: '13'"
+  echo "jump_skipped: 2026102100" >"$TEST_TMPDIR/.status/jumpy"
+  stub_script update-pkg.sh 0
+  run "$TEST_TMPDIR/scripts/check-all.sh" --prepare "$TEST_TMPDIR/out"
+  [ "$status" -eq 0 ]
+  [ ! -e "$TEST_TMPDIR/update-pkg.sh.args" ]
+  [ "$(cat "$TEST_TMPDIR/out/status/jumpy")" = "jump_skipped: 2026102100" ]
+  [ "$(cat "$TEST_TMPDIR/out/status/_error_count")" = "0" ]
+}
+
 @test "check-all --prepare: records a failed preparation" {
   create_test_package "pkg" "github-release" "upstream:
   project: owner/repo
@@ -1064,6 +1330,32 @@ current: '1.0.0'"
   [ "$status" -eq 0 ]
   [ ! -e "$TEST_TMPDIR/publish-pkg.sh.args" ]
   [ "$(cat "$TEST_TMPDIR/.status/older")" = "downgrade_skipped: 0.9.0" ]
+}
+
+@test "check-all --publish: keeps a skipped version jump and publishes nothing" {
+  create_test_package "jumpy" "github-release" "upstream:
+  project: owner/repo
+current: '13'"
+  checked_status jumpy "jump_skipped: 2026102100"
+  stub_script publish-pkg.sh 0
+  run "$TEST_TMPDIR/scripts/check-all.sh" --publish "$TEST_TMPDIR/out"
+  [ "$status" -eq 0 ]
+  [ ! -e "$TEST_TMPDIR/publish-pkg.sh.args" ]
+  [ "$(cat "$TEST_TMPDIR/.status/jumpy")" = "jump_skipped: 2026102100" ]
+  [ "$(cat "$TEST_TMPDIR/.status/_error_count")" = "0" ]
+}
+
+@test "check-all --publish: publishes no version jump of a package that does not allow it" {
+  create_test_package "jumpy" "github-release" "upstream:
+  project: owner/repo
+current: '13'"
+  checked_status jumpy "new_version: 2026102100"
+  mkdir -p "$TEST_TMPDIR/out/prepared/jumpy"
+  stub_script publish-pkg.sh 0
+  run "$TEST_TMPDIR/scripts/check-all.sh" --publish "$TEST_TMPDIR/out"
+  [ "$status" -eq 0 ]
+  [ ! -e "$TEST_TMPDIR/publish-pkg.sh.args" ]
+  [ "$(cat "$TEST_TMPDIR/.status/jumpy")" = "jump_skipped: 2026102100" ]
 }
 
 @test "check-all --publish: marks a package the check run left out" {
@@ -1893,6 +2185,23 @@ write_srcinfo_line() {
   [ "$status" -eq 0 ]
 }
 
+# Temurin early access: pkgver 28+21 for tag jdk-28+21-ea-beta, whose assets
+# are named 28_21, in the repository of the major version
+temurin_source() {
+  printf 'source = https://github.com/adoptium/temurin%s-binaries/releases/download/jdk-%s-ea-beta/OpenJDK-jdk_x64_linux_hotspot_%s-ea.tar.gz' \
+    "${1%%+*}" "$1" "${1/+/_}"
+}
+
+@test "check_prepared_srcinfo: accepts the version with underscores for plus signs" {
+  write_srcinfo_line "$TEST_TMPDIR/old.SRCINFO" 28+21 "$(temurin_source 28+21)"
+  write_srcinfo_line "$TEST_TMPDIR/new.SRCINFO" 28+22 "$(temurin_source 28+22)"
+  run check_prepared_srcinfo "$TEST_TMPDIR/old.SRCINFO" "$TEST_TMPDIR/new.SRCINFO" 28+22
+  [ "$status" -eq 0 ]
+  write_srcinfo_line "$TEST_TMPDIR/new.SRCINFO" 29+1 "$(temurin_source 29+1)"
+  run check_prepared_srcinfo "$TEST_TMPDIR/old.SRCINFO" "$TEST_TMPDIR/new.SRCINFO" 29+1
+  [ "$status" -eq 0 ]
+}
+
 @test "check_prepared_srcinfo: replaces each version form once" {
   write_srcinfo_line "$TEST_TMPDIR/old.SRCINFO" 5.1.0 "source = https://example.com/5.1/demo-5.1.0.tar.gz"
   write_srcinfo_line "$TEST_TMPDIR/new.SRCINFO" 5.10.0 "source = https://example.com/5.10/demo-5.10.0.tar.gz"
@@ -1976,13 +2285,13 @@ write_srcinfo_sources() {
 }
 
 # pkgver="${_pkgver//-/.}" with the source built from _pkgver
-@test "check_prepared_srcinfo: rejects a bump that changes no source and no checksum" {
+@test "check_prepared_srcinfo: rejects a bump that changes no source URL and no checksum" {
   local src="demo-2025-04-03.tar.gz::https://example.com/archive/2025-04-03.tar.gz"
   write_srcinfo_sources "$TEST_TMPDIR/old.SRCINFO" 2025.04.03 "$src" "$H1"
   write_srcinfo_sources "$TEST_TMPDIR/new.SRCINFO" 2026.09.10 "$src" "$H1"
   run check_prepared_srcinfo "$TEST_TMPDIR/old.SRCINFO" "$TEST_TMPDIR/new.SRCINFO" 2026.09.10
   [ "$status" -eq 1 ]
-  [[ "$output" == *"Prepared .SRCINFO changes no source and no checksum"* ]]
+  [[ "$output" == *"Prepared .SRCINFO changes no source URL and no checksum"* ]]
 }
 
 @test "check_prepared_srcinfo: rejects a source without the version that keeps its checksum" {
@@ -1991,7 +2300,23 @@ write_srcinfo_sources() {
   write_srcinfo_sources "$TEST_TMPDIR/new.SRCINFO" 6.00.3092 "$src" "$H1"
   run check_prepared_srcinfo "$TEST_TMPDIR/old.SRCINFO" "$TEST_TMPDIR/new.SRCINFO" 6.00.3092
   [ "$status" -eq 1 ]
-  [[ "$output" == *"Prepared .SRCINFO changes no source and no checksum"* ]]
+  [[ "$output" == *"Prepared .SRCINFO changes no source URL and no checksum"* ]]
+}
+
+# pamac-aur saves the archive of a commit as pamac-$pkgver-$pkgrel.zip
+@test "check_prepared_srcinfo: rejects a bump that changes only the name a download is saved under" {
+  write_srcinfo_sources "$TEST_TMPDIR/old.SRCINFO" 1.0.0 "demo-1.0.0.zip::https://example.com/archive/363e794.zip" "$H1"
+  write_srcinfo_sources "$TEST_TMPDIR/new.SRCINFO" 1.1.0 "demo-1.1.0.zip::https://example.com/archive/363e794.zip" "$H1"
+  run check_prepared_srcinfo "$TEST_TMPDIR/old.SRCINFO" "$TEST_TMPDIR/new.SRCINFO" 1.1.0
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"Prepared .SRCINFO changes no source URL and no checksum"* ]]
+}
+
+@test "check_prepared_srcinfo: accepts a bump that changes the name and the URL of a download" {
+  write_srcinfo_sources "$TEST_TMPDIR/old.SRCINFO" 1.0.0 "demo-1.0.0.zip::https://example.com/archive/v1.0.0.zip" "$H1"
+  write_srcinfo_sources "$TEST_TMPDIR/new.SRCINFO" 1.1.0 "demo-1.1.0.zip::https://example.com/archive/v1.1.0.zip" "$H1"
+  run check_prepared_srcinfo "$TEST_TMPDIR/old.SRCINFO" "$TEST_TMPDIR/new.SRCINFO" 1.1.0
+  [ "$status" -eq 0 ]
 }
 
 # prepare hands over the AUR files when the AUR already has the version
@@ -2032,6 +2357,174 @@ write_srcinfo_sources() {
   write_srcinfo_sources "$TEST_TMPDIR/old.SRCINFO" 1.0.0 "$src" SKIP
   write_srcinfo_sources "$TEST_TMPDIR/new.SRCINFO" 1.1.0 "$src" SKIP
   run check_prepared_srcinfo "$TEST_TMPDIR/old.SRCINFO" "$TEST_TMPDIR/new.SRCINFO" 1.1.0
+  [ "$status" -eq 0 ]
+}
+
+# A pin holds no version, so a bump that keeps it builds the old code
+@test "check_prepared_srcinfo: rejects a bump that keeps a VCS source at its commit" {
+  local src="git+https://example.com/demo.git?signed#commit=a2d30b96fbb026621ec11692272f0117f35a00fd"
+  write_srcinfo_sources "$TEST_TMPDIR/old.SRCINFO" 1.11.0 "$src" SKIP
+  write_srcinfo_sources "$TEST_TMPDIR/new.SRCINFO" 1.12.0 "$src" SKIP
+  run check_prepared_srcinfo "$TEST_TMPDIR/old.SRCINFO" "$TEST_TMPDIR/new.SRCINFO" 1.12.0
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"Prepared .SRCINFO changes no source URL and no checksum"* ]]
+}
+
+@test "check_prepared_srcinfo: rejects a bump that keeps any VCS pin" {
+  local src sum
+  for sum in SKIP "$H1"; do
+    for src in "git://example.com/demo.git#tag=stable" \
+      "demo::hg+https://example.com/demo#revision=42" \
+      "svn+https://example.com/demo/trunk#revision=42" \
+      "bzr+https://example.com/demo#revision=42" \
+      "fossil+https://example.com/demo#commit=abc123" \
+      "hg+https://example.com/demo#tag=stable"; do
+      write_srcinfo_sources "$TEST_TMPDIR/old.SRCINFO" 1.0 "$src" "$sum"
+      write_srcinfo_sources "$TEST_TMPDIR/new.SRCINFO" 1.1 "$src" "$sum"
+      run check_prepared_srcinfo "$TEST_TMPDIR/old.SRCINFO" "$TEST_TMPDIR/new.SRCINFO" 1.1
+      [ "$status" -eq 1 ] || {
+        echo "accepted: $src $sum"
+        return 1
+      }
+      [[ "$output" == *"Prepared .SRCINFO changes no source URL and no checksum"* ]]
+    done
+  done
+}
+
+@test "check_prepared_srcinfo: accepts a VCS pin that follows the version" {
+  write_srcinfo_sources "$TEST_TMPDIR/old.SRCINFO" 1.11.0 "git+https://example.com/demo.git#tag=v1.11.0" SKIP
+  write_srcinfo_sources "$TEST_TMPDIR/new.SRCINFO" 1.12.0 "git+https://example.com/demo.git#tag=v1.12.0" SKIP
+  run check_prepared_srcinfo "$TEST_TMPDIR/old.SRCINFO" "$TEST_TMPDIR/new.SRCINFO" 1.12.0
+  [ "$status" -eq 0 ]
+}
+
+@test "check_prepared_srcinfo: accepts a VCS source on a branch that stays the same" {
+  local src="git+https://example.com/demo.git#branch=main"
+  write_srcinfo_sources "$TEST_TMPDIR/old.SRCINFO" 1.11.0 "$src" SKIP
+  write_srcinfo_sources "$TEST_TMPDIR/new.SRCINFO" 1.12.0 "$src" SKIP
+  run check_prepared_srcinfo "$TEST_TMPDIR/old.SRCINFO" "$TEST_TMPDIR/new.SRCINFO" 1.12.0
+  [ "$status" -eq 0 ]
+}
+
+# A second repository pinned to a commit, as a submodule often is, may stay
+@test "check_prepared_srcinfo: accepts a VCS pin that stays when another source moves" {
+  local sub="git+https://example.com/sub.git#commit=abc123"
+  write_srcinfo_sources "$TEST_TMPDIR/old.SRCINFO" 49.0 \
+    "git+https://example.com/demo.git#tag=49.0" SKIP "$sub" SKIP
+  write_srcinfo_sources "$TEST_TMPDIR/new.SRCINFO" 51.1 \
+    "git+https://example.com/demo.git#tag=51.1" SKIP "$sub" SKIP
+  run check_prepared_srcinfo "$TEST_TMPDIR/old.SRCINFO" "$TEST_TMPDIR/new.SRCINFO" 51.1
+  [ "$status" -eq 0 ]
+}
+
+# pijul: pkgver 1.0.0.beta.11 with pkgver_dash ., the crate URL keeps the dash
+@test "check_prepared_srcinfo: accepts a source with the dash that pkgver_dash replaced" {
+  local url=https://static.crates.io/crates/pijul/pijul
+  write_srcinfo_sources "$TEST_TMPDIR/old.SRCINFO" 1.0.0.beta.11 "pijul-1.0.0.beta.11.tar.gz::$url-1.0.0-beta.11.crate" "$H1"
+  write_srcinfo_sources "$TEST_TMPDIR/new.SRCINFO" 1.0.0.beta.24 "pijul-1.0.0.beta.24.tar.gz::$url-1.0.0-beta.24.crate" "$H2"
+  run check_prepared_srcinfo "$TEST_TMPDIR/old.SRCINFO" "$TEST_TMPDIR/new.SRCINFO" 1.0.0.beta.24 .
+  [ "$status" -eq 0 ]
+  run check_prepared_srcinfo "$TEST_TMPDIR/old.SRCINFO" "$TEST_TMPDIR/new.SRCINFO" 1.0.0.beta.24
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"Prepared .SRCINFO line 4 is not the AUR source with the new version"* ]]
+}
+
+# nodejs-inshellisense: pkgver 0.0.1_rc.20 with pkgver_dash _, ${pkgver//_/-}
+@test "check_prepared_srcinfo: accepts another line with the dash that pkgver_dash replaced" {
+  local url=https://registry.npmjs.org/@microsoft/inshellisense/-/inshellisense
+  write_srcinfo_sources "$TEST_TMPDIR/old.SRCINFO" 0.0.1_rc.20 "$url-0.0.1-rc.20.tgz" "$H1"
+  write_srcinfo_sources "$TEST_TMPDIR/new.SRCINFO" 0.0.4 "$url-0.0.4.tgz" "$H2"
+  sed -i $'/^\tsource = /a \tnoextract = inshellisense-0.0.1-rc.20.tgz' "$TEST_TMPDIR/old.SRCINFO"
+  sed -i $'/^\tsource = /a \tnoextract = inshellisense-0.0.4.tgz' "$TEST_TMPDIR/new.SRCINFO"
+  run check_prepared_srcinfo "$TEST_TMPDIR/old.SRCINFO" "$TEST_TMPDIR/new.SRCINFO" 0.0.4 _
+  [ "$status" -eq 0 ]
+}
+
+@test "check_prepared_srcinfo: rejects another character in place of a dot with pkgver_dash" {
+  write_srcinfo_sources "$TEST_TMPDIR/old.SRCINFO" 0.0.1_rc.20 "https://example.com/0.0.1-rc.20/demo.tgz" "$H1"
+  write_srcinfo_sources "$TEST_TMPDIR/new.SRCINFO" 0.0.4 "https://example.com/0x0x4/demo.tgz" "$H2"
+  run check_prepared_srcinfo "$TEST_TMPDIR/old.SRCINFO" "$TEST_TMPDIR/new.SRCINFO" 0.0.4 _
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"Prepared .SRCINFO line 4 is not the AUR source with the new version"* ]]
+}
+
+# An empty pattern matches the empty string at every pass
+@test "_undash_version: keeps the line for an empty version" {
+  run timeout 10 bash -c 'source "$1/scripts/lib.sh"; _undash_version "demo-1-0" "" .' _ "$TEST_TMPDIR"
+  [ "$status" -eq 0 ]
+  [ "$output" = "demo-1-0" ]
+}
+
+@test "check_prepared_srcinfo: rejects a dash outside the version with pkgver_dash" {
+  write_srcinfo_sources "$TEST_TMPDIR/old.SRCINFO" 1.0.0.beta.11 "https://static.crates.io/pijul-1.0.0-beta.11.crate" "$H1"
+  write_srcinfo_sources "$TEST_TMPDIR/new.SRCINFO" 1.0.0.beta.24 "https://static-crates.io/pijul-1.0.0-beta.24.crate" "$H2"
+  run check_prepared_srcinfo "$TEST_TMPDIR/old.SRCINFO" "$TEST_TMPDIR/new.SRCINFO" 1.0.0.beta.24 .
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"Prepared .SRCINFO line 4 is not the AUR source with the new version"* ]]
+}
+
+# pkgver 4.4215 for build 4215 with pkgver_format '4.%s', and the build in
+# the URL from ${pkgver#4.}
+@test "check_prepared_srcinfo: accepts a source with the upstream version of pkgver_format" {
+  local url=https://example.com/app_build
+  write_srcinfo_sources "$TEST_TMPDIR/old.SRCINFO" 4.4215 "app_4_4215.tar.xz::${url}_4215_x64.tar.xz" "$H1"
+  write_srcinfo_sources "$TEST_TMPDIR/new.SRCINFO" 4.4216 "app_4_4216.tar.xz::${url}_4216_x64.tar.xz" "$H2"
+  run check_prepared_srcinfo "$TEST_TMPDIR/old.SRCINFO" "$TEST_TMPDIR/new.SRCINFO" 4.4216 "" '4.%s'
+  [ "$status" -eq 0 ]
+  run check_prepared_srcinfo "$TEST_TMPDIR/old.SRCINFO" "$TEST_TMPDIR/new.SRCINFO" 4.4216
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"Prepared .SRCINFO line 4 is not the AUR source with the new version"* ]]
+}
+
+@test "check_prepared_srcinfo: rejects another number in place of the upstream version" {
+  local url=https://example.com/app_build
+  write_srcinfo_sources "$TEST_TMPDIR/old.SRCINFO" 4.4215 "${url}_4215_x64.tar.xz" "$H1"
+  write_srcinfo_sources "$TEST_TMPDIR/new.SRCINFO" 4.4216 "${url}_4217_x64.tar.xz" "$H2"
+  run check_prepared_srcinfo "$TEST_TMPDIR/old.SRCINFO" "$TEST_TMPDIR/new.SRCINFO" 4.4216 "" '4.%s'
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"Prepared .SRCINFO line 4 is not the AUR source with the new version"* ]]
+}
+
+@test "_unformat_version: prints the version inside the format" {
+  source "$TEST_TMPDIR/scripts/lib.sh"
+  run _unformat_version 4.4215 '4.%s'
+  [ "$status" -eq 0 ]
+  [ "$output" = "4215" ]
+  run _unformat_version 2.0.1.git '%s.git'
+  [ "$output" = "2.0.1" ]
+}
+
+@test "_unformat_version: prints nothing for a version outside the format" {
+  source "$TEST_TMPDIR/scripts/lib.sh"
+  run _unformat_version 3.4215 '4.%s'
+  [ "$status" -eq 0 ]
+  [ -z "$output" ]
+  # Without %s, the format is both the text before and the text after it
+  run _unformat_version 4.4 4
+  [ -z "$output" ]
+}
+
+@test "check_prepared_srcinfo: accepts another line with the upstream version of pkgver_format" {
+  local url=https://example.com/app_build
+  write_srcinfo_sources "$TEST_TMPDIR/old.SRCINFO" 4.4215 "${url}_4215_x64.tar.xz" "$H1"
+  write_srcinfo_sources "$TEST_TMPDIR/new.SRCINFO" 4.4216 "${url}_4216_x64.tar.xz" "$H2"
+  sed -i $'/^\tsource = /a \tnoextract = app_build_4215_x64.tar.xz' "$TEST_TMPDIR/old.SRCINFO"
+  sed -i $'/^\tsource = /a \tnoextract = app_build_4216_x64.tar.xz' "$TEST_TMPDIR/new.SRCINFO"
+  run check_prepared_srcinfo "$TEST_TMPDIR/old.SRCINFO" "$TEST_TMPDIR/new.SRCINFO" 4.4216 "" '4.%s'
+  [ "$status" -eq 0 ]
+}
+
+# An empty form matches at every position and never moves on
+@test "_bump_version: skips an empty upstream form" {
+  run timeout 10 bash -c 'source "$1/scripts/lib.sh"; _bump_version "demo-1.0-1" 1.0 1.1 "" 2' _ "$TEST_TMPDIR"
+  [ "$status" -eq 0 ]
+  [ "$output" = "demo-1.1-1" ]
+}
+
+@test "check_prepared_srcinfo: accepts the AUR copy of a package with a VCS pin" {
+  local src="git+https://example.com/demo.git#commit=abc123"
+  write_srcinfo_sources "$TEST_TMPDIR/old.SRCINFO" 1.11.0 "$src" SKIP
+  run check_prepared_srcinfo "$TEST_TMPDIR/old.SRCINFO" "$TEST_TMPDIR/old.SRCINFO" 1.11.0
   [ "$status" -eq 0 ]
 }
 
@@ -2120,6 +2613,32 @@ write_srcinfo_arch() {
   write_srcinfo "$TEST_TMPDIR/old.SRCINFO" 1.0.0 2 "$H1" "$H2"
   write_srcinfo "$TEST_TMPDIR/new.SRCINFO" 1.1.0 1 "$H3" "$H4"
   sed -i $'s/^\tlicense = MIT$/\tlicense = MIT\\n\tdepends = evil-pkg/' "$TEST_TMPDIR/new.SRCINFO"
+  run check_prepared_srcinfo "$TEST_TMPDIR/old.SRCINFO" "$TEST_TMPDIR/new.SRCINFO" 1.1.0
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"Prepared .SRCINFO adds or removes lines"* ]]
+}
+
+# haskell-haxml: an older makepkg ended .SRCINFO with a blank line
+@test "check_prepared_srcinfo: accepts an AUR copy that ends in a blank line" {
+  write_srcinfo "$TEST_TMPDIR/old.SRCINFO" 1.0.0 2 "$H1" "$H2"
+  echo >>"$TEST_TMPDIR/old.SRCINFO"
+  write_srcinfo "$TEST_TMPDIR/new.SRCINFO" 1.1.0 1 "$H3" "$H4"
+  run check_prepared_srcinfo "$TEST_TMPDIR/old.SRCINFO" "$TEST_TMPDIR/new.SRCINFO" 1.1.0
+  [ "$status" -eq 0 ]
+}
+
+@test "check_prepared_srcinfo: accepts a prepared copy that ends in blank lines" {
+  write_srcinfo "$TEST_TMPDIR/old.SRCINFO" 1.0.0 2 "$H1" "$H2"
+  write_srcinfo "$TEST_TMPDIR/new.SRCINFO" 1.1.0 1 "$H3" "$H4"
+  printf '\n\n' >>"$TEST_TMPDIR/new.SRCINFO"
+  run check_prepared_srcinfo "$TEST_TMPDIR/old.SRCINFO" "$TEST_TMPDIR/new.SRCINFO" 1.1.0
+  [ "$status" -eq 0 ]
+}
+
+@test "check_prepared_srcinfo: rejects a blank line added inside" {
+  write_srcinfo "$TEST_TMPDIR/old.SRCINFO" 1.0.0 2 "$H1" "$H2"
+  write_srcinfo "$TEST_TMPDIR/new.SRCINFO" 1.1.0 1 "$H3" "$H4"
+  sed -i $'s/^\tlicense = MIT$/\tlicense = MIT\\n/' "$TEST_TMPDIR/new.SRCINFO"
   run check_prepared_srcinfo "$TEST_TMPDIR/old.SRCINFO" "$TEST_TMPDIR/new.SRCINFO" 1.1.0
   [ "$status" -eq 1 ]
   [[ "$output" == *"Prepared .SRCINFO adds or removes lines"* ]]

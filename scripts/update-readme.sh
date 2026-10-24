@@ -45,9 +45,11 @@ if grep -q "$BADGES_START" "$README"; then
     # CI badge, always available
     badges+="[![Lint & Test](https://github.com/${repo_url}/actions/workflows/ci.yml/badge.svg)](https://github.com/${repo_url}/actions/workflows/ci.yml)"
 
-    # Codecov badge: ask the GitHub API (unauthenticated) whether the repo is public
+    # Codecov badge: ask the GitHub API (unauthenticated) whether the repo is
+    # public. yq prints true only for "private": false, and false for a
+    # private repo, an error answer or no answer.
     is_public=$(curl -sfL --max-time 5 "https://api.github.com/repos/${repo_url}" 2>/dev/null |
-      yq -r 'select(.private == false) | "true"' 2>/dev/null || true)
+      yq -r '.private == false' 2>/dev/null || true)
 
     if [[ "$is_public" == "true" ]]; then
       # Public repo: tokenless Codecov badge for this repo
@@ -130,6 +132,10 @@ for pkg_file in "${AURTOMATOR_DIR}"/packages/*.yml; do
         status="⬇️ ${run_status#downgrade_skipped: } skipped (downgrade)"
         ((pkg_ok++)) || true
         ;;
+      jump_skipped:*)
+        status="⬆️ ${run_status#jump_skipped: } skipped (version jump)"
+        ((pkg_ok++)) || true
+        ;;
       check_failed:* | update_failed:*)
         status="❌ failed"
         ((pkg_fail++)) || true
@@ -142,6 +148,7 @@ for pkg_file in "${AURTOMATOR_DIR}"/packages/*.yml; do
   elif [[ "$current" == "—" || "$current" == "null" ]]; then
     status="🆕 new"
     current="—"
+    ((pkg_ok++)) || true
   else
     status="✅ tracking"
     ((pkg_ok++)) || true

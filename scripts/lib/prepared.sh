@@ -118,14 +118,17 @@ check_prepared_pkgbuild() {
 }
 
 # Replace the old version in a line with the new one, and also the forms a
-# PKGBUILD derives from pkgver: dots turned into underscores, the part
-# before the first +, and the version without its last component, such as
-# ${pkgver%.*} in the frameworks/6.19/ directory of KDE Frameworks. That
-# last form counts only while it keeps a dot, as a lone major version is
-# too common in other text. One pass from left to right, longest form
-# first, so a replaced part is not matched again: with 5.1.0 -> 5.10.0 the
-# 5.1 at the start of 5.10.0 stays.
-# Args: $1=line, $2=old version, $3=new version
+# PKGBUILD derives from pkgver: dots and plus signs turned into
+# underscores, the part before the first +, and the version without its
+# last component, such as ${pkgver%.*} in the frameworks/6.19/ directory
+# of KDE Frameworks. That last form counts only while it keeps a dot, as a
+# lone major version is too common in other text. One pass from left to
+# right, longest form first, so a replaced part is not matched again: with
+# 5.1.0 -> 5.10.0 the 5.1 at the start of 5.10.0 stays. With
+# pkgver_format, the upstream version inside the version is the last form,
+# as 4215 in 4.4215.
+# Args: $1=line, $2=old version, $3=new version, $4=old upstream version,
+#       $5=new upstream version
 _bump_version() {
   local rest="$1" old="$2" new="$3" out="" i matched
   if [[ -z "$old" ]]; then
@@ -133,9 +136,9 @@ _bump_version() {
     return 0
   fi
   local -a olds=("$old") news=("$new")
-  if [[ "$old" == *.* ]]; then
-    olds+=("${old//./_}")
-    news+=("${new//./_}")
+  if [[ "$old" == *[.+]* ]]; then
+    olds+=("${old//[.+]/_}")
+    news+=("${new//[.+]/_}")
   fi
   if [[ "$old" == *+* ]]; then
     olds+=("${old%%+*}")
@@ -146,6 +149,11 @@ _bump_version() {
   if [[ "${old%.*}" == *.* ]]; then
     olds+=("${old%.*}")
     news+=("${new%.*}")
+  fi
+  # An empty form would match at every position and never move on
+  if [[ -n "${4:-}" && -n "${5:-}" ]]; then
+    olds+=("$4")
+    news+=("$5")
   fi
 
   while [[ -n "$rest" ]]; do
@@ -164,6 +172,48 @@ _bump_version() {
     fi
   done
   printf '%s\n' "$out"
+}
+
+# Print the upstream version inside a version of pkgver_format, the part
+# in place of %s, or nothing when the version does not fit the format
+# Args: $1=version, $2=pkgver_format
+_unformat_version() {
+  local prefix="${2%%"%s"*}" suffix="${2#*"%s"}" version="$1"
+  if [[ "$2" == *%s* && "$version" == "$prefix"*"$suffix" ]]; then
+    version="${version#"$prefix"}"
+    printf '%s\n' "${version%"$suffix"}"
+  fi
+}
+
+# Print the line with each form of the version that has a dash in place of
+# the pkgver_dash character turned back into the version, as
+# ${pkgver//_/-} writes 0.0.1-rc.20 for pkgver 0.0.1_rc.20
+# Args: $1=line, $2=version, $3=pkgver_dash character
+_undash_version() {
+  local rest="$1" version="$2" dash="$3" re="" out="" c i match
+  for ((i = 0; i < ${#version}; i++)); do
+    c="${version:i:1}"
+    if [[ "$c" == "$dash" ]]; then
+      re+="[$c-]"
+    else
+      re+="[$c]"
+    fi
+  done
+  while [[ -n "$re" && "$rest" =~ $re ]]; do
+    match="${BASH_REMATCH[0]}"
+    out+="${rest%%"$match"*}${version}"
+    rest="${rest#*"$match"}"
+  done
+  printf '%s\n' "$out$rest"
+}
+
+# Args: $1=AUR line, $2=prepared line, $3=old version, $4=new version,
+#       $5=pkgver_dash character
+# Returns: 0 when the prepared line is the AUR line with the version
+#          replaced, once a dash in place of the pkgver_dash character in
+#          either version counts as that character
+_bumped_with_dash() {
+  [[ "$(_undash_version "$2" "$4" "$5")" == "$(_bump_version "$(_undash_version "$1" "$3" "$5")" "$3" "$4")" ]]
 }
 
 # Print "SKIP <arch suffix>:<index>" for every source entry of a .SRCINFO
@@ -190,12 +240,33 @@ _is_download() {
   [[ "$1" == *://* && "${url%%://*}" =~ ^(http|https|ftp)$ ]]
 }
 
+# Args: $1=source entry of a .SRCINFO
+# Returns: 0 when makepkg checks it out with a VCS client at a fixed
+#          commit, tag or revision
+_is_vcs_pin() {
+  local url="${1#*::}"
+  [[ "$1" == *://* && "${url%%://*}" =~ ^(bzr|fossil|git|hg|svn)(\+.+)?$ && "$url" == *#* ]] || return 1
+  local fragment="${url#*#}"
+  [[ "${fragment%%=*}" =~ ^(commit|tag|revision)$ ]]
+}
+
 # Args: $1=expected source line, $2=prepared source line
 # Returns: 0 when both save their file under a name before ::, have the same
 #          URL after it, and their names differ in nothing but digits
 _name_differs_in_digits() {
   [[ "$1" == *::* && "$2" == *::* && "${1#*::}" == "${2#*::}" ]] || return 1
   [[ "$(sed -E 's/[0-9]+/0/g' <<<"${1%%::*}")" == "$(sed -E 's/[0-9]+/0/g' <<<"${2%%::*}")" ]]
+}
+
+# Drop the empty lines at the end of an array. makepkg --printsrcinfo ends
+# a .SRCINFO at its last line, while some AUR copies end in an empty line,
+# as those mksrcinfo v8 wrote do.
+# Args: $1=name of the array
+_drop_trailing_blank() {
+  local -n lines_ref="$1"
+  while ((${#lines_ref[@]} > 0)) && [[ -z "${lines_ref[-1]}" ]]; do
+    unset 'lines_ref[-1]'
+  done
 }
 
 # A .SRCINFO is generated, so line N of the prepared file must be line N of
@@ -208,13 +279,20 @@ _name_differs_in_digits() {
 # the digits in the name of its file, as a nightly package names its
 # download by the date: verify_prepared_sums never fetches it, and makepkg
 # takes the sources from the PKGBUILD. When pkgver changes and a download
-# has a real checksum, some source or checksum has to change too: a pkgver
-# built from another variable, or a source URL without the version, would
-# otherwise label the old files with the new version.
-# Args: $1=AUR .SRCINFO, $2=prepared .SRCINFO, $3=expected version
+# has a real checksum, or a VCS source is pinned to a commit, a tag or a
+# revision, some source URL or checksum has to change too: a pkgver built
+# from another variable, a source URL without the version, a pin that
+# stays, or a version only in the name a download is saved under, the part
+# before ::, would otherwise label the old files with the new version. With
+# pkgver_dash, a version with a dash in place of that character, as
+# ${pkgver//_/-} writes it, counts as the version. With pkgver_format, so
+# does the upstream version inside it, as ${pkgver#4.} writes 4215.
+# Args: $1=AUR .SRCINFO, $2=prepared .SRCINFO, $3=expected version,
+#       $4=pkgver_dash character of the package, if any,
+#       $5=pkgver_format of the package, if any
 # Returns: 0 when that holds, 1 otherwise (reason on stderr)
 check_prepared_srcinfo() {
-  local version="$3"
+  local version="$3" dash="${4:-}" format="${5:-}"
   if [[ ! -r "$1" || ! -r "$2" ]]; then
     log_err "Could not read the .SRCINFO to compare"
     return 1
@@ -226,13 +304,19 @@ check_prepared_srcinfo() {
   local -a old_lines new_lines
   mapfile -t old_lines <"$1"
   mapfile -t new_lines <"$2"
+  _drop_trailing_blank old_lines
+  _drop_trailing_blank new_lines
   if [[ "${#old_lines[@]}" -ne "${#new_lines[@]}" ]]; then
     log_err "Prepared .SRCINFO adds or removes lines"
     return 1
   fi
 
-  local old_ver
+  local old_ver old_up="" new_up=""
   old_ver=$(awk -F' = ' '$1 ~ /^[ \t]*pkgver$/ { print $2; exit }' "$1")
+  if [[ -n "$format" ]]; then
+    old_up=$(_unformat_version "$old_ver" "$format")
+    new_up=$(_unformat_version "$version" "$format")
+  fi
 
   local -A skip_sources=() hashed_sources=() source_counts=()
   local checksum entry
@@ -290,20 +374,23 @@ check_prepared_srcinfo() {
       source)
         n="${source_counts[$key]:-0}"
         source_counts[$key]=$((n + 1))
-        expected=$(_bump_version "$old" "$old_ver" "$version")
+        expected=$(_bump_version "$old" "$old_ver" "$version" "$old_up" "$new_up")
         if [[ "$new" != "$expected" ]] &&
+          ! _bumped_with_dash "$old" "$new" "$old_ver" "$version" "$dash" &&
           ! { [[ -n "${skip_sources["${key#source}:$n"]:-}" ]] &&
             _name_differs_in_digits "$expected" "$new"; }; then
           log_err "Prepared .SRCINFO line $((i + 1)) is not the AUR source with the new version: $new"
           return 1
         fi
-        [[ "$new" == "$old" ]] || changed=true
-        if [[ -n "${hashed_sources["${key#source}:$n"]:-}" ]] && _is_download "$old_val"; then
+        [[ "${new_val#*::}" == "${old_val#*::}" ]] || changed=true
+        if { [[ -n "${hashed_sources["${key#source}:$n"]:-}" ]] && _is_download "$old_val"; } ||
+          _is_vcs_pin "$old_val"; then
           pinned=true
         fi
         ;;
       *)
-        if [[ "$new" != "$old" && "$new" != "$(_bump_version "$old" "$old_ver" "$version")" ]]; then
+        if [[ "$new" != "$old" && "$new" != "$(_bump_version "$old" "$old_ver" "$version" "$old_up" "$new_up")" ]] &&
+          ! _bumped_with_dash "$old" "$new" "$old_ver" "$version" "$dash"; then
           log_err "Prepared .SRCINFO line $((i + 1)) changes more than the version: $new"
           return 1
         fi
@@ -311,7 +398,7 @@ check_prepared_srcinfo() {
     esac
   done
   if [[ "$pinned" == true && "$changed" == false && "$version" != "$old_ver" ]]; then
-    log_err "Prepared .SRCINFO changes no source and no checksum, so the new version would hold the files of the old one"
+    log_err "Prepared .SRCINFO changes no source URL and no checksum, so the new version would hold the files of the old one"
     return 1
   fi
   return 0
@@ -342,7 +429,9 @@ prepared_base() {
 }
 
 # Check a prepared PKGBUILD and .SRCINFO against the AUR repo at their base
-# Args: $1=AUR repo, $2=prepared dir, $3=expected version
+# Args: $1=AUR repo, $2=prepared dir, $3=expected version,
+#       $4=pkgver_dash character of the package, if any,
+#       $5=pkgver_format of the package, if any
 # Returns: 0 when both files pass, 1 otherwise (reason on stderr)
 check_prepared_files() {
   local f
@@ -354,5 +443,5 @@ check_prepared_files() {
     fi
   done
   check_prepared_pkgbuild "$1/PKGBUILD" "$2/PKGBUILD" "$3" &&
-    check_prepared_srcinfo "$1/.SRCINFO" "$2/.SRCINFO" "$3"
+    check_prepared_srcinfo "$1/.SRCINFO" "$2/.SRCINFO" "$3" "${4:-}" "${5:-}"
 }

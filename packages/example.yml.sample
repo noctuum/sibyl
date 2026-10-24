@@ -9,9 +9,15 @@
 #
 # Optional:
 #   allow_downgrade - true publishes a version lower than current
+#   allow_version_jump - true publishes a version whose first number has
+#                     at least two digits more than that of current
 #   pkgver_dash     - _ or ., stands for each - of the upstream version,
 #                     which pkgver cannot hold; the PKGBUILD turns it back
 #                     where a URL needs the dash, as in ${pkgver//_/-}
+#   pkgver_format   - the upstream version with a fixed text around it, %s
+#                     in its place, as 4.%s for pkgver 4.4215 of build 4215;
+#                     the PKGBUILD cuts the text off where a URL needs the
+#                     build, as in ${pkgver#4.}
 #
 # Written by update-pkg.sh after every push, do not edit by hand:
 #   current      - last pushed version
@@ -19,11 +25,12 @@
 #
 # Strategies:
 #   github-release   GitHub Releases API
-#   github-tag       GitHub Tags API
+#   github-tag       GitHub tags, git ls-remote
 #   github-nightly   GitHub nightly/prerelease builds (4 patterns)
 #   github-asset     GitHub release assets re-uploaded on a fixed tag
 #   gitlab-tag       GitLab Tags API (gitlab.com, invent.kde.org, self-hosted)
 #   gitea-tag        Gitea / Forgejo / Codeberg Tags
+#   git-tag          any HTTPS git repository, git ls-remote
 #   git-latest       bare git clone, produces rCOUNT.HASH (for -git packages)
 #   pypi             PyPI JSON API
 #   npm              npm registry
@@ -50,7 +57,10 @@ upstream:
 # =============================================================================
 
 # --- github-release ---------------------------------------------------------
-# Reads /repos/{project}/releases/latest, which skips pre-releases.
+# Reads /repos/{project}/releases/latest, which skips pre-releases. With
+# tag_version_regex, reads the release list, up to 10 pages of 100, and takes
+# the matching release published last, pre-releases left out: one product of
+# a repository that releases several.
 #
 # strategy: github-release
 # upstream:
@@ -142,8 +152,21 @@ upstream:
 #   tag_version_regex: '^release-(.+)$'      # optional, ERE with a capture group
 #   tag_version_replace: '\1'              # optional, \1 to \9 are the groups
 
+# --- git-tag ----------------------------------------------------------------
+# Any HTTPS git repository: sourcehut, kernel.org, Savannah, or a GitLab or
+# Gitea project with more tags than gitlab-tag and gitea-tag read. Reads
+# every tag with git ls-remote, without authentication, and keeps v1.2.3
+# and 1.2.3; tag_version_regex replaces that filter.
+#
+# strategy: git-tag
+# upstream:
+#   url: https://git.sr.ht/~owner/repo     # required, https only
+#   tag_version_regex: '^v([0-9.]+)$'      # optional, ERE with a capture group
+#   tag_version_replace: '\1'              # optional, \1 to \9 are the groups
+
 # --- git-latest -------------------------------------------------------------
-# For -git packages. Produces rCOUNT.HASH (e.g. r435.abc1234).
+# For -git packages. Produces rCOUNT.HASH (e.g. r435.abc1234), or with
+# describe the git describe form of the Arch guidelines (1.4.0.r47.g0bbf5ad).
 #
 # strategy: git-latest
 # upstream:
@@ -153,6 +176,8 @@ upstream:
 #   url: https://example.com/repo.git      # required for type=git, https only
 #   branch: develop                        # optional, as #branch= in source;
 #                                          # default: the default branch
+#   describe: tags                         # optional: tags|annotated
+#   tag_prefix: v                          # optional, cut from the tag
 
 # --- pypi / npm / crates ----------------------------------------------------
 # Language registries. PyPI returns stable releases only, and crates too
@@ -179,7 +204,10 @@ upstream:
 #
 # strategy: repology
 # upstream:
-#   repology: project-name                 # optional, defaults to `name` above
+#   repology: project-name                 # optional, defaults to `name` above;
+#                                          # a Python, Ruby, Perl or Haskell
+#                                          # library is <language>:<name>,
+#                                          # as ruby:rmagick
 
 # --- archpkg ----------------------------------------------------------------
 # Follows the pkgver of a package in the Arch official repos, without
@@ -191,9 +219,9 @@ upstream:
 #   archpkg: qt6-base                      # optional, defaults to `name` above
 
 # --- kde-tarball ------------------------------------------------------------
-# Reads one directory on https://download.kde.org/ for
-# <project>-<version>.tar.xz releases. A directory per version, as for
-# Plasma, does not fit.
+# Reads a directory on https://download.kde.org/ for
+# <project>-<version>.tar.xz releases, and the newest version directory in
+# it, as for Plasma (stable/plasma/6.8.1/) or Gear (release-service).
 #
 # strategy: kde-tarball
 # upstream:

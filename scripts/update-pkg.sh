@@ -125,19 +125,21 @@ fi
 # UPDATE CHECKSUMS
 # =============================================================================
 
-# updpkgsums would put a real hash in place of the SKIP of a download,
-# except a signature, which makepkg gives SKIP itself
-if has_skip_checksums "${aur_dir}/PKGBUILD"; then
+# Validate source URLs before downloading. A download with a SKIP checksum
+# is checked too: no later step fetches it, so a URL that answers 404 or an
+# HTML page would reach the AUR.
+if ! validate_source_urls "${aur_dir}/PKGBUILD"; then
+  log_err "Source URL validation failed, aborting"
+  exit 1
+fi
+
+# updpkgsums would put a real hash in place of the SKIP of a download or of
+# a pinned VCS source, and the audit blocks such a SKIP next to a remote
+# hash. Next to the SKIP of a VCS source without a pin, updpkgsums runs only
+# for a remote hash, since makepkg -g clones the repository.
+if has_skip_checksums "${aur_dir}/PKGBUILD" && ! has_remote_hash "${aur_dir}/PKGBUILD"; then
   log_info "VCS package, skipping checksums"
 else
-  # Validate source URLs before downloading
-  url_rc=0
-  validate_source_urls "${aur_dir}/PKGBUILD" || url_rc=$?
-  if [[ "$url_rc" -gt 0 ]]; then
-    log_err "Source URL validation failed ($url_rc error(s)), aborting"
-    exit 1
-  fi
-
   require_cmd updpkgsums
   log_info "Updating checksums"
   (cd "$aur_dir" && updpkgsums) || {
@@ -190,7 +192,8 @@ fi
 # The checks that publish-pkg.sh runs, against the files of the clone's HEAD
 aur_files="${tmp_dir}/aur-files"
 aur_export "$aur_dir" "$aur_files" || exit 1
-check_prepared_files "$aur_files" "$aur_dir" "$NEW_VERSION" || exit 1
+check_prepared_files "$aur_files" "$aur_dir" "$NEW_VERSION" "$(pkg_get "$PKG_FILE" '.pkgver_dash // ""')" \
+  "$(pkg_get "$PKG_FILE" '.pkgver_format // ""')" || exit 1
 
 # =============================================================================
 # DRY RUN CHECK

@@ -13,11 +13,11 @@ For every update, aurtomator does exactly this:
 5. **Validate source URLs** (HEAD request, HTTP status and `Content-Type` check)
 6. Run `updpkgsums`
 7. Run `makepkg --verifysource` to verify checksums
-8. **Lint with `namcap`** when it is installed (errors are fatal, warnings are not)
+8. **Lint with `namcap`**
 9. Run `makepkg --printsrcinfo` to regenerate `.SRCINFO`
 10. Commit and push to the AUR
 
-Steps 5 to 7 are skipped when a checksum array holds a `SKIP` other than that of a signature, see [Packages with VCS checksums](#packages-with-vcs-checksums-skip) and [Sources with a signature](#sources-with-a-signature).
+Steps 6 and 7 are skipped when a checksum array holds a `SKIP` other than that of a signature and no remote source has a real checksum, see [Packages with VCS checksums](#packages-with-vcs-checksums-skip) and [Sources with a signature](#sources-with-a-signature).
 
 aurtomator does not build packages and does not check runtime dependencies. That needs `ldd` or `readelf` on built binaries and is out of scope. Dependency correctness is the maintainer's responsibility.
 
@@ -31,7 +31,7 @@ Packages that download prebuilt binaries and install them. The source URL contai
 source=("https://github.com/user/app/releases/download/v${pkgver}/app-${pkgver}-linux-x86_64.tar.gz")
 ```
 
-**Why it works:** only `pkgver` changes. The URL pattern, binary format and installation steps stay the same, and `updpkgsums` downloads the new binary and updates the checksums.
+Only `pkgver` changes. The URL pattern, binary format and installation steps stay the same, and `updpkgsums` downloads the new binary and updates the checksums.
 
 ### Packages with arch-specific sources
 
@@ -42,7 +42,7 @@ source_x86_64=("https://example.com/app-${pkgver}-x86_64.tar.gz")
 source_aarch64=("https://example.com/app-${pkgver}-aarch64.tar.gz")
 ```
 
-**Why it works:** `updpkgsums` handles arch-specific checksum arrays, and source URL validation covers every `source_<arch>` array. A stable URL pattern is enough.
+`updpkgsums` handles arch-specific checksum arrays, and source URL validation covers every `source_<arch>` array. A stable URL pattern is enough.
 
 ### VCS packages (-git) with the git-latest strategy
 
@@ -56,9 +56,9 @@ upstream:
   project: group/project
 ```
 
-**Why it works:** `git-latest` makes a bare clone and computes `r{count}.{hash}`, for example `r435.abc1234`, the usual AUR format for `-git` versions. aurtomator writes this value to `pkgver=`, skips `SKIP` checksums and pushes. A source pinned to `#branch=` needs `upstream.branch` with the same branch, or the count and the hash come from the default branch.
+`git-latest` makes a bare clone and computes `r{count}.{hash}`, for example `r435.abc1234`, the usual AUR format for `-git` versions. aurtomator writes this value to `pkgver=`, skips `SKIP` checksums and pushes. A source pinned to `#branch=` needs `upstream.branch` with the same branch, or the count and the hash come from the default branch.
 
-A `pkgver()` function in the PKGBUILD is fine when it produces the same `r{count}.{hash}` format. The hash takes as many characters as the hash in `current`. A `pkgver()` in the form of `git describe`, such as `1.4.0.r47.g0bbf5ad`, does not fit: `vercmp` reads it as newer than every `r{count}.{hash}`, and `validate-pkg.sh` refuses such a `current`. A user who builds the package later gets a newer value when upstream has moved on, as with every `-git` package on the AUR.
+A `pkgver()` function in the PKGBUILD is fine when it produces the same format. The hash takes as many characters as the hash in `current`. A `pkgver()` that follows the `git describe` recipe of the Arch package guidelines, such as `1.4.0.r47.g0bbf5ad`, needs `upstream.describe`: `tags` for `git describe --long --tags`, `annotated` without `--tags`, and `upstream.tag_prefix` for a prefix the recipe cuts off the tag, as `sed 's/^v//'`. `vercmp` reads that form as newer than every `r{count}.{hash}`, so `validate-pkg.sh` refuses a `current` of the other form. A `pkgver()` that counts the commits in another way, as hyprland-git does with `git rev-list --count --cherry-pick`, gives a count the strategy does not reproduce. A user who builds the package later gets a newer value when upstream has moved on, as with every `-git` package on the AUR.
 
 ### Packages with VCS checksums (SKIP)
 
@@ -75,9 +75,9 @@ b2sums_x86_64=('SKIP')
 b2sums_aarch64=('SKIP')
 ```
 
-**Why it works:** aurtomator reads every checksum array, with and without an arch suffix. A `SKIP` at any position makes it skip `updpkgsums`, which would otherwise replace the `SKIP` of a download with a real hash. The `SKIP` of a signature is the exception, see [Sources with a signature](#sources-with-a-signature).
+aurtomator reads every checksum array, with and without an arch suffix. A `SKIP` at any position makes it skip `updpkgsums`, which would otherwise replace the `SKIP` of a download with a real hash and clone the repository of every VCS source. The `SKIP` of a signature is the exception, see [Sources with a signature](#sources-with-a-signature). `updpkgsums` also runs next to the `SKIP` of a VCS source without a pin when a remote source has a real hash. The source URLs are checked either way, see [Source URL returns HTML](#source-url-returns-html-blocked).
 
-A real hash for a remote source next to a `SKIP` other than that of a signature is blocked by the PKGBUILD audit. See "Mixed SKIP and real checksums" below.
+A real hash for a remote source next to a `SKIP` other than that of a signature or of a VCS source without a pin is blocked by the PKGBUILD audit. See "Mixed SKIP and real checksums" below.
 
 ### Sources with a signature
 
@@ -89,13 +89,13 @@ sha256sums=('abc123def456...'
             'SKIP')
 ```
 
-**Why it works:** makepkg gives `SKIP` to every source whose file name ends in `.sig`, `.sign` or `.asc`, and `updpkgsums` writes that `SKIP` again. When every `SKIP` of the PKGBUILD belongs to such a source, aurtomator runs steps 5 to 7 as for a package without `SKIP`, and the other sources get new checksums. For a source with a name before `::`, makepkg reads that name and not the URL.
+makepkg gives `SKIP` to every source whose file name ends in `.sig`, `.sign` or `.asc`, and `updpkgsums` writes that `SKIP` again. When every `SKIP` of the PKGBUILD belongs to such a source, aurtomator runs steps 5 to 7 as for a package without `SKIP`, and the other sources get new checksums. For a source with a name before `::`, makepkg reads that name and not the URL.
 
 aurtomator does not check the signature. It runs `makepkg --verifysource` with `--skippgpcheck`, and verify skips every `SKIP`, see step 5 of verify in [WORKFLOW.md section 4.4](WORKFLOW.md#44-prepare-and-publish).
 
 ### Non-standard tag formats (tag_version_regex)
 
-`github-release`, `github-tag`, `github-nightly`, `gitlab-tag` and `gitea-tag` accept `tag_version_regex` for unusual tag names:
+`github-release`, `github-tag`, `github-nightly`, `gitlab-tag`, `gitea-tag` and `git-tag` accept `tag_version_regex` for unusual tag names:
 
 ```yaml
 upstream:
@@ -103,7 +103,7 @@ upstream:
   tag_version_regex: '^release-v?([0-9.]+)-stable$'
 ```
 
-**Why it works:** the first capture group of the ERE is the version, whatever the format of the tag, for example `0.1.8-stable`, `release-v2.3.0` or `app/v1.5.0`. bash takes the group, so the regex may hold `|`, in a group after the version: `^v?([0-9.]+)(-stable|)$`.
+The first capture group of the ERE is the version, whatever the format of the tag, for example `0.1.8-stable`, `release-v2.3.0` or `app/v1.5.0`. bash takes the group, so the regex may hold `|`, in a group after the version: `^v?([0-9.]+)(-stable|)$`. With `github-release`, the regex also picks the release of one product in a repository that releases several, see [WORKFLOW.md section 3.1](WORKFLOW.md#31-github-release).
 
 `tag_version_replace` builds the version from more than one group, with `\1` to `\9`. For the date tag `2026-09-10`, `'^([0-9]{4})-([0-9]{2})-([0-9]{2})$'` with `'\1.\2.\3'` gives `2026.09.10`. See [WORKFLOW.md section 3.1](WORKFLOW.md#31-github-release).
 
@@ -119,7 +119,22 @@ upstream:
 pkgver_dash: _
 ```
 
-**Why it works:** `check-update.sh` replaces every `-` in the output of the strategy, whatever the strategy, and the PKGBUILD turns it back where a source URL needs it, as nodejs-inshellisense does with `${pkgver//_/-}`. `_` and `.` are allowed, and `vercmp` reads them the same. `crates` with `prerelease: true` needs the field, see [WORKFLOW.md section 3.10](WORKFLOW.md#310-crates).
+`check-update.sh` replaces every `-` in the output of the strategy, whatever the strategy, and the PKGBUILD turns it back where a source URL needs it, as nodejs-inshellisense does with `${pkgver//_/-}`. The `.SRCINFO` check of verify and publish counts that form as the version. A pre-release in this form, such as `1.0.0.beta.24`, sorts above its final release, so the final release is skipped as a downgrade, and the AUR package needs an `epoch`, which aurtomator does not write. `_` and `.` are allowed, and `vercmp` reads them the same. `crates` with `prerelease: true` needs the field, see [WORKFLOW.md section 3.10](WORKFLOW.md#310-crates).
+
+### Versions with text around the upstream version (pkgver_format)
+
+Some PKGBUILDs put a fixed text around the upstream version, such as `4.4215` for build `4215`, and cut it off again in the source URL. `pkgver_format` names that text, with `%s` in place of the upstream version:
+
+```yaml
+name: my-package
+strategy: webpage-scrape
+upstream:
+  url: https://example.com/updates.json
+  pattern: '"latest_version": ([0-9]+)'
+pkgver_format: '4.%s'
+```
+
+`check-update.sh` puts the output of the strategy in place of `%s`, whatever the strategy, and the PKGBUILD cuts the text off where a source URL needs the upstream version, as with `${pkgver#4.}`. The `.SRCINFO` check of verify and publish counts the upstream version inside the old and the new `pkgver` as the version. See [WORKFLOW.md section 2](WORKFLOW.md#2-package-yaml-format).
 
 ### Nightly and prerelease packages
 
@@ -130,7 +145,7 @@ pkgver_dash: _
 - **Separate nightly repo**, for example yt-dlp-nightly-builds. It reads `/releases/latest`, which skips pre-releases, so a repository that files its nightlies as pre-releases, such as ruffle, needs dated tags.
 - **Channel filter**, for example the brave-browser Nightly channel
 
-The version comes from the tag name, the release body, the tag date or the publish date. `strategies/github-nightly.sh` lists the fields. `date_format` sets the form of the two dates, `YYYY.MM.DD` by default, and `'%Y%m%d'` fits a `pkgver` such as `20251213`. See [WORKFLOW.md section 3.3](WORKFLOW.md#33-github-nightly).
+The version comes from the tag name, the release body, the tag date or the publish date. `strategies/github-nightly.sh` lists the fields. A release that keeps its tag and its publish date while its assets are replaced, such as the `nightly` release of `wezterm/wezterm`, published in 2019, is tracked by the date of the assets with `github-asset`, see [pkgver() with the wrong strategy](#pkgver-with-the-wrong-strategy-blocked). `date_format` sets the form of the two dates, `YYYY.MM.DD` by default, and `'%Y%m%d'` fits a `pkgver` such as `20251213`. See [WORKFLOW.md section 3.3](WORKFLOW.md#33-github-nightly).
 
 A fixed tag keeps its download URL, so a PKGBUILD can save the download under a name with the date, as `neovim-nightly-bin` does with `_date="$(date -u +%Y%m%d)"` and `"$_pkgname-$_date.tar.gz::<url>"`. This works when the checksum of that source is `SKIP`: only the digits of the name may change from one update to the next. See step 5 of publish in [WORKFLOW.md section 4.4](WORKFLOW.md#44-prepare-and-publish).
 
@@ -145,7 +160,7 @@ pkgver=2.50
 source=("https://www.csie.ntu.edu.tw/~cjlin/$pkgbase/$pkgbase-$pkgver.tar.gz")
 ```
 
-**Why it works:** `pkgver`, `pkgrel`, the sources and the checksums belong to the `pkgbase`, so the update is the same as for a single package. The AUR keeps a split package in one git repository named after the `pkgbase`, and the `name` in the package YAML is that `pkgbase`. A line in the section of one package in `.SRCINFO`, such as `depends = foo=1.2.3` from `depends=("foo=$pkgver")`, may change only by the version, as every other line.
+`pkgver`, `pkgrel`, the sources and the checksums belong to the `pkgbase`, so the update is the same as for a single package. The AUR keeps a split package in one git repository named after the `pkgbase`, and the `name` in the package YAML is that `pkgbase`. A line in the section of one package in `.SRCINFO`, such as `depends = foo=1.2.3` from `depends=("foo=$pkgver")`, may change only by the version, as every other line.
 
 A change of the `pkgname` array upstream, a new package or a dropped one, is not detected, as with `depends`. See [Packages with changing dependencies](#packages-with-changing-dependencies).
 
@@ -159,37 +174,76 @@ A PKGBUILD with a `pkgver()` function and a strategy other than `git-latest` or 
 
 **Detection:** `audit_pkgbuild()` checks for a `pkgver()` function and the strategy. Release and tag strategies report release versions, which do not match what `pkgver()` computes at build time.
 
-**Correct approach:** use `strategy: git-latest` for packages with `pkgver()`.
+**Correct approach:** a package built from a git checkout uses `strategy: git-latest`. A binary from a release tag that never moves drops `pkgver()` and sets `pkgver` to a date, which `github-asset` takes from the `updated_at` of the newest listed asset. The URLs name the tag as text:
+
+```bash
+pkgver=20261023
+source=("wezterm-nightly.Ubuntu24.04.tar.xz::https://github.com/wezterm/wezterm/releases/download/nightly/wezterm-nightly.Ubuntu24.04.tar.xz")
+sha256sums=('SKIP')
+```
+
+```yaml
+name: wezterm-nightly-bin
+strategy: github-asset
+upstream:
+  project: wezterm/wezterm
+  tag: nightly
+  assets:
+    - wezterm-nightly.Ubuntu24.04.tar.xz
+```
+
+A URL built from `$pkgver`, such as `releases/download/${pkgver}/` for the tag `continuous`, would point at a tag named after the date, which does not exist. The source URL check stops that bump on the 404, see [Source URL returns HTML](#source-url-returns-html-blocked). A version that a project publishes as a text asset is read with `webpage-scrape`, see [WORKFLOW.md section 3.13](WORKFLOW.md#313-webpage-scrape).
 
 ### Mixed SKIP and real checksums (BLOCKED)
 
-A PKGBUILD with a `SKIP` and a real hash for a remote source, in any order and in any checksum array. The `SKIP` of a signature does not count, see [Sources with a signature](#sources-with-a-signature).
+A PKGBUILD with a `SKIP` and a real hash for a remote source, in any order and in any checksum array. The `SKIP` of a signature does not count, see [Sources with a signature](#sources-with-a-signature), and neither does that of a VCS source without a `#commit=`, `#tag=` or `#revision=` pin: makepkg writes both itself, so `updpkgsums` keeps them.
 
 ```bash
-source=("git+https://example.com/app.git" "https://example.com/data.tar.gz")
+source=("git+https://example.com/app.git#commit=1a2b3c4" "https://example.com/data.tar.gz")
 sha256sums=('SKIP'
             'abc123def456...')
 ```
 
-**Detection:** `audit_pkgbuild()` sources the PKGBUILD and pairs every entry of every checksum array (`ck`, `md5`, `sha1`, `sha224`, `sha256`, `sha384`, `sha512`, `b2`, with and without an arch suffix) with the entry at the same index of `source` or `source_<arch>`. A real hash for a URL with `://` next to a `SKIP` other than that of a signature blocks the update. A real hash for a local file is allowed, because that file lives in the AUR repo and does not change between versions.
+**Detection:** `audit_pkgbuild()` sources the PKGBUILD and pairs every entry of every checksum array (`ck`, `md5`, `sha1`, `sha224`, `sha256`, `sha384`, `sha512`, `b2`, with and without an arch suffix) with the entry at the same index of `source` or `source_<arch>`. A real hash for a URL with `://` next to any other `SKIP` blocks the update. A real hash for a local file is allowed, because that file lives in the AUR repo and does not change between versions.
 
-**Why:** when aurtomator sees such a `SKIP`, it skips `updpkgsums`, so the real hash of the remote source would be stale after the version bump.
+`updpkgsums` would replace such a `SKIP` with a real hash. Without `updpkgsums`, the real hash of the remote source would be stale after the version bump.
 
 ### Sources that do not follow pkgver (BLOCKED)
 
-A PKGBUILD whose sources take the version from another variable, as with `_pkgver=2025-04-03` and `pkgver="${_pkgver//-/.}"`, or a download URL without the version, such as `https://example.org/download/latest/player.tar.zst`, whose file has not changed.
+A PKGBUILD whose sources take the version from another variable, as with `_pkgver=2025-04-03` and `pkgver="${_pkgver//-/.}"`, a download URL without the version, such as `https://example.org/download/latest/player.tar.zst`, whose file has not changed, or a VCS source pinned to a commit the version does not set, as with `source=("git+https://example.org/player.git#commit=$_commit")`. The version in the name a download is saved under does not count, as in `"player-$pkgver.zip::https://example.org/archive/$_commit.zip"`.
 
-**Detection:** the `.SRCINFO` check refuses a new `pkgver` when no source and no checksum changed and a download over `http`, `https` or `ftp` has a real checksum. Publish runs it, and `update-pkg.sh` runs it before the commit. See step 5 of publish in [WORKFLOW.md section 4.4](WORKFLOW.md#44-prepare-and-publish).
+**Detection:** the `.SRCINFO` check refuses a new `pkgver` when no source URL, the part after `::`, and no checksum changed and a download over `http`, `https` or `ftp` has a real checksum, or a VCS source is pinned by `#commit=`, `#tag=` or `#revision=`. Publish runs it, and `update-pkg.sh` runs it before the commit. See step 5 of publish in [WORKFLOW.md section 4.4](WORKFLOW.md#44-prepare-and-publish).
 
-**Why:** `sed` sets only `pkgver`. When the sources stay the same, `updpkgsums` hashes the old files again, and the new version would hold them.
+`sed` sets only `pkgver`. When the sources stay the same, `updpkgsums` hashes the old files again, and makepkg checks out the same pin, so the new version would hold the old files.
+
+**Correct approach:** make `pkgver` the literal and derive the other variable from it, so `sed` sets the value the sources are built from. `_pkgver=2025-04-03` with `pkgver="${_pkgver//-/.}"` becomes:
+
+```bash
+pkgver=2025.04.03
+_pkgver=${pkgver//./-}
+source=("${pkgname}-${_pkgver}.tar.gz::${url}/archive/refs/tags/${_pkgver}.tar.gz")
+```
+
+`pkgver_dash: .` turns the dashes of a tag such as `2026-09-10` into dots, and the `.SRCINFO` check counts `2026-09-10` as a form of `2026.09.10`. The package YAML for the date tags of `vinceliuice/WhiteSur-gtk-theme`:
+
+```yaml
+name: whitesur-gtk-theme
+strategy: github-tag
+upstream:
+  project: vinceliuice/WhiteSur-gtk-theme
+  tag_version_regex: '^([0-9]{4}-[0-9]{2}-[0-9]{2})$'
+pkgver_dash: .
+```
+
+The `.SRCINFO` check accepts a derived variable whose text is one of the forms of the version listed in step 5 of publish in [WORKFLOW.md section 4.4](WORKFLOW.md#44-prepare-and-publish). A source that needs data the version does not hold, such as a commit hash or a build number, cannot be derived from `pkgver` and needs a manual update.
 
 ### Source URL returns HTML (BLOCKED)
 
 Upstream moves or renames a release, and the old URL now redirects to an HTML error or download page.
 
-**Detection:** `validate_source_urls()` sends a HEAD request to every URL in `source` and in each `source_<arch>` array and follows up to 5 redirects. curl reports the status and the `Content-Type` of the last response. A status of 400 or above, a missing status, or `Content-Type: text/html` in any letter case blocks the update. The script does not parse the headers itself, because the server chose that text. The check runs only when no checksum array holds a `SKIP` other than that of a signature: one such `SKIP` turns it off for every URL of the package.
+**Detection:** `validate_source_urls()` sends a HEAD request to every URL in `source` and in each `source_<arch>` array and follows up to 5 redirects. curl reports the status and the `Content-Type` of the last response. A status of 400 or above, a missing status, or `Content-Type: text/html` in any letter case blocks the update. The script does not parse the headers itself, because the server chose that text. The check covers every `http` and `https` URL, whatever its checksum, and leaves out VCS sources and local files. It reads the PKGBUILD with `CARCH` set, as makepkg does, so a URL built from `$CARCH` is the one makepkg downloads. A source with a `SKIP` checksum is checked too, because no later step downloads it.
 
-**Why:** without this check, `updpkgsums` would hash the HTML page. The checksums would match and the package would fail to install.
+Without this check, `updpkgsums` would hash the HTML page. The checksums would match and the package would fail to install.
 
 ### Packages with patches (WARNING)
 
@@ -214,7 +268,7 @@ When upstream changes the download URL format:
 - Binary renamed: `app-linux-x86_64` to `app-linux-amd64`
 - Major version path change: `v1/app.tar.gz` to `v2/app.tar.gz`
 
-aurtomator does not modify `source=()`. After such a change, source URL validation or `updpkgsums` fails and aurtomator refuses to push. That failure is safe. In a package with a `SKIP` other than that of a signature, every remote source is `SKIP`, and no step downloads one, so a changed URL there is pushed unnoticed.
+aurtomator does not modify `source=()`. After such a change, source URL validation or `updpkgsums` fails and aurtomator refuses to push. That failure is safe. In a package whose remote sources are all `SKIP`, no step downloads one: a changed URL that answers 404 or an HTML page stops the update, and one that serves another file is pushed unnoticed.
 
 ### Packages with changing dependencies
 
@@ -230,7 +284,9 @@ aurtomator does not touch `.install` files. When a new version needs migration s
 
 ## Version detection strategies
 
-aurtomator includes 14 version detection strategies. Choose by where your upstream publishes releases:
+aurtomator includes 15 version detection strategies. Pick the one that reads the source the PKGBUILD downloads, because two sources of one project can disagree. The streamrip PKGBUILD builds the git tag `v2.2.0` from GitHub, while PyPI still holds `2.1.0`, so `pypi` reports a downgrade on every run. A vendor page can sit behind a bot check that its download host does not have, see [Upstreams behind a bot check](#upstreams-behind-a-bot-check).
+
+By where the upstream publishes releases:
 
 | Strategy | Source | Best for | Pre-release filter |
 |---|---|---|---|
@@ -240,6 +296,7 @@ aurtomator includes 14 version detection strategies. Choose by where your upstre
 | `github-asset` | GitHub Releases API | Assets re-uploaded on a fixed tag (model zoos) | N/A (fixed tag) |
 | `gitlab-tag` | GitLab Tags API | GitLab.com, invent.kde.org, self-hosted | Auto (`v1.2.3` tags only) |
 | `gitea-tag` | Gitea/Forgejo Tags API | Codeberg, self-hosted Gitea | Auto (`v1.2.3` tags only) |
+| `git-tag` | `git ls-remote` | Any HTTPS git host: sourcehut, kernel.org, Savannah | Auto (`v1.2.3` tags only) |
 | `git-latest` | Bare git clone | `-git` packages (commit tracking) | N/A |
 | `pypi` | PyPI JSON API | Python packages | Auto (stable only) |
 | `npm` | npm registry | Node.js packages | Auto (`latest` tag) |
@@ -247,21 +304,36 @@ aurtomator includes 14 version detection strategies. Choose by where your upstre
 | `repology` | Repology API | Fallback across distro repositories, AUR left out | Varies |
 | `archpkg` | Arch package search | Track official repo versions | N/A |
 | `webpage-scrape` | Any HTTPS page + regex | No API available | None (depends on regex) |
-| `kde-tarball` | download.kde.org | KDE projects with one directory of tarballs | None |
+| `kde-tarball` | download.kde.org | KDE projects, in one directory or in a directory per version | None |
 
 ### Strategy limitations
 
 - **GitHub rate limit:** the GitHub strategies send `GITHUB_TOKEN` when it is set in the environment. The `check-updates` workflow sets it to the workflow token, which allows 1,000 requests per hour per repository. Without a token, the limit is 60 requests per hour. `github-tag` reads the tags with `git ls-remote`, outside this limit.
-- **Retries:** a request that a strategy sends with curl tries a timeout, a refused connection and an HTTP 408, 429, 500, 502, 503, 504, 522 or 524 answer twice more, 5 seconds apart. The git calls of `git-latest` and `github-tag` make one attempt. A check that still fails within its time budget runs once more after the other packages and a pause of 60 seconds. A failure on both tries fails the package for that run.
-- **Tag strategies take only `v1.2.3` and `1.2.3` by default:** without `tag_version_regex`, `github-tag`, `gitlab-tag` and `gitea-tag` leave out every other tag, `latest`, `1.0.0-rc1` and `1.0.0rc1` included. `tag_version_regex` replaces that filter. They pick the highest version with `sort -V`, which places `1.0.0-rc1` above `1.0.0`, so a regex that lets pre-release tags through picks them.
-- **`gitea-tag` fetches at most 50 tags:** there is no pagination.
+- **Retries:** a request that a strategy sends with curl tries a timeout, a refused connection and an HTTP 408, 429, 500, 502, 503, 504, 522 or 524 answer twice more, 5 seconds apart. The git calls of `git-latest`, `github-tag` and `git-tag` make one attempt. A check that still fails within its time budget runs once more after the other packages and a pause of 60 seconds. A failure on both tries fails the package for that run.
+- **Tag strategies take only `v1.2.3` and `1.2.3` by default:** without `tag_version_regex`, `github-tag`, `gitlab-tag`, `gitea-tag` and `git-tag` leave out every other tag, `latest`, `1.0.0-rc1` and `1.0.0rc1` included. `tag_version_regex` replaces that filter. They pick the highest version with `sort -V`, which places `1.0.0-rc1` above `1.0.0`, so a regex that lets pre-release tags through picks them. A plain number is of that form too, so a repository that tags its releases `13` and `14` and its builds `2026102100` gives the build; `check-all.sh` holds such a step as a version jump, see [WORKFLOW.md section 4.3](WORKFLOW.md#43-downgrade-behavior), and `tag_version_regex: '^([0-9]{1,3})$'` keeps the releases.
+- **`gitlab-tag` and `gitea-tag` fetch at most 100 and 50 tags:** there is no pagination. `git-tag` with the `.git` URL of the project reads every tag.
 - **`gitlab-tag` has no authentication:** private GitLab projects cannot be queried.
+
+### Upstreams behind a bot check
+
+Some sites answer a client without a browser with a check page in place of the data. A failed check names which kind it met.
+
+- **Cloudflare challenge:** the answer is HTTP 403 with the header `cf-mitigated: challenge`. Only a browser passes it, whatever the User-Agent, so `upstream.user_agent` does not help. The check fails with `<url>: The requested URL returned error: 403, a Cloudflare challenge, which only a browser passes`. The host the PKGBUILD downloads from, or a package repository of the vendor, often answers without the challenge. For anydesk-bin, the page `https://anydesk.com/en/downloads/linux` is behind it, while `download.anydesk.com` and the apt repository are not:
+
+  ```yaml
+  name: anydesk-bin
+  strategy: webpage-scrape
+  upstream:
+    url: https://deb.anydesk.com/dists/all/main/binary-amd64/Packages
+    pattern: 'Version: ([0-9.]+)'
+  ```
+
+- **A check of the site itself:** forge.soutade.fr redirects every request without its cookie to a page that asks "Are you Human?", the API, git and the archives alike. `gitea-tag` and `gitlab-tag` fail with the URL of that page, and the source check refuses the archives as HTML, see [Source URL returns HTML](#source-url-returns-html-blocked). aurtomator sends no cookie, so a package whose upstream sits behind such a check, as libgourou, is not supported.
 
 ### Upstream sources not covered
 
 These need `webpage-scrape` or a custom strategy:
 
-- SourceHut (git.sr.ht)
 - Go module proxy (proxy.golang.org)
 - Private registries (GitLab, npm, PyPI)
 - FTP servers
@@ -270,7 +342,7 @@ These need `webpage-scrape` or a custom strategy:
 
 | Tool | Detection | Update | Push | Approach |
 |---|---|---|---|---|
-| **aurtomator** | 14 built-in strategies | pkgver sed + updpkgsums | Auto push to AUR | Fully automated, self-hosted |
+| **aurtomator** | 15 built-in strategies | pkgver sed + updpkgsums | Auto push to AUR | Fully automated, self-hosted |
 | **nvchecker** | 40+ sources, TOML config | No | No | Detection only |
 | **aurpublish** | No | No | git subtree push | Workflow tool for maintainers |
 | **aur-auto-update** | nvchecker | pkgver bump | Auto push | Centralized bot (add as co-maintainer) |

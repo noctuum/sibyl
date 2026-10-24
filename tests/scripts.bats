@@ -1,6 +1,7 @@
 #!/usr/bin/env bats
 
 load helpers/setup.sh
+bats_require_minimum_version 1.5.0
 
 setup() {
   setup_test_env
@@ -63,7 +64,7 @@ teardown() {
 
 @test "audit_pkgbuild: passes normal binary package" {
   source "$TEST_TMPDIR/scripts/lib.sh"
-  cat > "$TEST_TMPDIR/test.PKGBUILD" <<'EOF'
+  cat >"$TEST_TMPDIR/test.PKGBUILD" <<'EOF'
 pkgname=test-bin
 pkgver=1.0.0
 pkgrel=1
@@ -81,7 +82,7 @@ EOF
 # The shape of liblinear on the AUR
 @test "audit_pkgbuild: passes a split package" {
   source "$TEST_TMPDIR/scripts/lib.sh"
-  cat > "$TEST_TMPDIR/test.PKGBUILD" <<'EOF'
+  cat >"$TEST_TMPDIR/test.PKGBUILD" <<'EOF'
 pkgbase=test-split
 pkgname=(test-split python-test-split)
 pkgver=1.0.0
@@ -108,7 +109,7 @@ EOF
 
 @test "audit_pkgbuild: blocks pkgver() with non-git-latest strategy" {
   source "$TEST_TMPDIR/scripts/lib.sh"
-  cat > "$TEST_TMPDIR/test.PKGBUILD" <<'EOF'
+  cat >"$TEST_TMPDIR/test.PKGBUILD" <<'EOF'
 pkgname=test-git
 pkgver=r100.abc1234
 pkgrel=1
@@ -128,9 +129,30 @@ EOF
   [[ "$output" == *"pkgver() function"* ]]
 }
 
+@test "audit_pkgbuild: the pkgver() block says to drop pkgver() or use git-latest" {
+  source "$TEST_TMPDIR/scripts/lib.sh"
+  cat >"$TEST_TMPDIR/test.PKGBUILD" <<'EOF'
+pkgname=test-nightly-bin
+pkgver=20261022
+pkgrel=1
+pkgdesc="test"
+arch=('x86_64')
+url="https://example.com"
+license=('MIT')
+source=("test.tar.xz::https://example.com/releases/download/nightly/test.tar.xz")
+sha256sums=('SKIP')
+pkgver() {
+  date +%Y%m%d
+}
+EOF
+  run audit_pkgbuild "$TEST_TMPDIR/test.PKGBUILD" "github-asset"
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"Drop pkgver() so that sed sets pkgver, or use 'git-latest' for a package built from git."* ]]
+}
+
 @test "audit_pkgbuild: allows pkgver() with git-latest strategy" {
   source "$TEST_TMPDIR/scripts/lib.sh"
-  cat > "$TEST_TMPDIR/test.PKGBUILD" <<'EOF'
+  cat >"$TEST_TMPDIR/test.PKGBUILD" <<'EOF'
 pkgname=test-git
 pkgver=r100.abc1234
 pkgrel=1
@@ -151,7 +173,7 @@ EOF
 
 @test "audit_pkgbuild: warns on patches in source" {
   source "$TEST_TMPDIR/scripts/lib.sh"
-  cat > "$TEST_TMPDIR/test.PKGBUILD" <<'EOF'
+  cat >"$TEST_TMPDIR/test.PKGBUILD" <<'EOF'
 pkgname=test-patched
 pkgver=1.0.0
 pkgrel=1
@@ -170,7 +192,7 @@ EOF
 
 @test "audit_pkgbuild: blocks mixed SKIP and real checksums with remote sources" {
   source "$TEST_TMPDIR/scripts/lib.sh"
-  cat > "$TEST_TMPDIR/test.PKGBUILD" <<'EOF'
+  cat >"$TEST_TMPDIR/test.PKGBUILD" <<'EOF'
 pkgname=test-mixed
 pkgver=1.0.0
 pkgrel=1
@@ -178,7 +200,7 @@ pkgdesc="test"
 arch=('x86_64')
 url="https://example.com"
 license=('MIT')
-source=("git+https://example.com/repo.git"
+source=("git+https://example.com/repo.git#commit=abc123"
         "https://example.com/config-${pkgver}.tar.gz")
 sha256sums=('SKIP'
             'abc123')
@@ -194,7 +216,7 @@ EOF
   source "$TEST_TMPDIR/scripts/lib.sh"
   # Typical nightly-bin pattern: SKIP for the remote nightly binary,
   # real hashes for local files (e.g. .vim, .install) shipped in the AUR repo
-  cat > "$TEST_TMPDIR/test.PKGBUILD" <<'EOF'
+  cat >"$TEST_TMPDIR/test.PKGBUILD" <<'EOF'
 pkgname=test-nightly
 pkgver=0.13.0
 pkgrel=1
@@ -215,7 +237,7 @@ EOF
 
 @test "audit_pkgbuild: allows pkgver() with github-nightly strategy" {
   source "$TEST_TMPDIR/scripts/lib.sh"
-  cat > "$TEST_TMPDIR/test.PKGBUILD" <<'EOF'
+  cat >"$TEST_TMPDIR/test.PKGBUILD" <<'EOF'
 pkgname=test-nightly-pkgver
 pkgver=0.13.0
 pkgrel=1
@@ -236,7 +258,7 @@ EOF
 
 @test "audit_pkgbuild: passes VCS package with only SKIP checksums" {
   source "$TEST_TMPDIR/scripts/lib.sh"
-  cat > "$TEST_TMPDIR/test.PKGBUILD" <<'EOF'
+  cat >"$TEST_TMPDIR/test.PKGBUILD" <<'EOF'
 pkgname=test-vcs
 pkgver=r100.abc1234
 pkgrel=1
@@ -253,7 +275,7 @@ EOF
 
 @test "audit_pkgbuild: blocks mixed SKIP and real checksums in arch-specific arrays" {
   source "$TEST_TMPDIR/scripts/lib.sh"
-  cat > "$TEST_TMPDIR/test.PKGBUILD" <<'EOF'
+  cat >"$TEST_TMPDIR/test.PKGBUILD" <<'EOF'
 pkgname=test-mixed-arch
 pkgver=1.0.0
 pkgrel=1
@@ -261,7 +283,7 @@ pkgdesc="test"
 arch=('x86_64')
 url="https://example.com"
 license=('MIT')
-source_x86_64=("git+https://example.com/repo.git"
+source_x86_64=("git+https://example.com/repo.git#commit=abc123"
                "https://example.com/data-${pkgver}.tar.gz")
 sha256sums_x86_64=('SKIP'
                    'abc123')
@@ -273,7 +295,7 @@ EOF
 
 @test "audit_pkgbuild: blocks a real remote hash listed before SKIP" {
   source "$TEST_TMPDIR/scripts/lib.sh"
-  cat > "$TEST_TMPDIR/test.PKGBUILD" <<'EOF'
+  cat >"$TEST_TMPDIR/test.PKGBUILD" <<'EOF'
 pkgname=test-mixed-order
 pkgver=1.0.0
 pkgrel=1
@@ -282,7 +304,7 @@ arch=('x86_64')
 url="https://example.com"
 license=('MIT')
 source=("https://example.com/data-${pkgver}.tar.gz"
-        "git+https://example.com/repo.git")
+        "git+https://example.com/repo.git#commit=abc123")
 sha256sums=('abc123'
             'SKIP')
 EOF
@@ -356,11 +378,88 @@ EOF
   done
 }
 
+# makepkg -g writes SKIP for a VCS source without a pin, as for a signature
+@test "audit_pkgbuild: allows the SKIP of a VCS source without a pin next to a real hash" {
+  source "$TEST_TMPDIR/scripts/lib.sh"
+  local vcs
+  for vcs in "git+https://example.com/app.git" "app::git+https://example.com/app.git#branch=main" \
+    "hg+https://example.com/app" "svn+https://example.com/app/trunk" \
+    "bzr+https://example.com/app" "fossil+https://example.com/app"; do
+    cat >"$TEST_TMPDIR/test.PKGBUILD" <<EOF
+pkgname=test-vcs-data
+pkgver=1.0.0
+pkgrel=1
+pkgdesc="test"
+arch=('x86_64')
+url="https://example.com"
+license=('MIT')
+source=("$vcs"
+        "https://example.com/data-\${pkgver}.tar.gz")
+sha256sums=('SKIP'
+            'abc123')
+EOF
+    run audit_pkgbuild "$TEST_TMPDIR/test.PKGBUILD" "github-release"
+    [ "$status" -eq 0 ] || {
+      echo "blocked: $vcs"
+      return 1
+    }
+  done
+}
+
+# libadwaita-without-adwaita: makepkg -g hashes a local file
+@test "audit_pkgbuild: blocks the SKIP of a local file next to a real remote hash" {
+  source "$TEST_TMPDIR/scripts/lib.sh"
+  cat >"$TEST_TMPDIR/test.PKGBUILD" <<'EOF'
+pkgname=test-local-skip
+pkgver=1.0.0
+pkgrel=1
+pkgdesc="test"
+arch=('x86_64')
+url="https://example.com"
+license=('MIT')
+source=("https://example.com/app-${pkgver}.tar.gz"
+        "theme.diff")
+sha256sums=('abc123'
+            'SKIP')
+EOF
+  run audit_pkgbuild "$TEST_TMPDIR/test.PKGBUILD" "github-release"
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"SKIP checksums mixed with real hashes for remote"* ]]
+}
+
+# makepkg -g hashes a VCS source at a commit, a tag or a revision
+@test "audit_pkgbuild: blocks the SKIP of a pinned VCS source next to a real hash" {
+  source "$TEST_TMPDIR/scripts/lib.sh"
+  local vcs
+  for vcs in "git+https://example.com/app.git#commit=abc123" "app::git+https://example.com/app.git?signed#tag=v1" \
+    "hg+https://example.com/app#revision=4" "bzr+https://example.com/app#revision=4"; do
+    cat >"$TEST_TMPDIR/test.PKGBUILD" <<EOF
+pkgname=test-vcs-data
+pkgver=1.0.0
+pkgrel=1
+pkgdesc="test"
+arch=('x86_64')
+url="https://example.com"
+license=('MIT')
+source=("$vcs"
+        "https://example.com/data-\${pkgver}.tar.gz")
+sha256sums=('SKIP'
+            'abc123')
+EOF
+    run audit_pkgbuild "$TEST_TMPDIR/test.PKGBUILD" "github-release"
+    [ "$status" -eq 1 ] || {
+      echo "allowed: $vcs"
+      return 1
+    }
+    [[ "$output" == *"SKIP checksums mixed with real hashes for remote"* ]]
+  done
+}
+
 # === has_skip_checksums ===
 
 @test "has_skip_checksums: finds SKIP in arch-specific arrays" {
   source "$TEST_TMPDIR/scripts/lib.sh"
-  cat > "$TEST_TMPDIR/test.PKGBUILD" <<'EOF'
+  cat >"$TEST_TMPDIR/test.PKGBUILD" <<'EOF'
 pkgname=test-arch-skip
 pkgver=1.0.0
 pkgrel=1
@@ -376,7 +475,7 @@ EOF
 
 @test "has_skip_checksums: finds SKIP after a real hash" {
   source "$TEST_TMPDIR/scripts/lib.sh"
-  cat > "$TEST_TMPDIR/test.PKGBUILD" <<'EOF'
+  cat >"$TEST_TMPDIR/test.PKGBUILD" <<'EOF'
 pkgname=test-late-skip
 pkgver=1.0.0
 pkgrel=1
@@ -392,7 +491,7 @@ EOF
 
 @test "has_skip_checksums: returns 1 without SKIP" {
   source "$TEST_TMPDIR/scripts/lib.sh"
-  cat > "$TEST_TMPDIR/test.PKGBUILD" <<'EOF'
+  cat >"$TEST_TMPDIR/test.PKGBUILD" <<'EOF'
 pkgname=test-no-skip
 pkgver=1.0.0
 pkgrel=1
@@ -408,7 +507,7 @@ EOF
 
 @test "has_skip_checksums: returns 1 when every SKIP belongs to a signature" {
   source "$TEST_TMPDIR/scripts/lib.sh"
-  cat > "$TEST_TMPDIR/test.PKGBUILD" <<'EOF'
+  cat >"$TEST_TMPDIR/test.PKGBUILD" <<'EOF'
 pkgname=test-signed
 pkgver=1.0.0
 pkgrel=1
@@ -424,7 +523,7 @@ EOF
 
 @test "has_skip_checksums: finds a VCS SKIP next to the SKIP of a signature" {
   source "$TEST_TMPDIR/scripts/lib.sh"
-  cat > "$TEST_TMPDIR/test.PKGBUILD" <<'EOF'
+  cat >"$TEST_TMPDIR/test.PKGBUILD" <<'EOF'
 pkgname=test-signed-vcs
 pkgver=r100.abc1234
 pkgrel=1
@@ -494,6 +593,35 @@ MOCKCURL
   [[ "$output" == *"test-1.0.0-riscv64.tar.gz"* ]]
   grep -q "test-1.0.0-armv7h.tar.gz" "$TEST_TMPDIR/curl-urls.log"
   grep -q "test-1.0.0-riscv64.tar.gz" "$TEST_TMPDIR/curl-urls.log"
+}
+
+# makepkg sets CARCH, and neovim-nightly-bin builds its URL from it in a
+# case statement. Without CARCH the URL is nvim-linux-.tar.gz, a 404.
+@test "lib.sh: validate_source_urls builds the URLs with CARCH" {
+  cat >"$TEST_TMPDIR/PKGBUILD" <<'EOF'
+pkgname=test-carch
+pkgver=1.0.0
+pkgrel=1
+arch=('x86_64' 'aarch64')
+source=("https://example.com/test-1.0.0-${CARCH}.tar.gz")
+sha256sums=('SKIP')
+EOF
+
+  cat >"$MOCK_DIR/curl" <<MOCKCURL
+#!/usr/bin/env bash
+echo "\${@: -1}" >>"$TEST_TMPDIR/curl-urls.log"
+printf '200 application/octet-stream'
+MOCKCURL
+  chmod +x "$MOCK_DIR/curl"
+
+  local lib='source "$0/scripts/lib.sh"; validate_source_urls "$1"'
+  run env -u CARCH bash -c "$lib" "$TEST_TMPDIR" "$TEST_TMPDIR/PKGBUILD"
+  [ "$status" -eq 0 ]
+  grep -qx "https://example.com/test-1.0.0-$(uname -m).tar.gz" "$TEST_TMPDIR/curl-urls.log"
+
+  run env CARCH=aarch64 bash -c "$lib" "$TEST_TMPDIR" "$TEST_TMPDIR/PKGBUILD"
+  [ "$status" -eq 0 ]
+  grep -qx "https://example.com/test-1.0.0-aarch64.tar.gz" "$TEST_TMPDIR/curl-urls.log"
 }
 
 # The server of a source chooses the headers. bash evaluates an operand of
@@ -599,7 +727,76 @@ MOCKCURL
   source "$TEST_TMPDIR/scripts/lib.sh"
   run http_get https://example.invalid/a --max-redirs 5
   [ "$status" -eq 0 ]
-  [ "$output" = "-sfL --max-time 30 --retry 2 --retry-delay 5 --retry-connrefused -A aurtomator/1.0 --max-redirs 5 https://example.invalid/a" ]
+  [ "$output" = '-sfL --max-time 30 --retry 2 --retry-delay 5 --retry-connrefused -A aurtomator/1.0 -w %{onerror}%{stderr}%{url_effective}\t%{errormsg}\t%header{cf-mitigated} --max-redirs 5 https://example.invalid/a' ]
+}
+
+# Helper: a curl that writes $CURL_STDERR to stderr, as its -w does on a
+# failure, and exits $CURL_RC
+mock_curl_failure() {
+  cat >"$MOCK_DIR/curl" <<'MOCKCURL'
+#!/usr/bin/env bash
+printf '%b' "$CURL_STDERR" >&2
+exit "$CURL_RC"
+MOCKCURL
+  chmod +x "$MOCK_DIR/curl"
+}
+
+@test "lib.sh: http_get names the URL of the last answer and the error" {
+  mock_curl_failure
+  source "$TEST_TMPDIR/scripts/lib.sh"
+  CURL_RC=22 CURL_STDERR='https://example.com/b\tThe requested URL returned error: 404\t' run http_get https://example.com/a
+  [ "$status" -eq 22 ]
+  [ "$output" = "https://example.com/b: The requested URL returned error: 404" ]
+}
+
+# anydesk.com sends this answer to every client without JavaScript,
+# whatever its User-Agent
+@test "lib.sh: http_get names a Cloudflare challenge" {
+  mock_curl_failure
+  source "$TEST_TMPDIR/scripts/lib.sh"
+  CURL_RC=22 CURL_STDERR='https://example.com/a\tThe requested URL returned error: 403\tchallenge' run http_get https://example.com/a
+  [ "$status" -eq 22 ]
+  [ "$output" = "https://example.com/a: The requested URL returned error: 403, a Cloudflare challenge, which only a browser passes" ]
+}
+
+# curl refuses a malformed URL before -w writes anything
+@test "lib.sh: http_get names the URL and the exit code when curl writes nothing" {
+  mock_curl_failure
+  source "$TEST_TMPDIR/scripts/lib.sh"
+  CURL_RC=3 CURL_STDERR='' run http_get 'https://[bad'
+  [ "$status" -eq 3 ]
+  [ "$output" = "https://[bad: curl exit 3" ]
+}
+
+# curl writes its own message for an unknown option, -s or not
+@test "lib.sh: http_get passes a message of curl through" {
+  mock_curl_failure
+  source "$TEST_TMPDIR/scripts/lib.sh"
+  CURL_RC=2 CURL_STDERR='curl: option --bad: is unknown\n' run http_get https://example.com/a --bad
+  [ "$status" -eq 2 ]
+  [ "$output" = "curl: option --bad: is unknown" ]
+}
+
+@test "lib.sh: http_get_json asks curl for the URL of the last answer" {
+  cat >"$MOCK_DIR/curl" <<MOCKCURL
+#!/usr/bin/env bash
+printf '%s\n' "\$@" >"$TEST_TMPDIR/curl.args"
+printf '[\n  {"name": "v1.0.0"}\n]\n\nhttps://example.com/a'
+MOCKCURL
+  chmod +x "$MOCK_DIR/curl"
+  source "$TEST_TMPDIR/scripts/lib.sh"
+  run http_get_json https://example.com/a
+  [ "$status" -eq 0 ]
+  [ "$output" = $'[\n  {"name": "v1.0.0"}\n]' ]
+  [ "$(grep -x -A1 -- -w "$TEST_TMPDIR/curl.args" | tail -1)" = '\n%{url_effective}%{onerror}%{stderr}%{url_effective}\t%{errormsg}\t%header{cf-mitigated}' ]
+}
+
+@test "lib.sh: http_get_json stops at a failed request" {
+  mock_curl_failure
+  source "$TEST_TMPDIR/scripts/lib.sh"
+  CURL_RC=22 CURL_STDERR='https://example.com/a\tThe requested URL returned error: 404\t' run http_get_json https://example.com/a
+  [ "$status" -eq 22 ]
+  [ "$output" = "https://example.com/a: The requested URL returned error: 404" ]
 }
 
 # script from util-linux runs the command on a terminal of its own
@@ -656,6 +853,30 @@ MOCKCURL
   run bash -c 'source "$0/scripts/lib.sh"; validate_pkgver "$1"' "$TEST_TMPDIR" '1.0в'
   [ "$status" -eq 1 ]
   [[ "$output" == *"Version string rejected, only A-Za-z0-9 . _ + are allowed"* ]]
+}
+
+# === version_jump ===
+
+@test "lib.sh: version_jump finds a first number two digits longer" {
+  local pair
+  for pair in "13 2026102100" "4.4215 4215" "1.2 2026.1" "2025.12.13 20261021" "0.9 100.0" "r1.0000000 r504.42cd4ac"; do
+    run bash -c 'source "$0/scripts/lib.sh"; version_jump "$1" "$2"' "$TEST_TMPDIR" "${pair% *}" "${pair#* }"
+    [ "$status" -eq 0 ] || {
+      echo "no jump found: $pair"
+      return 1
+    }
+  done
+}
+
+@test "lib.sh: version_jump leaves a usual step" {
+  local pair
+  for pair in "9 10" "99 100" "0.9 1.0" "1.9 1.10" "2025.12.13 2026.1.2" "r99.abc1234 r100.def5678" "13 14"; do
+    run bash -c 'source "$0/scripts/lib.sh"; version_jump "$1" "$2"' "$TEST_TMPDIR" "${pair% *}" "${pair#* }"
+    [ "$status" -eq 1 ] || {
+      echo "jump found: $pair"
+      return 1
+    }
+  done
 }
 
 # === tag_versions ===
@@ -725,6 +946,28 @@ pkgver_dash: _"
 pkgver_dash: ."
   result=$("$TEST_TMPDIR/scripts/check-update.sh" "mypkg" 2>/dev/null)
   [ "$result" = "1.0.0.beta.24" ]
+}
+
+@test "check-update: pkgver_format puts the version of the strategy into pkgver" {
+  stand_in_strategy build 4216
+  create_test_package "mypkg" "build" "current: '4.4215'
+pkgver_format: '4.%s'"
+
+  run --separate-stderr "$TEST_TMPDIR/scripts/check-update.sh" "mypkg"
+  [ "$status" -eq 0 ]
+  [ "$output" = "4.4216" ]
+  [[ "$stderr" == *"mypkg: update available 4.4215 → 4.4216"* ]]
+}
+
+@test "check-update: pkgver_format compares the formatted version with current" {
+  stand_in_strategy build 4215
+  create_test_package "mypkg" "build" "current: '4.4215'
+pkgver_format: '4.%s'"
+
+  run --separate-stderr "$TEST_TMPDIR/scripts/check-update.sh" "mypkg"
+  [ "$status" -eq 0 ]
+  [ -z "$output" ]
+  [[ "$stderr" == *"mypkg is up to date (4.4215)"* ]]
 }
 
 @test "update-pkg: refuses an injected version before any git call" {
@@ -797,7 +1040,7 @@ current: '2.0.0'"
 
 @test "check-all: reports errors for broken packages" {
   # Create package with strategy that will fail (nonexistent strategy)
-  cat > "$TEST_TMPDIR/packages/broken.yml" <<EOF
+  cat >"$TEST_TMPDIR/packages/broken.yml" <<EOF
 name: broken
 strategy: nonexistent-strategy
 upstream:
@@ -854,7 +1097,7 @@ make_spaced_project() {
 current: '2.0.0'"
 
   # Create minimal README with markers
-  cat > "$TEST_TMPDIR/README.md" <<'EOF'
+  cat >"$TEST_TMPDIR/README.md" <<'EOF'
 # test
 <!-- PACKAGES:START -->
 old content
@@ -1276,7 +1519,7 @@ EOF
   grep -q "# Header Before" "$TEST_TMPDIR/README.md"
   grep -q "# Footer After" "$TEST_TMPDIR/README.md"
   # Old content should be replaced
-  ! grep -q "old table" "$TEST_TMPDIR/README.md"
+  run ! grep -q "old table" "$TEST_TMPDIR/README.md"
 }
 
 @test "update-readme: shows updated status" {
@@ -1324,6 +1567,119 @@ EOF
   git -C "$TEST_TMPDIR" remote add origin "https://github.com/myuser/myrepo.git"
   "$TEST_TMPDIR/scripts/update-readme.sh" 2>/dev/null
   grep -q "actions/workflows" "$TEST_TMPDIR/README.md"
+}
+
+# Helper: a README with both marker pairs and a line between them
+readme_with_badges() {
+  printf '%s\n' '# test' '<!-- BADGES:START -->' 'old badges' '<!-- BADGES:END -->' \
+    'text between' '<!-- PACKAGES:START -->' '<!-- PACKAGES:END -->' >"$TEST_TMPDIR/README.md"
+}
+
+@test "update-readme: a public fork gets its own CI and Codecov badges" {
+  create_test_package "pkg-a" "github-release" "upstream:
+  project: owner/repo
+current: '1.0.0'"
+  readme_with_badges
+  git -C "$TEST_TMPDIR" init -q
+  git -C "$TEST_TMPDIR" remote add origin "git@github.com:someone/fork.git"
+  cat >"$MOCK_DIR/curl" <<EOF
+#!/usr/bin/env bash
+echo "\${@: -1}" >>"$TEST_TMPDIR/curl-urls.log"
+echo '{"private": false}'
+EOF
+  chmod +x "$MOCK_DIR/curl"
+
+  run "$TEST_TMPDIR/scripts/update-readme.sh"
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"Badges updated (repo: someone/fork)"* ]]
+  grep -qx 'https://api.github.com/repos/someone/fork' "$TEST_TMPDIR/curl-urls.log"
+  local badges
+  badges=$(sed -n '3p' "$TEST_TMPDIR/README.md")
+  [[ "$badges" == "[![Lint & Test](https://github.com/someone/fork/actions/workflows/ci.yml/badge.svg)](https://github.com/someone/fork/actions/workflows/ci.yml) [![codecov](https://codecov.io/github/someone/fork/graph/badge.svg)](https://codecov.io/github/someone/fork) [![Bash]"* ]]
+  [[ "$badges" == *"[![License](https://img.shields.io/badge/license-BSD--3--Clause-blue)](LICENSE)" ]]
+  grep -qx 'text between' "$TEST_TMPDIR/README.md"
+  run ! grep -q 'old badges' "$TEST_TMPDIR/README.md"
+}
+
+# Codecov shows no tokenless badge for a private repository. mikefarah yq
+# prints the "true" of select(...) | "true" whatever the input.
+@test "update-readme: a private repo or a failed API call links the Codecov of aurtomator" {
+  create_test_package "pkg-a" "github-release" "upstream:
+  project: owner/repo
+current: '1.0.0'"
+  git -C "$TEST_TMPDIR" init -q
+  git -C "$TEST_TMPDIR" remote add origin "https://github.com/someone/private.git"
+  local answer
+  for answer in "echo '{\"private\": true}'" "exit 22"; do
+    readme_with_badges
+    printf '#!/usr/bin/env bash\n%s\n' "$answer" >"$MOCK_DIR/curl"
+    chmod +x "$MOCK_DIR/curl"
+
+    run "$TEST_TMPDIR/scripts/update-readme.sh"
+    [ "$status" -eq 0 ]
+    grep -qF '(https://github.com/someone/private/actions/workflows/ci.yml)' "$TEST_TMPDIR/README.md"
+    grep -qF '[![codecov](https://codecov.io/github/staticwire/aurtomator/graph/badge.svg)](https://codecov.io/github/staticwire/aurtomator)' "$TEST_TMPDIR/README.md"
+  done
+}
+
+@test "update-readme: without a GitHub origin only the static badges remain" {
+  create_test_package "pkg-a" "github-release" "upstream:
+  project: owner/repo
+current: '1.0.0'"
+  readme_with_badges
+  git -C "$TEST_TMPDIR" init -q
+
+  run "$TEST_TMPDIR/scripts/update-readme.sh"
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"Badges updated (repo: unknown)"* ]]
+  local badges
+  badges=$(sed -n '3p' "$TEST_TMPDIR/README.md")
+  [[ "$badges" == *"[![Bash]"*"[![AUR]"*"[![License]"* ]]
+  [[ "$badges" != *"Lint & Test"* && "$badges" != *"codecov"* ]]
+}
+
+@test "update-readme: an unknown status reads as tracking" {
+  create_test_package "pkg-a" "github-release" "upstream:
+  project: owner/repo
+current: '1.0.0'"
+  echo "something_new" >"$TEST_TMPDIR/.status/pkg-a"
+  printf '%s\n' '<!-- PACKAGES:START -->' '<!-- PACKAGES:END -->' >"$TEST_TMPDIR/README.md"
+  git -C "$TEST_TMPDIR" init -q
+
+  run "$TEST_TMPDIR/scripts/update-readme.sh"
+  [ "$status" -eq 0 ]
+  grep -qF '| 1.0.0 | github-release | — | ✅ tracking |' "$TEST_TMPDIR/README.md"
+  grep -qF 'packages-1%2F1-brightgreen' "$TEST_TMPDIR/README.md"
+}
+
+@test "update-readme: a package without current is new" {
+  create_test_package "pkg-new" "github-release" "upstream:
+  project: owner/repo"
+  printf '%s\n' '<!-- PACKAGES:START -->' '<!-- PACKAGES:END -->' >"$TEST_TMPDIR/README.md"
+  git -C "$TEST_TMPDIR" init -q
+
+  run "$TEST_TMPDIR/scripts/update-readme.sh"
+  [ "$status" -eq 0 ]
+  grep -qF '| [pkg-new](https://aur.archlinux.org/pkgbase/pkg-new) | — | github-release | — | 🆕 new |' "$TEST_TMPDIR/README.md"
+}
+
+# A package that has not been checked yet has failed nothing
+@test "update-readme: a new package counts as ok in the badge" {
+  create_test_package "pkg-new" "github-release" "upstream:
+  project: owner/repo"
+  printf '%s\n' '<!-- PACKAGES:START -->' '<!-- PACKAGES:END -->' >"$TEST_TMPDIR/README.md"
+  git -C "$TEST_TMPDIR" init -q
+
+  run "$TEST_TMPDIR/scripts/update-readme.sh"
+  [ "$status" -eq 0 ]
+  grep -qF 'packages-1%2F1-brightgreen' "$TEST_TMPDIR/README.md"
+
+  create_test_package "pkg-a" "github-release" "upstream:
+  project: owner/repo
+current: '1.0.0'"
+  run "$TEST_TMPDIR/scripts/update-readme.sh"
+  [ "$status" -eq 0 ]
+  grep -qF 'packages-2%2F2-brightgreen' "$TEST_TMPDIR/README.md"
 }
 
 # === update-readme.sh: last_updated column ===
@@ -1411,7 +1767,7 @@ current: '1.0.0'"
   git -C "$aur_dir" config user.name "test"
   git -C "$aur_dir" config user.email "test@test"
   git -C "$aur_dir" config commit.gpgsign false
-  cat > "$aur_dir/PKGBUILD" <<'EOF'
+  cat >"$aur_dir/PKGBUILD" <<'EOF'
 # Maintainer: test
 pkgname=test-vcs-bad
 pkgver=r100.abc1234
@@ -1429,7 +1785,7 @@ pkgver() {
 EOF
   git -C "$aur_dir" add . && git -C "$aur_dir" commit -q -m "init"
 
-  cat > "$MOCK_DIR/git" <<MOCKGIT
+  cat >"$MOCK_DIR/git" <<MOCKGIT
 #!/usr/bin/env bash
 if [[ "\$1" == "clone" ]]; then
   cp -r "$aur_dir" "\$3" 2>/dev/null || cp -r "$aur_dir/." "\$3" 2>/dev/null
@@ -1457,7 +1813,7 @@ current: 'r100.abc1234'"
   git -C "$aur_dir" config user.name "test"
   git -C "$aur_dir" config user.email "test@test"
   git -C "$aur_dir" config commit.gpgsign false
-  cat > "$aur_dir/PKGBUILD" <<'EOF'
+  cat >"$aur_dir/PKGBUILD" <<'EOF'
 # Maintainer: test
 pkgname=test-vcs-ok
 pkgver=r100.abc1234
@@ -1480,7 +1836,7 @@ EOF
   git -C "$aur_dir" remote add origin "$TEST_TMPDIR/aur-bare-test-vcs-ok.git"
   git -C "$aur_dir" push -q -u origin HEAD
 
-  cat > "$MOCK_DIR/git" <<MOCKGIT
+  cat >"$MOCK_DIR/git" <<MOCKGIT
 #!/usr/bin/env bash
 if [[ "\$1" == "clone" ]]; then
   cp -r "$aur_dir" "\$3" 2>/dev/null || cp -r "$aur_dir/." "\$3" 2>/dev/null
@@ -1490,7 +1846,7 @@ exec /usr/bin/git "\$@"
 MOCKGIT
   chmod +x "$MOCK_DIR/git"
 
-  cat > "$MOCK_DIR/makepkg" <<'EOF'
+  cat >"$MOCK_DIR/makepkg" <<'EOF'
 #!/usr/bin/env bash
 echo "pkgbase = test-vcs-ok"
 echo "pkgname = test-vcs-ok"
@@ -1514,7 +1870,7 @@ current: '1.0.0'"
   git -C "$aur_dir" config user.name "test"
   git -C "$aur_dir" config user.email "test@test"
   git -C "$aur_dir" config commit.gpgsign false
-  cat > "$aur_dir/PKGBUILD" <<'EOF'
+  cat >"$aur_dir/PKGBUILD" <<'EOF'
 # Maintainer: test
 pkgname=test-html
 pkgver=1.0.0
@@ -1528,7 +1884,7 @@ sha256sums=('abc123')
 EOF
   git -C "$aur_dir" add . && git -C "$aur_dir" commit -q -m "init"
 
-  cat > "$MOCK_DIR/git" <<MOCKGIT
+  cat >"$MOCK_DIR/git" <<MOCKGIT
 #!/usr/bin/env bash
 if [[ "\$1" == "clone" ]]; then
   cp -r "$aur_dir" "\$3" 2>/dev/null || cp -r "$aur_dir/." "\$3" 2>/dev/null
@@ -1539,7 +1895,7 @@ MOCKGIT
   chmod +x "$MOCK_DIR/git"
 
   # Mock curl to return HTML content-type for HEAD requests
-  cat > "$MOCK_DIR/curl" <<'MOCKCURL'
+  cat >"$MOCK_DIR/curl" <<'MOCKCURL'
 #!/usr/bin/env bash
 if [[ "$1" == "-sIL" ]]; then
   printf '200 text/html; charset=utf-8'
@@ -1579,7 +1935,7 @@ current: '1.0.0'"
   git -C "$aur_dir" config user.name "test"
   git -C "$aur_dir" config user.email "test@test"
   git -C "$aur_dir" config commit.gpgsign false
-  cat > "$aur_dir/PKGBUILD" <<'EOF'
+  cat >"$aur_dir/PKGBUILD" <<'EOF'
 # Maintainer: test <test@example.com>
 pkgname=test-namcap
 pkgver=1.0.0
@@ -1592,7 +1948,7 @@ sha256sums=('e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855')
 EOF
   git -C "$aur_dir" add . && git -C "$aur_dir" commit -q -m "init"
 
-  cat > "$MOCK_DIR/git" <<MOCKGIT
+  cat >"$MOCK_DIR/git" <<MOCKGIT
 #!/usr/bin/env bash
 if [[ "\$1" == "clone" ]]; then
   cp -r "$aur_dir" "\$3" 2>/dev/null || cp -r "$aur_dir/." "\$3" 2>/dev/null
@@ -1603,7 +1959,7 @@ MOCKGIT
   chmod +x "$MOCK_DIR/git"
 
   # Mock curl for source URL validation
-  cat > "$MOCK_DIR/curl" <<'MOCKCURL'
+  cat >"$MOCK_DIR/curl" <<'MOCKCURL'
 #!/usr/bin/env bash
 if [[ "$1" == "-sIL" ]]; then
   printf '200 application/octet-stream'
@@ -1613,13 +1969,13 @@ echo '{}'
 MOCKCURL
   chmod +x "$MOCK_DIR/curl"
 
-  cat > "$MOCK_DIR/updpkgsums" <<'EOF'
+  cat >"$MOCK_DIR/updpkgsums" <<'EOF'
 #!/usr/bin/env bash
 exit 0
 EOF
   chmod +x "$MOCK_DIR/updpkgsums"
 
-  cat > "$MOCK_DIR/makepkg" <<'EOF'
+  cat >"$MOCK_DIR/makepkg" <<'EOF'
 #!/usr/bin/env bash
 if [[ "$1" == "--verifysource" ]]; then exit 0; fi
 echo "pkgbase = test-namcap"
@@ -1649,7 +2005,7 @@ current: '1.0.0'"
   git -C "$aur_dir" config user.name "test"
   git -C "$aur_dir" config user.email "test@test"
   git -C "$aur_dir" config commit.gpgsign false
-  cat > "$aur_dir/PKGBUILD" <<'EOF'
+  cat >"$aur_dir/PKGBUILD" <<'EOF'
 pkgname=test-namcap-warn
 pkgver=1.0.0
 pkgrel=1
@@ -1662,7 +2018,7 @@ sha256sums=('e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855')
 EOF
   git -C "$aur_dir" add . && git -C "$aur_dir" commit -q -m "init"
 
-  cat > "$MOCK_DIR/git" <<MOCKGIT
+  cat >"$MOCK_DIR/git" <<MOCKGIT
 #!/usr/bin/env bash
 if [[ "\$1" == "clone" ]]; then
   cp -r "$aur_dir" "\$3" 2>/dev/null || cp -r "$aur_dir/." "\$3" 2>/dev/null
@@ -1672,7 +2028,7 @@ exec /usr/bin/git "\$@"
 MOCKGIT
   chmod +x "$MOCK_DIR/git"
 
-  cat > "$MOCK_DIR/curl" <<'MOCKCURL'
+  cat >"$MOCK_DIR/curl" <<'MOCKCURL'
 #!/usr/bin/env bash
 if [[ "$1" == "-sIL" ]]; then
   printf '200 application/octet-stream'
@@ -1682,13 +2038,13 @@ echo '{}'
 MOCKCURL
   chmod +x "$MOCK_DIR/curl"
 
-  cat > "$MOCK_DIR/updpkgsums" <<'EOF'
+  cat >"$MOCK_DIR/updpkgsums" <<'EOF'
 #!/usr/bin/env bash
 exit 0
 EOF
   chmod +x "$MOCK_DIR/updpkgsums"
 
-  cat > "$MOCK_DIR/makepkg" <<'EOF'
+  cat >"$MOCK_DIR/makepkg" <<'EOF'
 #!/usr/bin/env bash
 if [[ "$1" == "--verifysource" ]]; then exit 0; fi
 echo "pkgbase = test-namcap-warn"
@@ -1721,7 +2077,7 @@ current: '1.0.0'"
   git -C "$aur_dir" config user.name "test"
   git -C "$aur_dir" config user.email "test@test"
   git -C "$aur_dir" config commit.gpgsign false
-  cat > "$aur_dir/PKGBUILD" <<'EOF'
+  cat >"$aur_dir/PKGBUILD" <<'EOF'
 # Maintainer: test
 pkgname=test-detached
 pkgver=1.0.0
@@ -1740,7 +2096,7 @@ EOF
   git -C "$aur_dir" fetch -q origin
   git -C "$aur_dir" checkout -q --detach master
 
-  cat > "$MOCK_DIR/git" <<MOCKGIT
+  cat >"$MOCK_DIR/git" <<MOCKGIT
 #!/usr/bin/env bash
 if [[ "\$1" == "clone" ]]; then
   cp -r "$aur_dir" "\$3" 2>/dev/null || cp -r "$aur_dir/." "\$3" 2>/dev/null
@@ -1750,7 +2106,7 @@ exec /usr/bin/git "\$@"
 MOCKGIT
   chmod +x "$MOCK_DIR/git"
 
-  cat > "$MOCK_DIR/curl" <<'MOCKCURL'
+  cat >"$MOCK_DIR/curl" <<'MOCKCURL'
 #!/usr/bin/env bash
 if [[ "$1" == "-sIL" ]]; then
   printf '200 application/octet-stream'
@@ -1760,13 +2116,13 @@ echo '{}'
 MOCKCURL
   chmod +x "$MOCK_DIR/curl"
 
-  cat > "$MOCK_DIR/updpkgsums" <<'EOF'
+  cat >"$MOCK_DIR/updpkgsums" <<'EOF'
 #!/usr/bin/env bash
 exit 0
 EOF
   chmod +x "$MOCK_DIR/updpkgsums"
 
-  cat > "$MOCK_DIR/makepkg" <<'EOF'
+  cat >"$MOCK_DIR/makepkg" <<'EOF'
 #!/usr/bin/env bash
 if [[ "$1" == "--verifysource" ]]; then exit 0; fi
 echo "pkgbase = test-detached"
@@ -1801,7 +2157,7 @@ current: '1.0.0'"
   git -C "$aur_dir" config user.name "test"
   git -C "$aur_dir" config user.email "test@test"
   git -C "$aur_dir" config commit.gpgsign false
-  cat > "$aur_dir/PKGBUILD" <<'EOF'
+  cat >"$aur_dir/PKGBUILD" <<'EOF'
 # Maintainer: test
 pkgname=test-no-origin
 pkgver=1.0.0
@@ -1816,7 +2172,7 @@ EOF
   git -C "$aur_dir" add . && git -C "$aur_dir" commit -q -m "init"
   git -C "$aur_dir" checkout -q --detach master
 
-  cat > "$MOCK_DIR/git" <<MOCKGIT
+  cat >"$MOCK_DIR/git" <<MOCKGIT
 #!/usr/bin/env bash
 if [[ "\$1" == "clone" ]]; then
   cp -r "$aur_dir" "\$3" 2>/dev/null || cp -r "$aur_dir/." "\$3" 2>/dev/null
@@ -1869,7 +2225,7 @@ current: '1.0.0'"
   git -C "$aur_dir" config user.name "test"
   git -C "$aur_dir" config user.email "test@test"
   git -C "$aur_dir" config commit.gpgsign false
-  cat > "$aur_dir/PKGBUILD" <<'EOF'
+  cat >"$aur_dir/PKGBUILD" <<'EOF'
 pkgname=test-checksums
 pkgver=1.0.0
 pkgrel=1
@@ -1892,7 +2248,7 @@ EOF
 
   # Mock git clone to return our fake AUR dir
   mkdir -p "$MOCK_DIR"
-  cat > "$MOCK_DIR/git" <<MOCKGIT
+  cat >"$MOCK_DIR/git" <<MOCKGIT
 #!/usr/bin/env bash
 if [[ "\$1" == "clone" ]]; then
   cp -r "$aur_dir" "\$3" 2>/dev/null || cp -r "$aur_dir/." "\$3" 2>/dev/null
@@ -1921,7 +2277,7 @@ current: 'r100.abc1234'"
   git -C "$aur_dir" config user.name "test"
   git -C "$aur_dir" config user.email "test@test"
   git -C "$aur_dir" config commit.gpgsign false
-  cat > "$aur_dir/PKGBUILD" <<'EOF'
+  cat >"$aur_dir/PKGBUILD" <<'EOF'
 pkgname=test-vcs
 pkgver=r100.abc1234
 pkgrel=1
@@ -1940,7 +2296,7 @@ EOF
   git -C "$aur_dir" push -q -u origin HEAD
 
   # Mock git clone
-  cat > "$MOCK_DIR/git" <<MOCKGIT
+  cat >"$MOCK_DIR/git" <<MOCKGIT
 #!/usr/bin/env bash
 if [[ "\$1" == "clone" ]]; then
   cp -r "$aur_dir" "\$3" 2>/dev/null || cp -r "$aur_dir/." "\$3" 2>/dev/null
@@ -1951,7 +2307,7 @@ MOCKGIT
   chmod +x "$MOCK_DIR/git"
 
   # Mock makepkg --printsrcinfo
-  cat > "$MOCK_DIR/makepkg" <<'EOF'
+  cat >"$MOCK_DIR/makepkg" <<'EOF'
 #!/usr/bin/env bash
 echo "pkgbase = test-vcs"
 echo "pkgname = test-vcs"
@@ -1976,7 +2332,7 @@ current: '1.0.0'"
   git -C "$aur_dir" config user.name "test"
   git -C "$aur_dir" config user.email "test@test"
   git -C "$aur_dir" config commit.gpgsign false
-  cat > "$aur_dir/PKGBUILD" <<'EOF'
+  cat >"$aur_dir/PKGBUILD" <<'EOF'
 pkgname=test-arch-skip
 pkgver=1.0.0
 pkgrel=1
@@ -1991,7 +2347,7 @@ b2sums_aarch64=('SKIP')
 EOF
   git -C "$aur_dir" add . && git -C "$aur_dir" commit -q -m "init"
 
-  cat > "$MOCK_DIR/git" <<MOCKGIT
+  cat >"$MOCK_DIR/git" <<MOCKGIT
 #!/usr/bin/env bash
 if [[ "\$1" == "clone" ]]; then
   cp -r "$aur_dir" "\$3" 2>/dev/null || cp -r "$aur_dir/." "\$3" 2>/dev/null
@@ -2001,16 +2357,82 @@ exec /usr/bin/git "\$@"
 MOCKGIT
   chmod +x "$MOCK_DIR/git"
 
-  cat > "$MOCK_DIR/makepkg" <<'EOF'
+  cat >"$MOCK_DIR/makepkg" <<'EOF'
 #!/usr/bin/env bash
 echo "pkgbase = test-arch-skip"
 echo "pkgname = test-arch-skip"
 EOF
   chmod +x "$MOCK_DIR/makepkg"
 
+  # HEAD requests get a file and every URL asked for is logged
+  cat >"$MOCK_DIR/curl" <<MOCKCURL
+#!/usr/bin/env bash
+echo "\${@: -1}" >>"$TEST_TMPDIR/curl-urls.log"
+printf '200 application/octet-stream'
+MOCKCURL
+  chmod +x "$MOCK_DIR/curl"
+
   run "$TEST_TMPDIR/scripts/update-pkg.sh" "test-arch-skip" "1.0.1"
   [[ "$output" == *"VCS package, skipping checksums"* ]]
   [[ "$output" != *"Updating checksums"* ]]
+  grep -q "nightly-x86_64.tar.gz" "$TEST_TMPDIR/curl-urls.log"
+  grep -q "nightly-aarch64.tar.gz" "$TEST_TMPDIR/curl-urls.log"
+}
+
+# A source with a SKIP checksum is not downloaded by any later step, so
+# without the HEAD request a URL that answers 404 would reach the AUR, as a
+# tag built from $pkgver does for a release whose tag never moves.
+@test "update-pkg: checks source URLs when every checksum is SKIP" {
+  create_test_package "test-skip-url" "github-asset" "upstream:
+  project: owner/repo
+  tag: continuous
+  assets:
+    - test.AppImage
+current: '20261022'"
+
+  aur_dir="$TEST_TMPDIR/aur-test-skip-url"
+  mkdir -p "$aur_dir"
+  git -C "$aur_dir" init -q
+  git -C "$aur_dir" config user.name "test"
+  git -C "$aur_dir" config user.email "test@test"
+  git -C "$aur_dir" config commit.gpgsign false
+  cat >"$aur_dir/PKGBUILD" <<'EOF'
+# Maintainer: test
+pkgname=test-skip-url
+pkgver=20261022
+pkgrel=1
+pkgdesc="test SKIP source URL"
+arch=('x86_64')
+url="https://example.com"
+license=('MIT')
+source=("test.AppImage::https://example.com/releases/download/${pkgver}/test.AppImage")
+sha256sums=('SKIP')
+EOF
+  git -C "$aur_dir" add . && git -C "$aur_dir" commit -q -m "init"
+
+  cat >"$MOCK_DIR/git" <<MOCKGIT
+#!/usr/bin/env bash
+if [[ "\$1" == "clone" ]]; then
+  cp -r "$aur_dir" "\$3" 2>/dev/null || cp -r "$aur_dir/." "\$3" 2>/dev/null
+  exit 0
+fi
+exec /usr/bin/git "\$@"
+MOCKGIT
+  chmod +x "$MOCK_DIR/git"
+
+  cat >"$MOCK_DIR/curl" <<MOCKCURL
+#!/usr/bin/env bash
+echo "\${@: -1}" >>"$TEST_TMPDIR/curl-urls.log"
+printf '404 text/plain'
+MOCKCURL
+  chmod +x "$MOCK_DIR/curl"
+
+  run "$TEST_TMPDIR/scripts/update-pkg.sh" "test-skip-url" "20261023"
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"Source URL returned HTTP 404: https://example.com/releases/download/20261023/test.AppImage"* ]]
+  [[ "$output" == *"Source URL validation failed, aborting"* ]]
+  [[ "$output" != *"VCS package, skipping checksums"* ]]
+  [[ "$output" != *"Pushed"* ]]
 }
 
 # === downgrades ===
@@ -2124,7 +2546,7 @@ EOF
   grep -q "⬇️ downgraded to 1.0.0" "$TEST_TMPDIR/README.md"
   # Downgrades count toward pkg_ok, so the badge stays green.
   grep -q "brightgreen" "$TEST_TMPDIR/README.md"
-  ! grep -q "packages-.*-red" "$TEST_TMPDIR/README.md"
+  run ! grep -q "packages-.*-red" "$TEST_TMPDIR/README.md"
 }
 
 @test "update-readme: renders available_downgrade icon with (downgrade) suffix" {
@@ -2162,6 +2584,102 @@ EOF
 
   grep -q "⬇️ 1.0.0 skipped (downgrade)" "$TEST_TMPDIR/README.md"
   grep -q "brightgreen" "$TEST_TMPDIR/README.md"
+}
+
+# === version jumps ===
+
+# Helper: a strategy that prints the given version
+# Usage: stand_in_strategy <name> <version>
+stand_in_strategy() {
+  printf '#!/usr/bin/env bash\necho %s\n' "$2" >"$TEST_TMPDIR/strategies/$1.sh"
+  chmod +x "$TEST_TMPDIR/strategies/$1.sh"
+}
+
+# GrapheneOS/hardened_malloc releases 13 and 14 next to OS build tags
+@test "check-all: skips a version jump without allow_version_jump" {
+  stand_in_strategy jump 2026102100
+  create_test_package "pkg-jump" "jump" "current: '13'"
+
+  run "$TEST_TMPDIR/scripts/check-all.sh"
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"version jump 13 → 2026102100, skipped: allow_version_jump is not set"* ]]
+  [ "$(cat "$TEST_TMPDIR/.status/pkg-jump")" = "jump_skipped: 2026102100" ]
+  [ "$(cat "$TEST_TMPDIR/.status/_error_count")" = "0" ]
+}
+
+@test "check-all: writes 'new_version:' for a version jump the package allows" {
+  stand_in_strategy jump 2026102100
+  create_test_package "pkg-jump" "jump" "current: '13'
+allow_version_jump: true"
+
+  run "$TEST_TMPDIR/scripts/check-all.sh"
+  [ "$status" -eq 0 ]
+  [ "$(cat "$TEST_TMPDIR/.status/pkg-jump")" = "new_version: 2026102100" ]
+}
+
+@test "check-all: writes 'new_version:' for a usual step" {
+  stand_in_strategy step 100
+  create_test_package "pkg-step" "step" "current: '99'"
+
+  run "$TEST_TMPDIR/scripts/check-all.sh"
+  [ "$status" -eq 0 ]
+  [ "$(cat "$TEST_TMPDIR/.status/pkg-step")" = "new_version: 100" ]
+}
+
+@test "update-readme: renders a skipped version jump and keeps the badge green" {
+  create_test_package "pkg-jump" "github-release" "upstream:
+  project: owner/repo
+current: '13'"
+
+  echo "jump_skipped: 2026102100" >"$TEST_TMPDIR/.status/pkg-jump"
+
+  cat >"$TEST_TMPDIR/README.md" <<'EOF'
+<!-- PACKAGES:START -->
+<!-- PACKAGES:END -->
+EOF
+  git -C "$TEST_TMPDIR" init -q
+  "$TEST_TMPDIR/scripts/update-readme.sh" 2>/dev/null
+
+  grep -q "⬆️ 2026102100 skipped (version jump)" "$TEST_TMPDIR/README.md"
+  grep -q "brightgreen" "$TEST_TMPDIR/README.md"
+}
+
+@test "check-all: --prepare, --verify and --publish need a directory" {
+  local option
+  for option in --prepare --verify --publish; do
+    run "$TEST_TMPDIR/scripts/check-all.sh" "$option"
+    [ "$status" -eq 1 ]
+    [ "$output" = "$option needs a directory" ]
+  done
+}
+
+@test "check-all: --dry-run reaches update-pkg.sh" {
+  create_test_package "pkg-up" "github-release" "upstream:
+  type: github
+  project: owner/repo
+current: '1.0.0'"
+  rm -f "$TEST_TMPDIR/scripts/update-pkg.sh"
+  cat >"$TEST_TMPDIR/scripts/update-pkg.sh" <<EOF
+#!/usr/bin/env bash
+echo "\$*" >>"$TEST_TMPDIR/update-pkg.args"
+EOF
+  chmod +x "$TEST_TMPDIR/scripts/update-pkg.sh"
+
+  "$TEST_TMPDIR/scripts/check-all.sh" --update --dry-run 2>/dev/null || true
+  [ "$(cat "$TEST_TMPDIR/update-pkg.args")" = "pkg-up 2.0.0 --dry-run" ]
+}
+
+@test "check-all: writes 'up_to_date' when --update finds the version on the AUR" {
+  create_test_package "pkg-up" "github-release" "upstream:
+  type: github
+  project: owner/repo
+current: '1.0.0'"
+  rm -f "$TEST_TMPDIR/scripts/update-pkg.sh"
+  printf '#!/usr/bin/env bash\nexit 2\n' >"$TEST_TMPDIR/scripts/update-pkg.sh"
+  chmod +x "$TEST_TMPDIR/scripts/update-pkg.sh"
+
+  "$TEST_TMPDIR/scripts/check-all.sh" --update 2>/dev/null || true
+  [ "$(cat "$TEST_TMPDIR/.status/pkg-up")" = "up_to_date" ]
 }
 
 @test "check-all: writes 'updated:' status after --update on normal upgrade (regression)" {

@@ -1,6 +1,7 @@
 #!/usr/bin/env bats
 
 load helpers/setup.sh
+bats_require_minimum_version 1.5.0
 
 setup() {
   setup_test_env
@@ -10,7 +11,7 @@ setup() {
 
   # Mock gpg: accepts specific key IDs, with or without "!", and logs its
   # arguments to $TEST_TMPDIR/gpg.args
-  cat > "$MOCK_DIR/gpg" <<'MOCKEOF'
+  cat >"$MOCK_DIR/gpg" <<'MOCKEOF'
 #!/usr/bin/env bash
 echo "$*" >>"$TEST_TMPDIR/gpg.args"
 for arg in "$@"; do
@@ -100,14 +101,14 @@ MOCKEOF
   chmod +x "$MOCK_DIR/gpg"
 
   # Mock gpgconf (for kill agent)
-  cat > "$MOCK_DIR/gpgconf" <<'MOCKEOF'
+  cat >"$MOCK_DIR/gpgconf" <<'MOCKEOF'
 #!/usr/bin/env bash
 exit 0
 MOCKEOF
   chmod +x "$MOCK_DIR/gpgconf"
 
   # Mock ssh
-  cat > "$MOCK_DIR/ssh" <<'MOCKEOF'
+  cat >"$MOCK_DIR/ssh" <<'MOCKEOF'
 #!/usr/bin/env bash
 if [[ "$*" == *"aur.archlinux.org"* ]]; then
   echo "Welcome to AUR! Your SSH key is working."
@@ -118,7 +119,7 @@ MOCKEOF
   chmod +x "$MOCK_DIR/ssh"
 
   # Mock gh
-  cat > "$MOCK_DIR/gh" <<'MOCKEOF'
+  cat >"$MOCK_DIR/gh" <<'MOCKEOF'
 #!/usr/bin/env bash
 case "$1" in
   auth)
@@ -282,7 +283,6 @@ EOF
   [[ "$output" == *"must contain @"* ]]
 }
 
-
 # === GPG step ===
 
 @test "setup gpg: valid key accepted" {
@@ -314,7 +314,7 @@ EOF
   [ "$status" -eq 1 ]
   [[ "$output" == *"MASTERKEY001 is a primary key"* ]]
   [[ "$output" == *"gpg --quick-add-key"* ]]
-  ! grep -q 'export-secret' "$TEST_TMPDIR/gpg.args"
+  run ! grep -q 'export-secret' "$TEST_TMPDIR/gpg.args"
 }
 
 @test "setup gpg: refuses a primary key given by its fingerprint" {
@@ -508,6 +508,7 @@ EOF
 
 @test "setup secrets: sets all secrets via gh" {
   write_full_config "VALIDKEY123"
+  log_gh_calls
 
   run "$TEST_TMPDIR/scripts/setup.sh" secrets --non-interactive
   [ "$status" -eq 0 ]
@@ -515,6 +516,7 @@ EOF
   [[ "$output" == *"AUR_GIT_EMAIL"* ]]
   [[ "$output" == *"AUR_SSH_KEY"* ]]
   [[ "$output" == *"GPG_SIGNING_KEY"* ]]
+  grep -qx 'secret set AUR_SSH_KEY -R test/repo' "$TEST_TMPDIR/gh.args"
 }
 
 @test "setup secrets: shows manual instructions without gh" {
@@ -804,4 +806,240 @@ EOF
   [[ "$output" == *"cp $TEST_TMPDIR/ssh-pass/key $TEST_TMPDIR/ssh-pass/key-ci"* ]]
   [[ "$output" == *"ssh-keygen -p -N '' -f $TEST_TMPDIR/ssh-pass/key-ci"* ]]
   [ ! -e "$TEST_TMPDIR/.aurtomator.conf" ]
+}
+
+# Helper: log every gh call to $TEST_TMPDIR/gh.args, then run the mock
+log_gh_calls() {
+  mv "$MOCK_DIR/gh" "$MOCK_DIR/gh-mock"
+  printf '#!/usr/bin/env bash\necho "$*" >>"%s/gh.args"\nexec "%s/gh-mock" "$@"\n' \
+    "$TEST_TMPDIR" "$MOCK_DIR" >"$MOCK_DIR/gh"
+  chmod +x "$MOCK_DIR/gh"
+}
+
+@test "setup secrets: refuses a passphrase-protected key from --ssh-key and sets no secret" {
+  write_full_config "VALIDKEY123"
+  mkdir -p "$TEST_TMPDIR/ssh-pass"
+  ssh-keygen -t ed25519 -f "$TEST_TMPDIR/ssh-pass/key" -N "testpass" -q
+  log_gh_calls
+
+  run "$TEST_TMPDIR/scripts/setup.sh" secrets --ssh-key "$TEST_TMPDIR/ssh-pass/key" --non-interactive
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"✗ SSH key has a passphrase: $TEST_TMPDIR/ssh-pass/key"* ]]
+  [[ "$output" == *"ssh-keygen -p -N '' -f $TEST_TMPDIR/ssh-pass/key-ci"* ]]
+  [ ! -e "$TEST_TMPDIR/gh.args" ]
+}
+
+# A config saved before the ssh step refused such a key
+@test "setup secrets: refuses a passphrase-protected key from the saved config" {
+  mkdir -p "$TEST_TMPDIR/ssh-pass"
+  ssh-keygen -t ed25519 -f "$TEST_TMPDIR/ssh-pass/key" -N "testpass" -q
+  printf 'AUR_SSH_KEY=%q\n' "$TEST_TMPDIR/ssh-pass/key" >"$TEST_TMPDIR/.aurtomator.conf"
+  log_gh_calls
+
+  run "$TEST_TMPDIR/scripts/setup.sh" secrets --non-interactive
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"✗ SSH key has a passphrase: $TEST_TMPDIR/ssh-pass/key"* ]]
+  [ ! -e "$TEST_TMPDIR/gh.args" ]
+}
+
+@test "setup secrets: refuses a missing SSH key" {
+  write_full_config "VALIDKEY123"
+  log_gh_calls
+
+  run "$TEST_TMPDIR/scripts/setup.sh" secrets --ssh-key "$TEST_TMPDIR/ssh/missing.pem" --non-interactive
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"✗ SSH key not found: $TEST_TMPDIR/ssh/missing.pem"* ]]
+  [ ! -e "$TEST_TMPDIR/gh.args" ]
+}
+
+@test "setup secrets: manual path refuses a passphrase-protected key" {
+  mock_gh_unavailable
+  write_full_config ""
+  mkdir -p "$TEST_TMPDIR/ssh-pass"
+  ssh-keygen -t ed25519 -f "$TEST_TMPDIR/ssh-pass/key" -N "testpass" -q
+
+  run "$TEST_TMPDIR/scripts/setup.sh" secrets --ssh-key "$TEST_TMPDIR/ssh-pass/key" --non-interactive
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"✗ SSH key has a passphrase: $TEST_TMPDIR/ssh-pass/key"* ]]
+  [[ "$output" != *"Contents of: $TEST_TMPDIR/ssh-pass/key"* ]]
+}
+
+@test "setup secrets: asks for the repo when origin is missing" {
+  write_full_config ""
+  log_gh_calls
+  git -C "$TEST_TMPDIR" remote remove origin
+
+  run "$TEST_TMPDIR/scripts/setup.sh" secrets <<<"someone/repo"
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"Target repo: someone/repo"* ]]
+  grep -qx 'secret set AUR_SSH_KEY -R someone/repo' "$TEST_TMPDIR/gh.args"
+}
+
+@test "setup ssh: asks for the key path with a default" {
+  run "$TEST_TMPDIR/scripts/setup.sh" ssh <<<"$TEST_TMPDIR/ssh/aur.pem"
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"SSH key: $TEST_TMPDIR/ssh/aur.pem"* ]]
+  grep -qx "AUR_SSH_KEY='$TEST_TMPDIR/ssh/aur.pem'" "$TEST_TMPDIR/.aurtomator.conf"
+}
+
+@test "setup ssh: refuses a file that is not a private key" {
+  printf '%s\n' "not a key" >"$TEST_TMPDIR/ssh/notkey"
+  chmod 600 "$TEST_TMPDIR/ssh/notkey"
+
+  run "$TEST_TMPDIR/scripts/setup.sh" ssh --ssh-key "$TEST_TMPDIR/ssh/notkey" --non-interactive
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"✗ Not a valid private key: $TEST_TMPDIR/ssh/notkey"* ]]
+}
+
+@test "setup gpg: no to the question, or yes without a key ID, skips GPG" {
+  write_full_config ""
+
+  run "$TEST_TMPDIR/scripts/setup.sh" gpg <<<"n"
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"✓ GPG signing skipped"* ]]
+  [[ "$output" != *"Recommended: use a dedicated signing subkey"* ]]
+
+  run "$TEST_TMPDIR/scripts/setup.sh" gpg < <(printf 'y\n\n')
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"Recommended: use a dedicated signing subkey"* ]]
+  [[ "$output" == *"✓ GPG signing skipped"* ]]
+}
+
+@test "setup gpg: warns about a key without the signing flag" {
+  cat >"$TEST_TMPDIR/mock-bin/gpg" <<'EOF'
+#!/usr/bin/env bash
+case "$*" in
+  *--with-colons*) echo "fpr:::::::::0000000000000000000000000000000000000000:" ;;
+  *--list-secret-keys*) echo "ssb   cv25519/NOSIGN01 2026-01-01 [E]" ;;
+esac
+exit 0
+EOF
+  write_full_config "NOSIGN01"
+
+  run "$TEST_TMPDIR/scripts/setup.sh" gpg --non-interactive
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"! Key may not have signing capability, verify manually"* ]]
+  [[ "$output" == *"✓ GPG key: NOSIGN01 (no passphrase, ready for CI)"* ]]
+}
+
+@test "setup gpg: declining the passphrase-free copy turns GPG off" {
+  mock_gh_unavailable
+  mock_gpg_strip_flow
+  write_full_config "PASSKEY003"
+  mkdir -p "$TEST_TMPDIR/tmp"
+
+  TMPDIR="$TEST_TMPDIR/tmp" run "$TEST_TMPDIR/scripts/setup.sh" gpg <<<"n"
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"! GPG signing will fail in CI. Continuing without GPG."* ]]
+  grep -qx "GPG_KEY_ID=''" "$TEST_TMPDIR/.aurtomator.conf"
+  [ -z "$(ls -A "$TEST_TMPDIR/tmp")" ]
+}
+
+# Helper: the gpg and gpg-connect-agent of mock_gpg_strip_flow, with the step
+# of the passphrase strip named in $STRIP_FAIL failing: export, import,
+# keygrip, passwd or clean
+mock_gpg_strip_failing() {
+  mock_gpg_strip_flow
+  cat >"$TEST_TMPDIR/mock-bin/gpg" <<'EOF'
+#!/usr/bin/env bash
+fail=${STRIP_FAIL:-}
+case "$*" in
+  *--with-keygrip*)
+    [[ "$fail" == keygrip ]] && exit 0
+    echo "ssb   ed25519/PASSKEY003 2026-01-01 [S]"
+    echo "      Keygrip = 0123456789ABCDEF0123456789ABCDEF01234567"
+    ;;
+  *--homedir*--export-secret-subkeys*)
+    [[ "$fail" == clean ]] && exit 0
+    echo "-----BEGIN PGP PRIVATE KEY BLOCK-----"
+    echo "mocked-passphrase-free"
+    echo "-----END PGP PRIVATE KEY BLOCK-----"
+    ;;
+  *--export-secret-subkeys*)
+    [[ "$fail" == export ]] && exit 2
+    echo "-----BEGIN PGP PRIVATE KEY BLOCK-----"
+    echo "mocked-encrypted"
+    echo "-----END PGP PRIVATE KEY BLOCK-----"
+    ;;
+  *--import*)
+    cat >/dev/null
+    [[ "$fail" == import ]] && exit 2
+    ;;
+  *--list-secret-keys*)
+    echo "sec   ed25519/MASTERXXX 2026-01-01 [SC]"
+    echo "ssb   ed25519/PASSKEY003 2026-01-01 [S]"
+    ;;
+  *--sign*) exit 2 ;;
+esac
+exit 0
+EOF
+  cat >"$TEST_TMPDIR/mock-bin/gpg-connect-agent" <<'EOF'
+#!/usr/bin/env bash
+if [[ "${STRIP_FAIL:-}" == passwd ]]; then
+  echo "ERR 83886179 Operation cancelled <Pinentry>"
+else
+  echo "OK"
+fi
+EOF
+}
+
+# The temporary keyring holds the signing subkey, without its passphrase
+# from the PASSWD step on
+@test "setup gpg: each failed step of the passphrase strip removes the temporary keyring" {
+  mock_gh_unavailable
+  mock_gpg_strip_failing
+  mkdir -p "$TEST_TMPDIR/tmp"
+  local step expected
+  while IFS='|' read -r step expected; do
+    write_full_config "PASSKEY003"
+    STRIP_FAIL="$step" TMPDIR="$TEST_TMPDIR/tmp" run "$TEST_TMPDIR/scripts/setup.sh" gpg <<<"y"
+    [ "$status" -eq 0 ]
+    [[ "$output" == *"✗ $expected"* ]]
+    [ -z "$(ls -A "$TEST_TMPDIR/tmp")" ]
+    grep -qx "GPG_KEY_ID=''" "$TEST_TMPDIR/.aurtomator.conf"
+  done <<'EOF'
+export|Failed to export key (wrong passphrase or cancelled)
+import|Failed to import key into temporary keyring
+keygrip|Could not determine keygrip for signing subkey
+passwd|Failed to remove passphrase (cancelled or timed out)
+clean|Failed to export passphrase-free key
+EOF
+}
+
+@test "setup verify: a key that cannot sign is an issue" {
+  cat >"$TEST_TMPDIR/mock-bin/gpg" <<'EOF'
+#!/usr/bin/env bash
+[[ "$*" == *--sign* ]] && exit 2
+exit 0
+EOF
+  write_full_config "NOSIGN01"
+
+  run "$TEST_TMPDIR/scripts/setup.sh" verify --non-interactive
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"✗ GPG: cannot sign with NOSIGN01"* ]]
+  [[ "$output" == *"1 issue(s) found."* ]]
+}
+
+@test "setup verify: a missing secret is an issue" {
+  write_full_config ""
+  cat >"$TEST_TMPDIR/mock-bin/gh" <<'EOF'
+#!/usr/bin/env bash
+[[ "$1 $2" == "secret list" ]] && printf '%s\n' "AUR_SSH_KEY    Updated 2026-03-26" "AUR_GIT_NAME   Updated 2026-03-26"
+exit 0
+EOF
+
+  run "$TEST_TMPDIR/scripts/setup.sh" verify --non-interactive
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"! Secrets: 2/3 configured"* ]]
+  [[ "$output" == *"1 issue(s) found."* ]]
+}
+
+@test "setup verify: without gh the secrets go unchecked" {
+  write_full_config ""
+  mock_gh_unavailable
+
+  run "$TEST_TMPDIR/scripts/setup.sh" verify --non-interactive
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"! Secrets: cannot verify (gh not available)"* ]]
+  [[ "$output" == *"Ready."* ]]
 }

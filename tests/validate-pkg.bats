@@ -122,6 +122,78 @@ current: '$current'"
   done
 }
 
+@test "validate: git-latest describe passes" {
+  local describe
+  for describe in tags annotated; do
+    create_test_package "mypkg" "git-latest" "upstream:
+  type: github
+  project: owner/repo
+  describe: $describe
+  tag_prefix: release/
+current: '1.2.0.rc1.r47.g0bbf5ad'"
+    run "$TEST_TMPDIR/scripts/validate-pkg.sh" "mypkg"
+    [ "$status" -eq 0 ]
+  done
+}
+
+@test "validate: git-latest describe of another value rejected" {
+  create_test_package "mypkg" "git-latest" "upstream:
+  type: github
+  project: owner/repo
+  describe: 'yes'"
+  run "$TEST_TMPDIR/scripts/validate-pkg.sh" "mypkg"
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"upstream.describe must be tags or annotated: yes"* ]]
+}
+
+@test "validate: describe for another strategy rejected" {
+  create_test_package "mypkg" "github-tag" "upstream:
+  project: owner/repo
+  describe: tags"
+  run "$TEST_TMPDIR/scripts/validate-pkg.sh" "mypkg"
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"upstream.describe applies to the git-latest strategy only"* ]]
+}
+
+@test "validate: git-latest tag_prefix without describe rejected" {
+  create_test_package "mypkg" "git-latest" "upstream:
+  type: github
+  project: owner/repo
+  tag_prefix: v"
+  run "$TEST_TMPDIR/scripts/validate-pkg.sh" "mypkg"
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"upstream.tag_prefix applies with upstream.describe only"* ]]
+}
+
+@test "validate: git-latest tag_prefix outside the characters of a tag rejected" {
+  local prefix
+  for prefix in 'a b' 'v*' ''; do
+    create_test_package "mypkg" "git-latest" "upstream:
+  type: github
+  project: owner/repo
+  describe: tags
+  tag_prefix: '$prefix'"
+    run "$TEST_TMPDIR/scripts/validate-pkg.sh" "mypkg"
+    [ "$status" -eq 1 ]
+    [[ "$output" == *"upstream.tag_prefix may hold A-Za-z0-9._+/- only: $prefix"* ]]
+  done
+}
+
+# vercmp reads r504.42cd4ac as older than every 1.2.0.r47.g0bbf5ad
+@test "validate: git-latest describe fails on a current of another form" {
+  local current
+  for current in r504.42cd4ac 1.2.0 1.2.0.r47.0bbf5ad; do
+    create_test_package "mypkg" "git-latest" "upstream:
+  type: github
+  project: owner/repo
+  describe: tags
+current: '$current'"
+    run "$TEST_TMPDIR/scripts/validate-pkg.sh" "mypkg"
+    [ "$status" -eq 1 ]
+    [[ "$output" == *"current must be <tag>.r<count>.g<hash> for git-latest with upstream.describe, the form the strategy prints: $current"* ]]
+  done
+}
+
 @test "validate: branch for another strategy rejected" {
   create_test_package "mypkg" "github-tag" "upstream:
   project: owner/repo
@@ -374,6 +446,30 @@ EOF
   [[ "$output" == *"requires 'upstream.host'"* ]]
 }
 
+@test "validate: git-tag passes" {
+  create_test_package "mypkg" "git-tag" "upstream:
+  url: https://git.example.org/~owner/repo
+  tag_version_regex: '^release-(.+)$'"
+  run "$TEST_TMPDIR/scripts/validate-pkg.sh" "mypkg"
+  [ "$status" -eq 0 ]
+}
+
+@test "validate: git-tag fails without upstream.url" {
+  create_test_package "mypkg" "git-tag" "upstream:
+  project: owner/repo"
+  run "$TEST_TMPDIR/scripts/validate-pkg.sh" "mypkg"
+  [ "$status" -ne 0 ]
+  [[ "$output" == *"strategy 'git-tag' requires 'upstream.url'"* ]]
+}
+
+@test "validate: git-tag fails with a URL other than HTTPS" {
+  create_test_package "mypkg" "git-tag" "upstream:
+  url: http://git.example.org/~owner/repo"
+  run "$TEST_TMPDIR/scripts/validate-pkg.sh" "mypkg"
+  [ "$status" -ne 0 ]
+  [[ "$output" == *"upstream.url must use HTTPS: http://git.example.org/~owner/repo"* ]]
+}
+
 @test "validate: git-latest fails without upstream.type" {
   create_test_package "mypkg" "git-latest" "upstream:
   project: owner/repo"
@@ -397,6 +493,22 @@ EOF
   run "$TEST_TMPDIR/scripts/validate-pkg.sh" "mypkg"
   [ "$status" -ne 0 ]
   [[ "$output" == *"requires 'upstream.host'"* ]]
+}
+
+@test "validate: git-latest gitlab fails without project" {
+  create_test_package "mypkg" "git-latest" "upstream:
+  type: gitlab
+  host: gitlab.example.com"
+  run "$TEST_TMPDIR/scripts/validate-pkg.sh" "mypkg"
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"git-latest type 'gitlab' requires 'upstream.project'"* ]]
+}
+
+@test "validate: refuses a YAML file that does not parse" {
+  printf '%s\n' 'name: mypkg' 'strategy: [github-release' >"$TEST_TMPDIR/packages/mypkg.yml"
+  run "$TEST_TMPDIR/scripts/validate-pkg.sh" "mypkg"
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"Invalid YAML syntax: "*"mypkg.yml"* ]]
 }
 
 @test "validate: git-latest git fails without url" {
@@ -597,6 +709,26 @@ allow_downgrade: $value"
   done
 }
 
+@test "validate: allow_version_jump true passes" {
+  create_test_package "mypkg" "github-release" "upstream:
+  project: owner/repo
+allow_version_jump: true"
+  run "$TEST_TMPDIR/scripts/validate-pkg.sh" "mypkg"
+  [ "$status" -eq 0 ]
+}
+
+@test "validate: allow_version_jump that is not a boolean rejected" {
+  local value
+  for value in yes '"true"' 1; do
+    create_test_package "mypkg" "github-release" "upstream:
+  project: owner/repo
+allow_version_jump: $value"
+    run "$TEST_TMPDIR/scripts/validate-pkg.sh" "mypkg"
+    [ "$status" -ne 0 ]
+    [[ "$output" == *"allow_version_jump must be true or false"* ]]
+  done
+}
+
 @test "validate: pkgver_dash _ or . passes" {
   local value
   for value in _ .; do
@@ -618,6 +750,31 @@ pkgver_dash: $value"
     [ "$status" -ne 0 ]
     [[ "$output" == *"pkgver_dash must be _ or ."* ]]
   done
+}
+
+@test "validate: pkgver_format with %s once passes" {
+  create_test_package "mypkg" "repology" "current: '4.4215'
+pkgver_format: '4.%s'"
+  run "$TEST_TMPDIR/scripts/validate-pkg.sh" "mypkg"
+  [ "$status" -eq 0 ]
+}
+
+@test "validate: pkgver_format without %s once or with other characters rejected" {
+  local value
+  for value in "'4.'" "'%s.%s'" "'4-%s'" "'4 %s'" "'4:%s'" "''" 4; do
+    create_test_package "mypkg" "repology" "pkgver_format: $value"
+    run "$TEST_TMPDIR/scripts/validate-pkg.sh" "mypkg"
+    [ "$status" -ne 0 ]
+    [[ "$output" == *"pkgver_format must hold %s once, with only A-Za-z0-9 . _ + around it"* ]]
+  done
+}
+
+@test "validate: current outside pkgver_format rejected" {
+  create_test_package "mypkg" "repology" "current: '3.4215'
+pkgver_format: '4.%s'"
+  run "$TEST_TMPDIR/scripts/validate-pkg.sh" "mypkg"
+  [ "$status" -ne 0 ]
+  [[ "$output" == *"current 3.4215 does not fit pkgver_format 4.%s"* ]]
 }
 
 # === crates prerelease validation ===
