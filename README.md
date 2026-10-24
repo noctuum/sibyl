@@ -1,7 +1,7 @@
 # sibyl
 
 <!-- BADGES:START -->
-[![Lint & Test](https://github.com/noctuum/sibyl/actions/workflows/ci.yml/badge.svg)](https://github.com/noctuum/sibyl/actions/workflows/ci.yml) [![codecov](https://codecov.io/github/noctuum/sibyl/graph/badge.svg)](https://codecov.io/github/noctuum/sibyl) [![Bash](https://img.shields.io/badge/bash-5%2B-green)](https://www.gnu.org/software/bash/) [![AUR](https://img.shields.io/badge/AUR-automation-orange)](https://aur.archlinux.org/) [![License](https://img.shields.io/badge/license-BSD--3--Clause-blue)](LICENSE)
+[![Lint & Test](https://github.com/noctuum/sibyl/actions/workflows/ci.yml/badge.svg)](https://github.com/noctuum/sibyl/actions/workflows/ci.yml) [![codecov](https://codecov.io/github/staticwire/aurtomator/graph/badge.svg)](https://codecov.io/github/staticwire/aurtomator) [![Bash](https://img.shields.io/badge/bash-5%2B-green)](https://www.gnu.org/software/bash/) [![AUR](https://img.shields.io/badge/AUR-automation-orange)](https://aur.archlinux.org/) [![License](https://img.shields.io/badge/license-BSD--3--Clause-blue)](LICENSE)
 <!-- BADGES:END -->
 
 Automated AUR package updates from a single GitHub repo.  
@@ -12,10 +12,11 @@ Automated AUR package updates from a single GitHub repo.
 ## Packages
 
 <!-- PACKAGES:START -->
-![Check Updates](https://github.com/noctuum/sibyl/actions/workflows/check-updates.yml/badge.svg) ![packages](https://img.shields.io/badge/packages-19%2F19-brightgreen)
+![Check Updates](https://github.com/noctuum/sibyl/actions/workflows/check-updates.yml/badge.svg) ![packages](https://img.shields.io/badge/packages-20%2F20-brightgreen)
 
 <table>
 <tr><th>Package</th><th>Version</th><th>Strategy</th><th>Updated</th><th>Status</th></tr>
+<tr><td><a href="https://aur.archlinux.org/pkgbase/dbhub-mcp-server">dbhub-mcp-server</a></td><td>1.5.0</td><td nowrap>npm</td><td nowrap>—</td><td nowrap>✅ up to date</td></tr>
 <tr><td><a href="https://aur.archlinux.org/pkgbase/kio-s3-git">kio-s3-git</a></td><td>r508.79bf2ea</td><td nowrap>git-latest</td><td nowrap>2026-10-24</td><td nowrap>✅ up to date</td></tr>
 <tr><td><a href="https://aur.archlinux.org/pkgbase/kio-s3">kio-s3</a></td><td>1.0.2</td><td nowrap>kde-tarball</td><td nowrap>2026-04-24</td><td nowrap>✅ up to date</td></tr>
 <tr><td><a href="https://aur.archlinux.org/pkgbase/kqalc-bin">kqalc-bin</a></td><td>0.2.2</td><td nowrap>github-release</td><td nowrap>—</td><td nowrap>✅ up to date</td></tr>

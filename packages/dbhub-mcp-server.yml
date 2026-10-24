@@ -2,3 +2,4 @@ name: dbhub-mcp-server
 strategy: npm
 upstream:
   registry: "@bytebase/dbhub"
+current: 1.5.0
