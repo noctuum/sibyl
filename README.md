@@ -12,7 +12,7 @@ Automated AUR package updates from a single GitHub repo.
 ## Packages
 
 <!-- PACKAGES:START -->
-![Check Updates](https://github.com/noctuum/sibyl/actions/workflows/check-updates.yml/badge.svg) ![packages](https://img.shields.io/badge/packages-14%2F14-brightgreen)
+![Check Updates](https://github.com/noctuum/sibyl/actions/workflows/check-updates.yml/badge.svg) ![packages](https://img.shields.io/badge/packages-16%2F16-brightgreen)
 
 <table>
 <tr><th>Package</th><th>Version</th><th>Strategy</th><th>Updated</th><th>Status</th></tr>
@@ -20,6 +20,7 @@ Automated AUR package updates from a single GitHub repo.
 <tr><td><a href="https://aur.archlinux.org/pkgbase/kio-s3">kio-s3</a></td><td>1.0.2</td><td nowrap>kde-tarball</td><td nowrap>2026-04-24</td><td nowrap>✅ up to date</td></tr>
 <tr><td><a href="https://aur.archlinux.org/pkgbase/kqalc-bin">kqalc-bin</a></td><td>0.2.2</td><td nowrap>github-release</td><td nowrap>—</td><td nowrap>✅ up to date</td></tr>
 <tr><td><a href="https://aur.archlinux.org/pkgbase/liblinear">liblinear</a></td><td>2.50</td><td nowrap>webpage-scrape</td><td nowrap>—</td><td nowrap>✅ up to date</td></tr>
+<tr><td><a href="https://aur.archlinux.org/pkgbase/linux-exploit-suggester">linux-exploit-suggester</a></td><td>1.2</td><td nowrap>github-tag</td><td nowrap>—</td><td nowrap>✅ up to date</td></tr>
 <tr><td><a href="https://aur.archlinux.org/pkgbase/marp-cli-bin">marp-cli-bin</a></td><td>4.5.1</td><td nowrap>github-release</td><td nowrap>2026-09-06</td><td nowrap>✅ up to date</td></tr>
 <tr><td><a href="https://aur.archlinux.org/pkgbase/memos-bin">memos-bin</a></td><td>0.31.0</td><td nowrap>github-release</td><td nowrap>2026-09-19</td><td nowrap>✅ up to date</td></tr>
 <tr><td><a href="https://aur.archlinux.org/pkgbase/miniflux-bin">miniflux-bin</a></td><td>2.3.4</td><td nowrap>github-release</td><td nowrap>2026-10-20</td><td nowrap>✅ up to date</td></tr>
@@ -28,6 +29,7 @@ Automated AUR package updates from a single GitHub repo.
 <tr><td><a href="https://aur.archlinux.org/pkgbase/sherpa-onnx-piper-voice-ru-denis">sherpa-onnx-piper-voice-ru-denis</a></td><td>20251202</td><td nowrap>github-asset</td><td nowrap>—</td><td nowrap>✅ up to date</td></tr>
 <tr><td><a href="https://aur.archlinux.org/pkgbase/sherpa-onnx-piper-voice-ru-dmitri">sherpa-onnx-piper-voice-ru-dmitri</a></td><td>20251202</td><td nowrap>github-asset</td><td nowrap>—</td><td nowrap>✅ up to date</td></tr>
 <tr><td><a href="https://aur.archlinux.org/pkgbase/sherpa-onnx-piper-voice-ru-ruslan">sherpa-onnx-piper-voice-ru-ruslan</a></td><td>20251202</td><td nowrap>github-asset</td><td nowrap>—</td><td nowrap>✅ up to date</td></tr>
+<tr><td><a href="https://aur.archlinux.org/pkgbase/transfuse">transfuse</a></td><td>0.6.0</td><td nowrap>gitlab-tag</td><td nowrap>—</td><td nowrap>✅ up to date</td></tr>
 <tr><td><a href="https://aur.archlinux.org/pkgbase/wireguard-gui-bin">wireguard-gui-bin</a></td><td>0.1.12</td><td nowrap>github-release</td><td nowrap>2026-07-04</td><td nowrap>✅ up to date</td></tr>
 <tr><td><a href="https://aur.archlinux.org/pkgbase/ydiskarc">ydiskarc</a></td><td>1.1.0</td><td nowrap>pypi</td><td nowrap>—</td><td nowrap>✅ up to date</td></tr>
 </table>
