@@ -14,22 +14,23 @@ Automated AUR package updates from a single GitHub repo.
 <!-- PACKAGES:START -->
 ![Check Updates](https://github.com/noctuum/sibyl/actions/workflows/check-updates.yml/badge.svg) ![packages](https://img.shields.io/badge/packages-14%2F14-brightgreen)
 
-| Package | Version | Strategy | Updated | Status |
-|---------|---------|----------|---------|--------|
-| [kio-s3-git](https://aur.archlinux.org/pkgbase/kio-s3-git) | r508.79bf2ea | git-latest | 2026-10-24 | 🔄 updated to r508.79bf2ea |
-| [kio-s3](https://aur.archlinux.org/pkgbase/kio-s3) | 1.0.2 | kde-tarball | 2026-04-24 | ✅ up to date |
-| [kqalc-bin](https://aur.archlinux.org/pkgbase/kqalc-bin) | 0.2.2 | github-release | — | ✅ up to date |
-| [liblinear](https://aur.archlinux.org/pkgbase/liblinear) | 2.50 | webpage-scrape | — | ✅ up to date |
-| [marp-cli-bin](https://aur.archlinux.org/pkgbase/marp-cli-bin) | 4.5.1 | github-release | 2026-09-06 | ✅ up to date |
-| [memos-bin](https://aur.archlinux.org/pkgbase/memos-bin) | 0.31.0 | github-release | 2026-09-19 | ✅ up to date |
-| [miniflux-bin](https://aur.archlinux.org/pkgbase/miniflux-bin) | 2.3.4 | github-release | 2026-10-20 | ✅ up to date |
-| [neovim-nightly-bin](https://aur.archlinux.org/pkgbase/neovim-nightly-bin) | 0.13.0+dev+1944+g7b87ce822e | github-nightly | 2026-10-24 | 🔄 updated to 0.13.0+dev+1944+g7b87ce822e |
-| [sherpa-onnx-bin](https://aur.archlinux.org/pkgbase/sherpa-onnx-bin) | 2.0.0 | github-release | 2026-10-23 | ✅ up to date |
-| [sherpa-onnx-piper-voice-ru-denis](https://aur.archlinux.org/pkgbase/sherpa-onnx-piper-voice-ru-denis) | 20251202 | github-asset | — | ✅ up to date |
-| [sherpa-onnx-piper-voice-ru-dmitri](https://aur.archlinux.org/pkgbase/sherpa-onnx-piper-voice-ru-dmitri) | 20251202 | github-asset | — | ✅ up to date |
-| [sherpa-onnx-piper-voice-ru-ruslan](https://aur.archlinux.org/pkgbase/sherpa-onnx-piper-voice-ru-ruslan) | 20251202 | github-asset | — | ✅ up to date |
-| [wireguard-gui-bin](https://aur.archlinux.org/pkgbase/wireguard-gui-bin) | 0.1.12 | github-release | 2026-07-04 | ✅ up to date |
-| [ydiskarc](https://aur.archlinux.org/pkgbase/ydiskarc) | 1.1.0 | pypi | — | ✅ up to date |
+<table>
+<tr><th>Package</th><th>Version</th><th>Strategy</th><th>Updated</th><th>Status</th></tr>
+<tr><td><a href="https://aur.archlinux.org/pkgbase/kio-s3-git">kio-s3-git</a></td><td>r508.79bf2ea</td><td nowrap>git-latest</td><td nowrap>2026-10-24</td><td nowrap>✅ up to date</td></tr>
+<tr><td><a href="https://aur.archlinux.org/pkgbase/kio-s3">kio-s3</a></td><td>1.0.2</td><td nowrap>kde-tarball</td><td nowrap>2026-04-24</td><td nowrap>✅ up to date</td></tr>
+<tr><td><a href="https://aur.archlinux.org/pkgbase/kqalc-bin">kqalc-bin</a></td><td>0.2.2</td><td nowrap>github-release</td><td nowrap>—</td><td nowrap>✅ up to date</td></tr>
+<tr><td><a href="https://aur.archlinux.org/pkgbase/liblinear">liblinear</a></td><td>2.50</td><td nowrap>webpage-scrape</td><td nowrap>—</td><td nowrap>✅ up to date</td></tr>
+<tr><td><a href="https://aur.archlinux.org/pkgbase/marp-cli-bin">marp-cli-bin</a></td><td>4.5.1</td><td nowrap>github-release</td><td nowrap>2026-09-06</td><td nowrap>✅ up to date</td></tr>
+<tr><td><a href="https://aur.archlinux.org/pkgbase/memos-bin">memos-bin</a></td><td>0.31.0</td><td nowrap>github-release</td><td nowrap>2026-09-19</td><td nowrap>✅ up to date</td></tr>
+<tr><td><a href="https://aur.archlinux.org/pkgbase/miniflux-bin">miniflux-bin</a></td><td>2.3.4</td><td nowrap>github-release</td><td nowrap>2026-10-20</td><td nowrap>✅ up to date</td></tr>
+<tr><td><a href="https://aur.archlinux.org/pkgbase/neovim-nightly-bin">neovim-nightly-bin</a></td><td>0.13.0+dev+1944+g7b87ce822e</td><td nowrap>github-nightly</td><td nowrap>2026-10-24</td><td nowrap>✅ up to date</td></tr>
+<tr><td><a href="https://aur.archlinux.org/pkgbase/sherpa-onnx-bin">sherpa-onnx-bin</a></td><td>2.0.0</td><td nowrap>github-release</td><td nowrap>2026-10-23</td><td nowrap>✅ up to date</td></tr>
+<tr><td><a href="https://aur.archlinux.org/pkgbase/sherpa-onnx-piper-voice-ru-denis">sherpa-onnx-piper-voice-ru-denis</a></td><td>20251202</td><td nowrap>github-asset</td><td nowrap>—</td><td nowrap>✅ up to date</td></tr>
+<tr><td><a href="https://aur.archlinux.org/pkgbase/sherpa-onnx-piper-voice-ru-dmitri">sherpa-onnx-piper-voice-ru-dmitri</a></td><td>20251202</td><td nowrap>github-asset</td><td nowrap>—</td><td nowrap>✅ up to date</td></tr>
+<tr><td><a href="https://aur.archlinux.org/pkgbase/sherpa-onnx-piper-voice-ru-ruslan">sherpa-onnx-piper-voice-ru-ruslan</a></td><td>20251202</td><td nowrap>github-asset</td><td nowrap>—</td><td nowrap>✅ up to date</td></tr>
+<tr><td><a href="https://aur.archlinux.org/pkgbase/wireguard-gui-bin">wireguard-gui-bin</a></td><td>0.1.12</td><td nowrap>github-release</td><td nowrap>2026-07-04</td><td nowrap>✅ up to date</td></tr>
+<tr><td><a href="https://aur.archlinux.org/pkgbase/ydiskarc">ydiskarc</a></td><td>1.1.0</td><td nowrap>pypi</td><td nowrap>—</td><td nowrap>✅ up to date</td></tr>
+</table>
 <!-- PACKAGES:END -->
 
 *Auto-generated by CI after each run.*
