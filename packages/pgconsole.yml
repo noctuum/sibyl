@@ -2,3 +2,4 @@ name: pgconsole
 strategy: npm
 upstream:
   registry: "@pgplex/pgconsole"
+current: 1.3.0
