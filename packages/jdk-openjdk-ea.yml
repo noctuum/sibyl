@@ -1,0 +1,5 @@
+name: jdk-openjdk-ea
+strategy: github-tag
+upstream:
+  project: openjdk/jdk
+  tag_version_regex: '^jdk-([0-9]+\+[0-9]+)$'
