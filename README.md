@@ -27,7 +27,7 @@ Automated AUR package updates from a single GitHub repo.
 <tr><td><a href="https://aur.archlinux.org/pkgbase/marp-cli-bin">marp-cli-bin</a></td><td>4.5.1</td><td nowrap>github-release</td><td nowrap>2026-09-06</td><td nowrap>✅ up to date</td></tr>
 <tr><td><a href="https://aur.archlinux.org/pkgbase/memos-bin">memos-bin</a></td><td>0.31.0</td><td nowrap>github-release</td><td nowrap>2026-09-19</td><td nowrap>✅ up to date</td></tr>
 <tr><td><a href="https://aur.archlinux.org/pkgbase/miniflux-bin">miniflux-bin</a></td><td>2.3.4</td><td nowrap>github-release</td><td nowrap>2026-10-20</td><td nowrap>✅ up to date</td></tr>
-<tr><td><a href="https://aur.archlinux.org/pkgbase/neovim-nightly-bin">neovim-nightly-bin</a></td><td>0.13.0+dev+1952+g187d13aa60</td><td nowrap>github-nightly</td><td nowrap>2026-10-26</td><td nowrap>🔄 updated to 0.13.0+dev+1952+g187d13aa60</td></tr>
+<tr><td><a href="https://aur.archlinux.org/pkgbase/neovim-nightly-bin">neovim-nightly-bin</a></td><td>0.13.0+dev+1952+g187d13aa60</td><td nowrap>github-nightly</td><td nowrap>2026-10-26</td><td nowrap>✅ up to date</td></tr>
 <tr><td><a href="https://aur.archlinux.org/pkgbase/pgconsole">pgconsole</a></td><td>1.3.0</td><td nowrap>npm</td><td nowrap>—</td><td nowrap>✅ up to date</td></tr>
 <tr><td><a href="https://aur.archlinux.org/pkgbase/pgtui-bin">pgtui-bin</a></td><td>0.3.0</td><td nowrap>github-release</td><td nowrap>—</td><td nowrap>✅ up to date</td></tr>
 <tr><td><a href="https://aur.archlinux.org/pkgbase/pgtui">pgtui</a></td><td>0.3.0</td><td nowrap>github-release</td><td nowrap>—</td><td nowrap>✅ up to date</td></tr>
