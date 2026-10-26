@@ -3,3 +3,4 @@ strategy: webpage-scrape
 upstream:
   url: "https://api.adoptium.net/v3/info/release_names?release_type=ea&image_type=jdk&os=linux&architecture=x64&vendor=eclipse&page_size=20&sort_order=DESC"
   pattern: 'jdk-([0-9]+\+[0-9]+)-ea-beta'
+current: 28+21
