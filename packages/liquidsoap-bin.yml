@@ -1,0 +1,8 @@
+name: liquidsoap-bin
+strategy: github-tag
+upstream:
+  project: savonet/liquidsoap
+  tag_version_regex: '^v([0-9.]+(-rc[0-9]+)?)$'
+  asset_regex: '^liquidsoap_([0-9.]+-debian-forky-ocaml5\.[0-9.]+-[0-9]+)_amd64\.deb$'
+  asset_var: _deb
+pkgver_dash: ''
