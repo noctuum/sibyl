@@ -2,3 +2,4 @@ name: oasdiff-bin
 strategy: github-release
 upstream:
   project: oasdiff/oasdiff
+current: 1.34.1
