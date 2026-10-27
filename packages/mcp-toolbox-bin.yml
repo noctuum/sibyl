@@ -1,0 +1,4 @@
+name: mcp-toolbox-bin
+strategy: github-release
+upstream:
+  project: googleapis/mcp-toolbox
