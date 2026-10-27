@@ -1,0 +1,6 @@
+name: whodb-bin
+strategy: github-release
+upstream:
+  project: clidey/whodb
+  asset_regex: '^(whodb-[0-9.]+)-linux-amd64$'
+  asset_var: _bin
