@@ -1,0 +1,5 @@
+name: webdav-git
+strategy: git-latest
+upstream:
+  type: github
+  project: hacdias/webdav

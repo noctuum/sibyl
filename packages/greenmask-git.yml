@@ -1,0 +1,5 @@
+name: greenmask-git
+strategy: git-latest
+upstream:
+  type: github
+  project: GreenmaskIO/greenmask

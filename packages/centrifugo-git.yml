@@ -1,0 +1,5 @@
+name: centrifugo-git
+strategy: git-latest
+upstream:
+  type: github
+  project: centrifugal/centrifugo

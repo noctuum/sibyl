@@ -1,0 +1,5 @@
+name: pocket-tts-git
+strategy: git-latest
+upstream:
+  type: github
+  project: kyutai-labs/pocket-tts
