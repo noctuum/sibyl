@@ -2,3 +2,4 @@ name: pocket-tts
 strategy: github-release
 upstream:
   project: kyutai-labs/pocket-tts
+current: 4.0.1
