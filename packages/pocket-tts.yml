@@ -1,0 +1,4 @@
+name: pocket-tts
+strategy: github-release
+upstream:
+  project: kyutai-labs/pocket-tts
