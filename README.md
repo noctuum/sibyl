@@ -19,7 +19,7 @@ Automated AUR package updates from a single GitHub repo.
 <tr><td><a href="https://aur.archlinux.org/pkgbase/dbhub-mcp-server">dbhub-mcp-server</a></td><td>1.5.0</td><td nowrap>npm</td><td nowrap>—</td><td nowrap>✅ up to date</td></tr>
 <tr><td><a href="https://aur.archlinux.org/pkgbase/jdk-openjdk-ea">jdk-openjdk-ea</a></td><td>28+21</td><td nowrap>github-tag</td><td nowrap>—</td><td nowrap>✅ up to date</td></tr>
 <tr><td><a href="https://aur.archlinux.org/pkgbase/jdk-temurin-ea-bin">jdk-temurin-ea-bin</a></td><td>28+21</td><td nowrap>webpage-scrape</td><td nowrap>—</td><td nowrap>✅ up to date</td></tr>
-<tr><td><a href="https://aur.archlinux.org/pkgbase/kio-s3-git">kio-s3-git</a></td><td>r509.e0f5608</td><td nowrap>git-latest</td><td nowrap>2026-10-25</td><td nowrap>✅ up to date</td></tr>
+<tr><td><a href="https://aur.archlinux.org/pkgbase/kio-s3-git">kio-s3-git</a></td><td>r510.3cc7ccc</td><td nowrap>git-latest</td><td nowrap>2026-10-27</td><td nowrap>📦 updated to r510.3cc7ccc</td></tr>
 <tr><td><a href="https://aur.archlinux.org/pkgbase/kio-s3">kio-s3</a></td><td>1.0.2</td><td nowrap>kde-tarball</td><td nowrap>2026-04-24</td><td nowrap>✅ up to date</td></tr>
 <tr><td><a href="https://aur.archlinux.org/pkgbase/kqalc-bin">kqalc-bin</a></td><td>0.2.2</td><td nowrap>github-release</td><td nowrap>—</td><td nowrap>✅ up to date</td></tr>
 <tr><td><a href="https://aur.archlinux.org/pkgbase/liblinear">liblinear</a></td><td>2.50</td><td nowrap>webpage-scrape</td><td nowrap>—</td><td nowrap>✅ up to date</td></tr>
