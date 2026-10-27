@@ -1,0 +1,6 @@
+name: pocket-tts-bin
+strategy: github-release
+upstream:
+  project: kyutai-labs/pocket-tts
+  asset_regex: '^(pocket-tts-[0-9.]+)-x86_64-unknown-linux-gnu\.tar\.gz$'
+  asset_var: _bin
