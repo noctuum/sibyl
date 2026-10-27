@@ -1,0 +1,4 @@
+name: oasdiff
+strategy: github-release
+upstream:
+  project: oasdiff/oasdiff

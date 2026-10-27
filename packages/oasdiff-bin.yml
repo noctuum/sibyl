@@ -1,0 +1,4 @@
+name: oasdiff-bin
+strategy: github-release
+upstream:
+  project: oasdiff/oasdiff
