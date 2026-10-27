@@ -675,6 +675,7 @@ current: '1.0.0'"
   git -C "$AUR_REMOTE" show HEAD:PKGBUILD | grep -qx 'pkgver=1.1.0'
   [ "$(git -C "$AUR_REMOTE" log -1 --format=%s)" = "1.1.0 release from github-release" ]
   [ "$(pkg_get "$TEST_TMPDIR/packages/demo.yml" .current)" = "1.1.0" ]
+  [ "$(pkg_get "$TEST_TMPDIR/packages/demo.yml" 'has("current_asset")')" = "false" ]
 }
 
 @test "publish-pkg: clones the AUR repo without a checkout and keeps its other files" {
@@ -1286,6 +1287,23 @@ current: '13'"
   [ "$(cat "$TEST_TMPDIR/out/status/_error_count")" = "0" ]
 }
 
+@test "check-all --prepare: prepares no update the check run held" {
+  create_test_package "held" "github-release" "upstream:
+  project: owner/repo
+current: 28+25
+alerts:
+  - when: major
+    hold: true
+    note: Raise makedepends java-environment to 28"
+  echo "held: 29+1" >"$TEST_TMPDIR/.status/held"
+  stub_script update-pkg.sh 0
+  run "$TEST_TMPDIR/scripts/check-all.sh" --prepare "$TEST_TMPDIR/out"
+  [ "$status" -eq 0 ]
+  [ ! -e "$TEST_TMPDIR/update-pkg.sh.args" ]
+  [ "$(cat "$TEST_TMPDIR/out/status/held")" = "held: 29+1" ]
+  [ "$(cat "$TEST_TMPDIR/out/status/_error_count")" = "0" ]
+}
+
 @test "check-all --prepare: records a failed preparation" {
   create_test_package "pkg" "github-release" "upstream:
   project: owner/repo
@@ -1383,6 +1401,97 @@ current: '13'"
   [ "$status" -eq 0 ]
   [ ! -e "$TEST_TMPDIR/publish-pkg.sh.args" ]
   [ "$(cat "$TEST_TMPDIR/.status/jumpy")" = "jump_skipped: 2026102100" ]
+}
+
+@test "check-all --prepare and --publish: carry the aurtomator release status of the check run" {
+  echo "0.6.0" >"$TEST_TMPDIR/VERSION"
+  echo "newer: 0.7.0" >"$TEST_TMPDIR/.status/_upstream"
+  MOCK_UPSTREAM_TAG=fail run "$TEST_TMPDIR/scripts/check-all.sh" --prepare "$TEST_TMPDIR/out"
+  [ "$status" -eq 0 ]
+  [ "$(cat "$TEST_TMPDIR/.status/_upstream")" = "newer: 0.7.0" ]
+  MOCK_UPSTREAM_TAG=fail run "$TEST_TMPDIR/scripts/check-all.sh" --publish "$TEST_TMPDIR/out"
+  [ "$status" -eq 0 ]
+  [ "$(cat "$TEST_TMPDIR/.status/_upstream")" = "newer: 0.7.0" ]
+}
+
+@test "check-all --publish: drops an aurtomator release status it does not know" {
+  local upstream
+  for upstream in "newer: 0.7" "later: 0.7.0" "newer: 0.7.0 x" "x newer: 0.7.0"; do
+    printf '%s\n' "$upstream" >"$TEST_TMPDIR/.status/_upstream"
+    run "$TEST_TMPDIR/scripts/check-all.sh" --publish "$TEST_TMPDIR/out"
+    [ "$status" -eq 0 ]
+    [ ! -e "$TEST_TMPDIR/.status/_upstream" ] || {
+      echo "kept: $upstream"
+      return 1
+    }
+  done
+}
+
+@test "check-all --publish: keeps a held update and publishes nothing" {
+  create_test_package "held" "github-release" "upstream:
+  project: owner/repo
+current: 28+25"
+  checked_status held "held: 29+1"
+  stub_script publish-pkg.sh 0
+  run "$TEST_TMPDIR/scripts/check-all.sh" --publish "$TEST_TMPDIR/out"
+  [ "$status" -eq 0 ]
+  [ ! -e "$TEST_TMPDIR/publish-pkg.sh.args" ]
+  [ "$(cat "$TEST_TMPDIR/.status/held")" = "held: 29+1" ]
+  [ "$(cat "$TEST_TMPDIR/.status/_error_count")" = "0" ]
+}
+
+@test "check-all --publish: keeps a held update and records the notes of its alerts again" {
+  create_test_package "held" "github-release" "upstream:
+  project: owner/repo
+current: 28+25
+alerts:
+  - when: major
+    note: Create the package for the old major
+  - from: '29'
+    hold: true
+    note: Raise makedepends java-environment to 28"
+  checked_status held "held: 29+1"
+  printf 'held\thold\tstale note\n' >"$TEST_TMPDIR/.status/_alerts"
+  stub_script publish-pkg.sh 0
+  run "$TEST_TMPDIR/scripts/check-all.sh" --publish "$TEST_TMPDIR/out"
+  [ "$status" -eq 0 ]
+  [ ! -e "$TEST_TMPDIR/publish-pkg.sh.args" ]
+  [ "$(cat "$TEST_TMPDIR/.status/held")" = "held: 29+1" ]
+  [ "$(cat "$TEST_TMPDIR/.status/_alerts")" = $'held\tnotice\tCreate the package for the old major\nheld\thold\tRaise makedepends java-environment to 28' ]
+}
+
+@test "check-all --publish: publishes no update an alert with hold: true fires on" {
+  create_test_package "held" "github-release" "upstream:
+  project: owner/repo
+current: 28+25
+alerts:
+  - when: major
+    hold: true
+    note: Raise makedepends java-environment to 28"
+  checked_status held "new_version: 29+1"
+  mkdir -p "$TEST_TMPDIR/out/prepared/held"
+  stub_script publish-pkg.sh 0
+  run "$TEST_TMPDIR/scripts/check-all.sh" --publish "$TEST_TMPDIR/out"
+  [ "$status" -eq 0 ]
+  [ ! -e "$TEST_TMPDIR/publish-pkg.sh.args" ]
+  [ "$(cat "$TEST_TMPDIR/.status/held")" = "held: 29+1" ]
+}
+
+@test "check-all --publish: publishes an update an alert without hold fires on" {
+  create_test_package "noted" "github-release" "upstream:
+  project: owner/repo
+current: 28+25
+alerts:
+  - when: major
+    note: Create the package for the old major"
+  checked_status noted "new_version: 29+1"
+  mkdir -p "$TEST_TMPDIR/out/prepared/noted"
+  stub_script publish-pkg.sh 0
+  run "$TEST_TMPDIR/scripts/check-all.sh" --publish "$TEST_TMPDIR/out"
+  [ "$status" -eq 0 ]
+  [ "$(cat "$TEST_TMPDIR/publish-pkg.sh.args")" = "noted 29+1 $TEST_TMPDIR/out/prepared/noted" ]
+  [ "$(cat "$TEST_TMPDIR/.status/noted")" = "updated: 29+1" ]
+  [ "$(cat "$TEST_TMPDIR/.status/_alerts")" = $'noted\tnotice\tCreate the package for the old major' ]
 }
 
 @test "check-all --publish: marks a package the check run left out" {
@@ -1663,6 +1772,21 @@ EOF
   child_ended hang.sh
 }
 
+@test "check-all: an asset lookup that hangs fails after the budget of a check and gets no second pass" {
+  create_test_package "pkg" "github-release" "upstream:
+  project: owner/repo
+  asset_regex: '^pkg_(.+)\\.tar\\.gz\$'
+  asset_var: _pkg
+current: '1.0.0'"
+  hanging_script check-asset.sh
+  SECONDS=0
+  AURTOMATOR_CHECK_TIMEOUT=1 run "$TEST_TMPDIR/scripts/check-all.sh"
+  [ "$SECONDS" -lt 10 ]
+  [ "$(cat "$TEST_TMPDIR/.status/pkg")" = "check_failed: timed out after 1 s" ]
+  [[ "$output" != *"again"* ]]
+  child_ended check-asset.sh
+}
+
 @test "check-all --prepare: an update that hangs fails after its time budget" {
   create_test_package "pkg" "github-release" "upstream:
   project: owner/repo
@@ -1848,6 +1972,76 @@ current: '1.0.0'"
   run "$TEST_TMPDIR/scripts/check-all.sh" --verify "$TEST_TMPDIR/out"
   [ "$status" -eq 0 ]
   [ "$(cat "$TEST_TMPDIR/verify-pkg.sh.args")" = "pkg $TEST_TMPDIR/out/prepared/pkg" ]
+}
+
+# === alert_issue_body ===
+
+@test "alert_issue_body: lists every note of a held update" {
+  echo "held: 29+1" >"$TEST_TMPDIR/demo"
+  printf '%s\t%s\t%s\n' demo notice "Create the package for the old major" other hold "Not this one" \
+    demo hold "Raise makedepends java-environment to 28" >"$TEST_TMPDIR/_alerts"
+  run alert_issue_body "$TEST_TMPDIR/demo" https://github.com/owner/repo/actions/runs/1
+  [ "$status" -eq 0 ]
+  expected=$(
+    cat <<'EOF'
+Package: `demo`
+Held version: `29+1`
+Run: https://github.com/owner/repo/actions/runs/1
+
+- Create the package for the old major
+- Raise makedepends java-environment to 28
+
+Auto-created by update workflow. Publish the version by hand after the edit and set `current` in the package YAML to it. The next run closes this issue.
+EOF
+  )
+  [ "$output" = "$expected" ]
+}
+
+@test "alert_issue_body: writes the body without _alerts" {
+  echo "held: 29+1" >"$TEST_TMPDIR/demo"
+  run --keep-empty-lines alert_issue_body "$TEST_TMPDIR/demo" https://example.invalid/run
+  [ "$status" -eq 0 ]
+  [ "${lines[1]}" = 'Held version: `29+1`' ]
+  [ "${lines[4]}" = "" ]
+}
+
+@test "alert_issue_body: lists the notes of a published update" {
+  echo "updated: 29+1" >"$TEST_TMPDIR/demo"
+  printf '%s\t%s\t%s\n' demo notice "Create the package for the old major" >"$TEST_TMPDIR/_alerts"
+  run alert_issue_body "$TEST_TMPDIR/demo" https://example.invalid/run
+  [ "$status" -eq 0 ]
+  expected=$(
+    cat <<'EOF'
+Package: `demo`
+Published version: `29+1`
+Run: https://example.invalid/run
+
+- Create the package for the old major
+
+Auto-created by update workflow. Close it once the edit is done.
+EOF
+  )
+  [ "$output" = "$expected" ]
+}
+
+# === upstream_issue_body ===
+
+@test "upstream_issue_body: names the release, the version of the repository and the notes" {
+  echo "0.6.0" >"$TEST_TMPDIR/VERSION"
+  echo "newer: 0.7.0" >"$TEST_TMPDIR/_upstream"
+  run upstream_issue_body "$TEST_TMPDIR/_upstream" https://example.invalid/run
+  [ "$status" -eq 0 ]
+  expected=$(
+    cat <<'EOF'
+aurtomator 0.7.0 is out, and this repository runs 0.6.0.
+
+Release notes: https://github.com/staticwire/aurtomator/releases/tag/v0.7.0
+Run: https://example.invalid/run
+
+Auto-created by update workflow. A run closes it once `VERSION` holds this release, or once a newer release is out.
+EOF
+  )
+  [ "$output" = "$expected" ]
 }
 
 # === failure_issue_body ===
@@ -2774,4 +2968,535 @@ write_srcinfo_arch() {
   run check_prepared_files "$TEST_TMPDIR/aur" "$TEST_TMPDIR/prepared" 1.1.0
   [ "$status" -eq 1 ]
   [[ "$output" == *"PKGBUILD in the AUR repo is missing, a symlink or not a regular file"* ]]
+}
+
+# === values from release asset names ===
+
+# Values of _deb, the part of a liquidsoap asset name past the package
+# name: two builds of 2.4.6 and the build of 2.5.0-rc1
+V246_2=2.4.6-debian-forky-ocaml5.4.0-2
+V246_3=2.4.6-debian-forky-ocaml5.4.0-3
+V250=2.5.0-debian-forky-ocaml5.5.1-1
+
+# Helper: PKGBUILD of a package that takes the name of its download from
+# _deb, as liquidsoap-bin does
+# Usage: write_asset_pkgbuild <path> <pkgver> <_deb> <pkgrel> <sha256sum>
+write_asset_pkgbuild() {
+  cat >"$1" <<EOF
+pkgname=demo
+pkgver=$2
+_deb=$3
+pkgrel=$4
+pkgdesc="demo"
+arch=('x86_64')
+url="https://example.com"
+license=('MIT')
+_tag="v\${pkgver/rc/-rc}"
+source=("https://example.com/download/\${_tag}/demo_\${_deb}_amd64.deb")
+sha256sums=('$5')
+
+package() {
+  :
+}
+EOF
+}
+
+# Helper: the .SRCINFO makepkg prints for that PKGBUILD
+# Usage: write_asset_srcinfo <path> <pkgver> <pkgrel> <_deb> <sha256sum>
+write_asset_srcinfo() {
+  printf '%s\n' "pkgbase = demo" $'\tpkgver = '"$2" $'\tpkgrel = '"$3" \
+    $'\tsource = https://example.com/download/v'"${2/rc/-rc}/demo_$4"'_amd64.deb' \
+    $'\tsha256sums = '"$5" "" "pkgname = demo" >"$1"
+}
+
+@test "_bumped_line: refuses a prepared line that lacks the new asset value" {
+  run _bumped_line "a${V246_2}a" "a" 2.4.6 2.4.6 "" "" drop "$V246_2" "$V246_3"
+  [ "$status" -eq 1 ]
+}
+
+@test "check_prepared_pkgbuild: accepts the asset value of the check run" {
+  write_asset_pkgbuild "$OLD" 2.4.6 "$V246_3" 1 "$H1"
+  write_asset_pkgbuild "$NEW" 2.5.0rc1 "$V250" 1 "$H2"
+  run check_prepared_pkgbuild "$OLD" "$NEW" 2.5.0rc1 1 _deb "$V250"
+  [ "$status" -eq 0 ]
+}
+
+@test "check_prepared_pkgbuild: rejects another asset value" {
+  write_asset_pkgbuild "$OLD" 2.4.6 "$V246_3" 1 "$H1"
+  write_asset_pkgbuild "$NEW" 2.5.0rc1 "$V250" 1 "$H2"
+  run check_prepared_pkgbuild "$OLD" "$NEW" 2.5.0rc1 1 _deb "${V250%-1}-2"
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"Prepared PKGBUILD has _deb=${V250}, expected ${V250%-1}-2"* ]]
+}
+
+@test "check_prepared_pkgbuild: rejects a PKGBUILD without the asset line" {
+  write_pkgbuild "$OLD" 1.0.0 1 "sha256sums=('$H1' '$H2')"
+  write_pkgbuild "$NEW" 1.1.0 1 "sha256sums=('$H3' '$H4')"
+  run check_prepared_pkgbuild "$OLD" "$NEW" 1.1.0 1 _deb "$V250"
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"Prepared PKGBUILD needs one _deb= line, it has 0"* ]]
+}
+
+@test "check_prepared_pkgbuild: rejects a second asset line" {
+  write_asset_pkgbuild "$OLD" 2.4.6 "$V246_3" 1 "$H1"
+  write_asset_pkgbuild "$NEW" 2.5.0rc1 "$V250" 1 "$H2"
+  sed -i "/^_deb=/a _deb=$V246_3" "$OLD"
+  sed -i "/^_deb=/a _deb=$V250" "$NEW"
+  run check_prepared_pkgbuild "$OLD" "$NEW" 2.5.0rc1 1 _deb "$V250"
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"Prepared PKGBUILD needs one _deb= line, it has 2"* ]]
+}
+
+@test "check_prepared_pkgbuild: counts only a line that starts with the asset_var" {
+  write_asset_pkgbuild "$OLD" 2.4.6 "$V246_3" 1 "$H1"
+  write_asset_pkgbuild "$NEW" 2.5.0rc1 "$V250" 1 "$H2"
+  sed -i 's/^  :$/  local _deb=x/' "$OLD" "$NEW"
+  run check_prepared_pkgbuild "$OLD" "$NEW" 2.5.0rc1 1 _deb "$V250"
+  [ "$status" -eq 0 ]
+}
+
+@test "check_prepared_pkgbuild: accepts the pkgrel it is given" {
+  write_asset_pkgbuild "$OLD" 2.4.6 "$V246_2" 1 "$H1"
+  write_asset_pkgbuild "$NEW" 2.4.6 "$V246_3" 2 "$H2"
+  run check_prepared_pkgbuild "$OLD" "$NEW" 2.4.6 2 _deb "$V246_3"
+  [ "$status" -eq 0 ]
+}
+
+@test "check_prepared_pkgbuild: rejects a pkgrel other than the one it is given" {
+  write_asset_pkgbuild "$OLD" 2.4.6 "$V246_2" 1 "$H1"
+  write_asset_pkgbuild "$NEW" 2.4.6 "$V246_3" 1 "$H2"
+  run check_prepared_pkgbuild "$OLD" "$NEW" 2.4.6 2 _deb "$V246_3"
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"Prepared PKGBUILD has pkgrel=1, expected 2"* ]]
+}
+
+@test "check_prepared_srcinfo: accepts a source with the new asset value" {
+  write_asset_srcinfo "$TEST_TMPDIR/old.SRCINFO" 2.4.6 1 "$V246_3" "$H1"
+  write_asset_srcinfo "$TEST_TMPDIR/new.SRCINFO" 2.5.0 1 "$V250" "$H2"
+  run check_prepared_srcinfo "$TEST_TMPDIR/old.SRCINFO" "$TEST_TMPDIR/new.SRCINFO" 2.5.0 "" "" 1 "$V246_3" "$V250"
+  [ "$status" -eq 0 ]
+}
+
+@test "check_prepared_srcinfo: rejects a source with another asset value" {
+  write_asset_srcinfo "$TEST_TMPDIR/old.SRCINFO" 2.4.6 1 "$V246_3" "$H1"
+  write_asset_srcinfo "$TEST_TMPDIR/new.SRCINFO" 2.5.0 1 "${V250%-1}-2" "$H2"
+  run check_prepared_srcinfo "$TEST_TMPDIR/old.SRCINFO" "$TEST_TMPDIR/new.SRCINFO" 2.5.0 "" "" 1 "$V246_3" "$V250"
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"line 4 is not the AUR source with the new version"* ]]
+}
+
+# The tag of 2.5.0rc1 is v2.5.0-rc1, and its asset name holds no rc
+@test "check_prepared_srcinfo: accepts the asset value of an rc with pkgver_dash ''" {
+  write_asset_srcinfo "$TEST_TMPDIR/old.SRCINFO" 2.4.6 1 "$V246_3" "$H1"
+  write_asset_srcinfo "$TEST_TMPDIR/new.SRCINFO" 2.5.0rc1 1 "$V250" "$H2"
+  run check_prepared_srcinfo "$TEST_TMPDIR/old.SRCINFO" "$TEST_TMPDIR/new.SRCINFO" 2.5.0rc1 drop "" 1 "$V246_3" "$V250"
+  [ "$status" -eq 0 ]
+}
+
+@test "check_prepared_srcinfo: accepts an asset value that holds the version with a dash" {
+  write_asset_srcinfo "$TEST_TMPDIR/old.SRCINFO" 2.4.6 1 2.4.6-build3 "$H1"
+  write_asset_srcinfo "$TEST_TMPDIR/new.SRCINFO" 2.5.0rc1 1 2.5.0-rc1-build1 "$H2"
+  run check_prepared_srcinfo "$TEST_TMPDIR/old.SRCINFO" "$TEST_TMPDIR/new.SRCINFO" 2.5.0rc1 drop "" 1 2.4.6-build3 2.5.0-rc1-build1
+  [ "$status" -eq 0 ]
+}
+
+@test "check_prepared_srcinfo: rejects an asset value the AUR line does not hold" {
+  write_asset_srcinfo "$TEST_TMPDIR/old.SRCINFO" 2.4.6 1 2.4.6-build3 "$H1"
+  write_asset_srcinfo "$TEST_TMPDIR/new.SRCINFO" 2.5.0rc1 1 2.5.0-rc1-build1 "$H2"
+  sed -i 's|_amd64.deb$|_amd64.deb/2.5.0-rc1-build1|' "$TEST_TMPDIR/new.SRCINFO"
+  run check_prepared_srcinfo "$TEST_TMPDIR/old.SRCINFO" "$TEST_TMPDIR/new.SRCINFO" 2.5.0rc1 drop "" 1 2.4.6-build3 2.5.0-rc1-build1
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"line 4 is not the AUR source with the new version"* ]]
+}
+
+@test "check_prepared_srcinfo: accepts another line with the new asset value" {
+  write_asset_srcinfo "$TEST_TMPDIR/old.SRCINFO" 2.4.6 1 "$V246_3" "$H1"
+  write_asset_srcinfo "$TEST_TMPDIR/new.SRCINFO" 2.5.0rc1 1 "$V250" "$H2"
+  sed -i $'/^\tsource = /a \tnoextract = demo_'"${V246_3}"'_amd64.deb' "$TEST_TMPDIR/old.SRCINFO"
+  sed -i $'/^\tsource = /a \tnoextract = demo_'"${V250}"'_amd64.deb' "$TEST_TMPDIR/new.SRCINFO"
+  run check_prepared_srcinfo "$TEST_TMPDIR/old.SRCINFO" "$TEST_TMPDIR/new.SRCINFO" 2.5.0rc1 drop "" 1 "$V246_3" "$V250"
+  [ "$status" -eq 0 ]
+}
+
+@test "check_prepared_srcinfo: accepts the pkgrel it is given" {
+  write_asset_srcinfo "$TEST_TMPDIR/old.SRCINFO" 2.4.6 1 "$V246_2" "$H1"
+  write_asset_srcinfo "$TEST_TMPDIR/new.SRCINFO" 2.4.6 2 "$V246_3" "$H2"
+  run check_prepared_srcinfo "$TEST_TMPDIR/old.SRCINFO" "$TEST_TMPDIR/new.SRCINFO" 2.4.6 "" "" 2 "$V246_2" "$V246_3"
+  [ "$status" -eq 0 ]
+}
+
+@test "check_prepared_srcinfo: rejects a pkgrel other than the one it is given" {
+  write_asset_srcinfo "$TEST_TMPDIR/old.SRCINFO" 2.4.6 1 "$V246_2" "$H1"
+  write_asset_srcinfo "$TEST_TMPDIR/new.SRCINFO" 2.4.6 1 "$V246_3" "$H2"
+  run check_prepared_srcinfo "$TEST_TMPDIR/old.SRCINFO" "$TEST_TMPDIR/new.SRCINFO" 2.4.6 "" "" 2 "$V246_2" "$V246_3"
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"Prepared .SRCINFO has pkgrel = 1, expected 2"* ]]
+}
+
+@test "check_prepared_srcinfo: rejects a new asset value that reaches no source" {
+  write_srcinfo "$TEST_TMPDIR/old.SRCINFO" 1.0.0 1 "$H1" "$H2"
+  write_srcinfo "$TEST_TMPDIR/new.SRCINFO" 1.0.0 2 "$H1" "$H2"
+  run check_prepared_srcinfo "$TEST_TMPDIR/old.SRCINFO" "$TEST_TMPDIR/new.SRCINFO" 1.0.0 "" "" 2 "$V246_2" "$V246_3"
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"Prepared .SRCINFO changes no source URL and no checksum, so the new asset value reaches no source"* ]]
+}
+
+@test "check_prepared_srcinfo: accepts the AUR copy with its asset value" {
+  write_asset_srcinfo "$TEST_TMPDIR/old.SRCINFO" 2.4.6 2 "$V246_3" "$H1"
+  run check_prepared_srcinfo "$TEST_TMPDIR/old.SRCINFO" "$TEST_TMPDIR/old.SRCINFO" 2.4.6 "" "" 2 "$V246_3" "$V246_3"
+  [ "$status" -eq 0 ]
+}
+
+# Helper: the AUR copy and the prepared update of the package of
+# write_asset_pkgbuild, in $TEST_TMPDIR/aur and $TEST_TMPDIR/prepared
+# Usage: write_asset_dirs <AUR pkgver> <AUR _deb> <AUR pkgrel> <pkgver> <_deb> <pkgrel>
+write_asset_dirs() {
+  mkdir -p "$TEST_TMPDIR/aur" "$TEST_TMPDIR/prepared"
+  write_asset_pkgbuild "$TEST_TMPDIR/aur/PKGBUILD" "$1" "$2" "$3" "$H1"
+  write_asset_srcinfo "$TEST_TMPDIR/aur/.SRCINFO" "$1" "$3" "$2" "$H1"
+  write_asset_pkgbuild "$TEST_TMPDIR/prepared/PKGBUILD" "$4" "$5" "$6" "$H2"
+  write_asset_srcinfo "$TEST_TMPDIR/prepared/.SRCINFO" "$4" "$6" "$5" "$H2"
+}
+
+@test "check_prepared_files: takes the AUR pkgrel plus one for a rebuild" {
+  write_asset_dirs 2.4.6 "$V246_2" 1 2.4.6 "$V246_3" 2
+  run check_prepared_files "$TEST_TMPDIR/aur" "$TEST_TMPDIR/prepared" 2.4.6 drop "" _deb "$V246_3"
+  [ "$status" -eq 0 ]
+}
+
+@test "check_prepared_files: rejects a rebuild that keeps pkgrel" {
+  write_asset_dirs 2.4.6 "$V246_2" 1 2.4.6 "$V246_3" 1
+  run check_prepared_files "$TEST_TMPDIR/aur" "$TEST_TMPDIR/prepared" 2.4.6 drop "" _deb "$V246_3"
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"Prepared PKGBUILD has pkgrel=1, expected 2"* ]]
+}
+
+@test "check_prepared_files: rejects a rebuild two pkgrel ahead" {
+  write_asset_dirs 2.4.6 "$V246_2" 1 2.4.6 "$V246_3" 3
+  run check_prepared_files "$TEST_TMPDIR/aur" "$TEST_TMPDIR/prepared" 2.4.6 drop "" _deb "$V246_3"
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"Prepared PKGBUILD has pkgrel=3, expected 2"* ]]
+}
+
+@test "check_prepared_files: keeps the AUR pkgrel when the AUR has the asset value" {
+  write_asset_dirs 2.4.6 "$V246_3" 2 2.4.6 "$V246_3" 2
+  run check_prepared_files "$TEST_TMPDIR/aur" "$TEST_TMPDIR/prepared" 2.4.6 drop "" _deb "$V246_3"
+  [ "$status" -eq 0 ]
+}
+
+@test "check_prepared_files: takes pkgrel 1 for a new version" {
+  write_asset_dirs 2.4.6 "$V246_3" 2 2.5.0rc1 "$V250" 3
+  run check_prepared_files "$TEST_TMPDIR/aur" "$TEST_TMPDIR/prepared" 2.5.0rc1 drop "" _deb "$V250"
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"Prepared PKGBUILD has pkgrel=3, expected 1"* ]]
+}
+
+@test "check_prepared_files: refuses an AUR PKGBUILD without the asset line" {
+  write_asset_dirs 2.4.6 "$V246_3" 1 2.5.0rc1 "$V250" 1
+  sed -i '/^_deb=/d' "$TEST_TMPDIR/aur/PKGBUILD"
+  run check_prepared_files "$TEST_TMPDIR/aur" "$TEST_TMPDIR/prepared" 2.5.0rc1 drop "" _deb "$V250"
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"AUR PKGBUILD needs one _deb= line, it has 0"* ]]
+}
+
+@test "check_prepared_files: refuses a quoted asset value in the AUR PKGBUILD" {
+  write_asset_dirs 2.4.6 "$V246_3" 1 2.5.0rc1 "$V250" 1
+  sed -i "s/^_deb=.*/_deb=\"$V246_3\"/" "$TEST_TMPDIR/aur/PKGBUILD"
+  run check_prepared_files "$TEST_TMPDIR/aur" "$TEST_TMPDIR/prepared" 2.5.0rc1 drop "" _deb "$V250"
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"Asset value rejected"* ]]
+}
+
+@test "check_prepared_files: refuses a rebuild of a pkgrel that is no integer" {
+  write_asset_dirs 2.4.6 "$V246_2" 1.1 2.4.6 "$V246_3" 2
+  run check_prepared_files "$TEST_TMPDIR/aur" "$TEST_TMPDIR/prepared" 2.4.6 drop "" _deb "$V246_3"
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"A rebuild needs an integer pkgrel in the AUR PKGBUILD, it has 1.1"* ]]
+}
+
+# Helper: the AUR at <old pkgver> with <old _deb> and <old pkgrel> for the
+# package of write_asset_pkgbuild, its YAML with asset_var and
+# pkgver_dash: '', and the .SRCINFO makepkg prints for <pkgver>, <_deb>
+# and <pkgrel>. Sets OLD_SUM and NEW_SUM, the checksums of the two
+# downloads.
+# Usage: setup_asset_package <old pkgver> <old _deb> <old pkgrel> <pkgver> <_deb> <pkgrel>
+setup_asset_package() {
+  create_test_package "demo" "github-tag" "upstream:
+  project: owner/repo
+  asset_var: _deb
+current: '$1'
+current_asset: '$2'
+pkgver_dash: ''"
+  OLD_SUM=$(printf 'source of %s\n' "https://example.com/download/v${1/rc/-rc}/demo_${2}_amd64.deb" | sha256sum | cut -d' ' -f1)
+  NEW_SUM=$(printf 'source of %s\n' "https://example.com/download/v${4/rc/-rc}/demo_${5}_amd64.deb" | sha256sum | cut -d' ' -f1)
+  write_asset_pkgbuild "$OLD" "$1" "$2" "$3" "$OLD_SUM"
+  write_asset_srcinfo "$TEST_TMPDIR/old.SRCINFO" "$1" "$3" "$2" "$OLD_SUM"
+  write_asset_srcinfo "$TEST_TMPDIR/new.SRCINFO" "$4" "$6" "$5" "$NEW_SUM"
+  make_aur_remote demo "$OLD" "$TEST_TMPDIR/old.SRCINFO"
+  mock_pkg_tools "$TEST_TMPDIR/new.SRCINFO"
+  mock_source_tools
+  printf '#!/usr/bin/env bash\nsed -i s/%s/%s/ PKGBUILD\n' "$OLD_SUM" "$NEW_SUM" >"$MOCK_DIR/updpkgsums"
+}
+
+@test "a package with an asset value goes through prepare, verify and publish" {
+  setup_asset_package 2.4.6 "$V246_3" 1 2.5.0rc1 "$V250" 1
+  run "$TEST_TMPDIR/scripts/update-pkg.sh" demo 2.5.0rc1 --asset "$V250" --prepare "$TEST_TMPDIR/out"
+  [ "$status" -eq 0 ]
+  grep -qx "_deb=$V250" "$TEST_TMPDIR/out/demo/PKGBUILD"
+  mock_downloads
+  run "$TEST_TMPDIR/scripts/verify-pkg.sh" demo "$TEST_TMPDIR/out/demo"
+  [ "$status" -eq 0 ]
+  run "$TEST_TMPDIR/scripts/publish-pkg.sh" demo 2.5.0rc1 "$TEST_TMPDIR/out/demo" --asset "$V250"
+  [ "$status" -eq 0 ]
+  [ "$(git -C "$AUR_REMOTE" show HEAD:.SRCINFO)" = "$(cat "$TEST_TMPDIR/new.SRCINFO")" ]
+  [ "$(git -C "$AUR_REMOTE" log -1 --format=%s)" = "2.5.0rc1 release from github-tag" ]
+  [ "$(yq -r .current "$TEST_TMPDIR/packages/demo.yml")" = "2.5.0rc1" ]
+  [ "$(yq -r .current_asset "$TEST_TMPDIR/packages/demo.yml")" = "$V250" ]
+}
+
+@test "a rebuild goes through prepare, verify and publish" {
+  setup_asset_package 2.4.6 "$V246_2" 1 2.4.6 "$V246_3" 2
+  run "$TEST_TMPDIR/scripts/update-pkg.sh" demo 2.4.6 --asset "$V246_3" --prepare "$TEST_TMPDIR/out"
+  [ "$status" -eq 0 ]
+  grep -qx "pkgrel=2" "$TEST_TMPDIR/out/demo/PKGBUILD"
+  mock_downloads
+  run "$TEST_TMPDIR/scripts/verify-pkg.sh" demo "$TEST_TMPDIR/out/demo"
+  [ "$status" -eq 0 ]
+  run "$TEST_TMPDIR/scripts/publish-pkg.sh" demo 2.4.6 "$TEST_TMPDIR/out/demo" --asset "$V246_3"
+  [ "$status" -eq 0 ]
+  [ "$(git -C "$AUR_REMOTE" show HEAD:.SRCINFO)" = "$(cat "$TEST_TMPDIR/new.SRCINFO")" ]
+  [ "$(git -C "$AUR_REMOTE" log -1 --format=%s)" = "2.4.6-2 release from github-tag" ]
+  [ "$(yq -r .current_asset "$TEST_TMPDIR/packages/demo.yml")" = "$V246_3" ]
+}
+
+@test "update-pkg: pushes a rebuild with the next pkgrel" {
+  setup_asset_package 2.4.6 "$V246_2" 3 2.4.6 "$V246_3" 4
+  run "$TEST_TMPDIR/scripts/update-pkg.sh" demo 2.4.6 --asset "$V246_3"
+  [ "$status" -eq 0 ]
+  git -C "$AUR_REMOTE" show HEAD:PKGBUILD | grep -qx "pkgrel=4"
+  [ "$(git -C "$AUR_REMOTE" log -1 --format=%s)" = "2.4.6-4 release from github-tag" ]
+  [ "$(yq -r .current_asset "$TEST_TMPDIR/packages/demo.yml")" = "$V246_3" ]
+}
+
+@test "update-pkg: writes current_asset when the AUR already has the asset value" {
+  setup_asset_package 2.4.6 "$V246_3" 2 2.4.6 "$V246_3" 2
+  yq -i ".current_asset = \"$V246_2\"" "$TEST_TMPDIR/packages/demo.yml"
+  run "$TEST_TMPDIR/scripts/update-pkg.sh" demo 2.4.6 --asset "$V246_3"
+  [ "$status" -eq 2 ]
+  [ "$(git -C "$AUR_REMOTE" rev-parse HEAD)" = "$AUR_BASE" ]
+  [ "$(yq -r .current_asset "$TEST_TMPDIR/packages/demo.yml")" = "$V246_3" ]
+}
+
+@test "update-pkg --prepare: hands over the AUR files when the AUR has the asset value" {
+  setup_asset_package 2.4.6 "$V246_3" 2 2.4.6 "$V246_3" 2
+  run "$TEST_TMPDIR/scripts/update-pkg.sh" demo 2.4.6 --asset "$V246_3" --prepare "$TEST_TMPDIR/out"
+  [ "$status" -eq 2 ]
+  cmp "$OLD" "$TEST_TMPDIR/out/demo/PKGBUILD"
+}
+
+@test "update-pkg: a package with asset_var needs --asset" {
+  setup_asset_package 2.4.6 "$V246_3" 1 2.5.0rc1 "$V250" 1
+  run "$TEST_TMPDIR/scripts/update-pkg.sh" demo 2.5.0rc1
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"upstream.asset_var is set, so --asset is needed"* ]]
+}
+
+@test "update-pkg: --asset needs upstream.asset_var" {
+  create_test_package "demo" "github-release" "upstream:
+  project: owner/repo"
+  run "$TEST_TMPDIR/scripts/update-pkg.sh" demo 1.1.0 --asset "$V250"
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"--asset needs upstream.asset_var"* ]]
+}
+
+@test "update-pkg: --asset needs a value" {
+  create_test_package "demo" "github-release" "upstream:
+  project: owner/repo"
+  run "$TEST_TMPDIR/scripts/update-pkg.sh" demo 1.1.0 --asset
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"--asset needs a value"* ]]
+}
+
+# bash expands a tilde at the start of an assignment: _deb=~root gives the
+# home directory of root
+@test "update-pkg: refuses an asset value that starts with a tilde" {
+  setup_asset_package 2.4.6 "$V246_3" 1 2.5.0rc1 "$V250" 1
+  run "$TEST_TMPDIR/scripts/update-pkg.sh" demo 2.5.0rc1 --asset '~root'
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"Asset value rejected"* ]]
+  [ ! -e "$TEST_TMPDIR/clone-urls" ]
+}
+
+# sed and awk read the name as part of a pattern
+@test "update-pkg: refuses an asset_var that is no name starting with _" {
+  local var
+  for var in '_deb;x' 'x;_deb'; do
+    create_test_package "demo" "github-tag" "upstream:
+  project: owner/repo
+  asset_var: '$var'"
+    run "$TEST_TMPDIR/scripts/update-pkg.sh" demo 1.1.0 --asset "$V250"
+    [ "$status" -eq 1 ]
+    [[ "$output" == *"upstream.asset_var must be a name that starts with _: '$var'"* ]]
+  done
+}
+
+# sed takes a slash in the value for the end of its replacement
+@test "update-pkg: refuses an asset value with a slash" {
+  setup_asset_package 2.4.6 "$V246_3" 1 2.5.0rc1 "$V250" 1
+  run "$TEST_TMPDIR/scripts/update-pkg.sh" demo 2.5.0rc1 --asset "2.5.0/x"
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"Asset value rejected"* ]]
+}
+
+@test "publish-pkg: refuses another asset value than the one of the check run" {
+  setup_asset_package 2.4.6 "$V246_3" 1 2.5.0rc1 "$V250" 1
+  "$TEST_TMPDIR/scripts/update-pkg.sh" demo 2.5.0rc1 --asset "$V250" --prepare "$TEST_TMPDIR/out"
+  run "$TEST_TMPDIR/scripts/publish-pkg.sh" demo 2.5.0rc1 "$TEST_TMPDIR/out/demo" --asset "${V250%-1}-2"
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"Prepared PKGBUILD has _deb=${V250}, expected ${V250%-1}-2"* ]]
+  [ "$(git -C "$AUR_REMOTE" rev-parse HEAD)" = "$AUR_BASE" ]
+}
+
+@test "publish-pkg: writes current_asset when the AUR already has the update" {
+  setup_asset_package 2.4.6 "$V246_3" 2 2.4.6 "$V246_3" 2
+  yq -i ".current_asset = \"$V246_2\"" "$TEST_TMPDIR/packages/demo.yml"
+  run "$TEST_TMPDIR/scripts/update-pkg.sh" demo 2.4.6 --asset "$V246_3" --prepare "$TEST_TMPDIR/out"
+  [ "$status" -eq 2 ]
+  run "$TEST_TMPDIR/scripts/publish-pkg.sh" demo 2.4.6 "$TEST_TMPDIR/out/demo" --asset "$V246_3"
+  [ "$status" -eq 2 ]
+  [ "$(yq -r .current_asset "$TEST_TMPDIR/packages/demo.yml")" = "$V246_3" ]
+}
+
+@test "publish-pkg: a package with asset_var needs --asset" {
+  setup_asset_package 2.4.6 "$V246_3" 1 2.5.0rc1 "$V250" 1
+  "$TEST_TMPDIR/scripts/update-pkg.sh" demo 2.5.0rc1 --asset "$V250" --prepare "$TEST_TMPDIR/out"
+  run "$TEST_TMPDIR/scripts/publish-pkg.sh" demo 2.5.0rc1 "$TEST_TMPDIR/out/demo"
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"upstream.asset_var is set, so --asset is needed"* ]]
+}
+
+@test "publish-pkg: --asset needs a value" {
+  setup_publish
+  run "$TEST_TMPDIR/scripts/publish-pkg.sh" demo 1.1.0 "$PREPARED" --asset
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"--asset needs a value"* ]]
+}
+
+@test "publish-pkg: refuses an unknown option" {
+  setup_publish
+  run "$TEST_TMPDIR/scripts/publish-pkg.sh" demo 1.1.0 "$PREPARED" --force
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"Unknown option: --force"* ]]
+  [ "$(git -C "$AUR_REMOTE" rev-parse HEAD)" = "$AUR_BASE" ]
+}
+
+# Helper: pkg with asset_regex at <current>, the status of the check run
+# for it and the asset value that run recorded, if any
+# Usage: checked_asset_package <current> <status> [asset value]
+checked_asset_package() {
+  create_test_package "pkg" "github-release" "upstream:
+  project: owner/repo
+  asset_regex: '^pkg_(.+)\\.tar\\.gz\$'
+  asset_var: _pkg
+current: '$1'
+current_asset: '$1-a'"
+  checked_status pkg "$2"
+  if [[ -n "${3:-}" ]]; then
+    printf 'pkg\t%s\nother\t9.9-z\n' "$3" >"$TEST_TMPDIR/.status/_assets"
+  fi
+}
+
+@test "check-all --prepare: keeps an asset package up to date without a value" {
+  checked_asset_package 1.0.0 up_to_date
+  stub_script update-pkg.sh 0
+  run "$TEST_TMPDIR/scripts/check-all.sh" --prepare "$TEST_TMPDIR/out"
+  [ "$status" -eq 0 ]
+  [ "$(cat "$TEST_TMPDIR/out/status/pkg")" = "up_to_date" ]
+}
+
+@test "check-all --prepare: passes the asset value of the check run" {
+  checked_asset_package 1.0.0 "new_version: 2.0.0" 2.0.0-a
+  stub_script update-pkg.sh 0
+  run "$TEST_TMPDIR/scripts/check-all.sh" --prepare "$TEST_TMPDIR/out"
+  [ "$status" -eq 0 ]
+  [ "$(cat "$TEST_TMPDIR/update-pkg.sh.args")" = "pkg 2.0.0 --asset 2.0.0-a --prepare $TEST_TMPDIR/out/prepared" ]
+  [ "$(cat "$TEST_TMPDIR/out/status/pkg")" = "new_version: 2.0.0" ]
+}
+
+@test "check-all --prepare: prepares a rebuild" {
+  checked_asset_package 1.0.0 "new_build: 1.0.0" 1.0.0-b
+  stub_script update-pkg.sh 0
+  run "$TEST_TMPDIR/scripts/check-all.sh" --prepare "$TEST_TMPDIR/out"
+  [ "$status" -eq 0 ]
+  [ "$(cat "$TEST_TMPDIR/update-pkg.sh.args")" = "pkg 1.0.0 --asset 1.0.0-b --prepare $TEST_TMPDIR/out/prepared" ]
+  [ "$(cat "$TEST_TMPDIR/out/status/pkg")" = "new_build: 1.0.0" ]
+}
+
+@test "check-all --prepare: prepares nothing while the asset is pending" {
+  checked_asset_package 1.0.0 "pending: 2.0.0"
+  stub_script update-pkg.sh 0
+  run "$TEST_TMPDIR/scripts/check-all.sh" --prepare "$TEST_TMPDIR/out"
+  [ "$status" -eq 0 ]
+  [ ! -e "$TEST_TMPDIR/update-pkg.sh.args" ]
+  [ "$(cat "$TEST_TMPDIR/out/status/pkg")" = "pending: 2.0.0" ]
+  [ "$(cat "$TEST_TMPDIR/out/status/_error_count")" = "0" ]
+}
+
+@test "check-all --prepare: fails a package without an asset value from the check run" {
+  checked_asset_package 1.0.0 "new_version: 2.0.0"
+  stub_script update-pkg.sh 0
+  run "$TEST_TMPDIR/scripts/check-all.sh" --prepare "$TEST_TMPDIR/out"
+  [ "$status" -eq 0 ]
+  [ ! -e "$TEST_TMPDIR/update-pkg.sh.args" ]
+  [ "$(cat "$TEST_TMPDIR/out/status/pkg")" = "check_failed: no asset value from the check run" ]
+}
+
+@test "check-all --publish: publishes with the asset value of the check run" {
+  checked_asset_package 1.0.0 "new_version: 2.0.0" 2.0.0-a
+  mkdir -p "$TEST_TMPDIR/out/prepared/pkg"
+  stub_script publish-pkg.sh 0
+  run "$TEST_TMPDIR/scripts/check-all.sh" --publish "$TEST_TMPDIR/out"
+  [ "$status" -eq 0 ]
+  [ "$(cat "$TEST_TMPDIR/publish-pkg.sh.args")" = "pkg 2.0.0 $TEST_TMPDIR/out/prepared/pkg --asset 2.0.0-a" ]
+  [ "$(cat "$TEST_TMPDIR/.status/pkg")" = "updated: 2.0.0" ]
+}
+
+@test "check-all --publish: publishes a rebuild" {
+  checked_asset_package 1.0.0 "new_build: 1.0.0" 1.0.0-b
+  mkdir -p "$TEST_TMPDIR/out/prepared/pkg"
+  stub_script publish-pkg.sh 0
+  run "$TEST_TMPDIR/scripts/check-all.sh" --publish "$TEST_TMPDIR/out"
+  [ "$status" -eq 0 ]
+  [ "$(cat "$TEST_TMPDIR/publish-pkg.sh.args")" = "pkg 1.0.0 $TEST_TMPDIR/out/prepared/pkg --asset 1.0.0-b" ]
+  [ "$(cat "$TEST_TMPDIR/.status/pkg")" = "rebuilt: 1.0.0" ]
+}
+
+@test "check-all --publish: keeps a pending asset and publishes nothing" {
+  checked_asset_package 1.0.0 "pending: 2.0.0"
+  stub_script publish-pkg.sh 0
+  run "$TEST_TMPDIR/scripts/check-all.sh" --publish "$TEST_TMPDIR/out"
+  [ "$status" -eq 0 ]
+  [ ! -e "$TEST_TMPDIR/publish-pkg.sh.args" ]
+  [ "$(cat "$TEST_TMPDIR/.status/pkg")" = "pending: 2.0.0" ]
+  [ "$(cat "$TEST_TMPDIR/.status/_error_count")" = "0" ]
+}
+
+@test "check-all --publish: refuses an asset value of the check run that a PKGBUILD must not hold" {
+  checked_asset_package 1.0.0 "new_version: 2.0.0" '~root'
+  mkdir -p "$TEST_TMPDIR/out/prepared/pkg"
+  stub_script publish-pkg.sh 0
+  run "$TEST_TMPDIR/scripts/check-all.sh" --publish "$TEST_TMPDIR/out"
+  [ "$status" -eq 0 ]
+  [ ! -e "$TEST_TMPDIR/publish-pkg.sh.args" ]
+  [ "$(cat "$TEST_TMPDIR/.status/pkg")" = "check_failed: no asset value from the check run" ]
+}
+
+@test "verify-pkg: refuses a prepared PKGBUILD without the asset line" {
+  setup_asset_package 2.4.6 "$V246_3" 1 2.5.0rc1 "$V250" 1
+  "$TEST_TMPDIR/scripts/update-pkg.sh" demo 2.5.0rc1 --asset "$V250" --prepare "$TEST_TMPDIR/out"
+  sed -i '/^_deb=/d' "$TEST_TMPDIR/out/demo/PKGBUILD"
+  mock_downloads
+  run "$TEST_TMPDIR/scripts/verify-pkg.sh" demo "$TEST_TMPDIR/out/demo"
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"Prepared PKGBUILD needs one _deb= line, it has 0"* ]]
 }

@@ -10,14 +10,15 @@ run_blocks() {
 # The runner pastes an expression into a run script before bash parses it,
 # so a step reads GitHub context through env: instead.
 @test "workflows: no run block expands an expression" {
-  local workflow
+  local workflow count=0
   for workflow in "$GITHUB_DIR"/workflows/*.yml; do
     echo "$workflow"
     run run_blocks "$workflow"
     [ "$status" -eq 0 ]
-    [ -n "$output" ]
     [[ "$output" != *'${{'* ]]
+    [ -z "$output" ] || count=$((count + 1))
   done
+  [ "$count" -gt 2 ]
 }
 
 @test "actions: no run block expands an expression" {
@@ -234,6 +235,72 @@ EOF
   [ "$output" = "0" ]
 }
 
+# === release-please.yml ===
+
+RELEASE="$GITHUB_DIR/workflows/release-please.yml"
+RELEASE_CONFIG="$GITHUB_DIR/release-please-config.json"
+
+# A fork or a template copy carries the workflow and must not open release PRs
+@test "release-please: runs only in the upstream repository" {
+  run yq '.jobs[] | .if' "$RELEASE"
+  [ "$status" -eq 0 ]
+  [ "$output" = "github.repository == 'staticwire/aurtomator'" ]
+}
+
+@test "release-please: pins the action by SHA, reads the config in .github and has a time limit" {
+  run yq '.jobs[].steps[1].uses' "$RELEASE"
+  [[ "$output" =~ ^googleapis/release-please-action@[0-9a-f]{40}$ ]]
+  run grep -E '^ +- uses: googleapis/release-please-action@[0-9a-f]{40} # v[0-9]+\.[0-9]+\.[0-9]+$' "$RELEASE"
+  [ "$status" -eq 0 ]
+  run yq '.jobs[].steps[1].with | .["config-file"] + " " + .["manifest-file"]' "$RELEASE"
+  [ "$output" = ".github/release-please-config.json .github/.release-please-manifest.json" ]
+  run yq '.jobs[]["timeout-minutes"] > 0' "$RELEASE"
+  [ "$output" = "true" ]
+  run yq -o=json -I=0 '.permissions' "$RELEASE"
+  [ "$output" = '{"contents":"read"}' ]
+}
+
+# GitHub runs the CI of a pull request opened with the workflow token only
+# after someone with write access approves it, and main requires that CI
+@test "release-please: opens the release PR with the token of the release App" {
+  run yq '.jobs[].steps | length' "$RELEASE"
+  [ "$output" = "2" ]
+  run yq '.jobs[].steps[0].uses' "$RELEASE"
+  [[ "$output" =~ ^actions/create-github-app-token@[0-9a-f]{40}$ ]]
+  run grep -E '^ +- uses: actions/create-github-app-token@[0-9a-f]{40} # v[0-9]+\.[0-9]+\.[0-9]+$' "$RELEASE"
+  [ "$status" -eq 0 ]
+  run yq -o=json -I=0 '.jobs[].steps[0] | [.id, .with]' "$RELEASE"
+  [ "$output" = '["app-token",{"client-id":"${{ vars.RELEASE_APP_CLIENT_ID }}","private-key":"${{ secrets.RELEASE_APP_PRIVATE_KEY }}","permission-contents":"write","permission-issues":"write","permission-pull-requests":"write"}]' ]
+  run yq '.jobs[].steps[1].with.token' "$RELEASE"
+  [ "$output" = '${{ steps.app-token.outputs.token }}' ]
+  run yq '.jobs[] | has("permissions")' "$RELEASE"
+  [ "$output" = "false" ]
+}
+
+@test "release-please: writes VERSION, keeps vX.Y.Z tags and GitHub notes, and no CHANGELOG" {
+  run yq -o=json -I=0 '.packages["."]' "$RELEASE_CONFIG"
+  [ "$status" -eq 0 ]
+  [ "$output" = '{"release-type":"simple","version-file":"VERSION","changelog-type":"github","skip-changelog":true,"bump-minor-pre-major":true,"include-component-in-tag":false,"extra-files":[{"type":"generic","path":"README.md"}]}' ]
+}
+
+# The release PR writes the version line of README.md, so the check run of
+# the upstream repository finds nothing to commit to its protected main
+@test "release-please: the README holds the version line update-readme.sh writes" {
+  local version
+  version=$(<"$GITHUB_DIR/../VERSION")
+  run grep -cxF "aurtomator $version <!-- x-release-please-version -->" "$GITHUB_DIR/../README.md"
+  [ "$output" = "1" ]
+}
+
+# release-please updates VERSION in place and does not create it
+@test "release-please: the manifest holds the version of VERSION" {
+  local version
+  version=$(<"$GITHUB_DIR/../VERSION")
+  [[ "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]
+  run yq -r '.["."]' "$GITHUB_DIR/.release-please-manifest.json"
+  [ "$output" = "$version" ]
+}
+
 # === check-updates.yml: who decides what ===
 
 CHECK_UPDATES="$GITHUB_DIR/workflows/check-updates.yml"
@@ -287,6 +354,14 @@ run_decide_step() {
   [ "$output" = $'prepare=true\nwork=true' ]
   run run_decide_step pkg="available_downgrade: 1.0.0"
   [ "$output" = $'prepare=true\nwork=true' ]
+  run run_decide_step pkg="new_build: 1.0.0" _assets=$'pkg\t1.0.0-b'
+  [ "$output" = $'prepare=true\nwork=true' ]
+}
+
+@test "check-updates: Decide prepares nothing while an asset is pending" {
+  README_CHANGED=1 run run_decide_step pkg="pending: 2.0.0"
+  [ "$status" -eq 0 ]
+  [ "$output" = $'prepare=false\nwork=true' ]
 }
 
 @test "check-updates: Decide publishes only a change of the status table" {
@@ -530,10 +605,11 @@ EOF
 }
 
 # Runs the issue step of publish in a workspace with the statuses given as
-# name=status pairs. gh lists the titles in $GH_TITLES, one per line, as
-# every open issue whatever --search asks for, the first 30 unless --limit
-# says otherwise, answers has_issues with $GH_HAS_ISSUES (true by default)
-# or fails it when $GH_API_FAIL is set, and logs every call to $GH_LOG.
+# name=status pairs. gh lists the titles in $GH_TITLES, one per line, that
+# start with the emoji of the --label it asks for, the first 30 unless
+# --limit says otherwise, answers has_issues with $GH_HAS_ISSUES (true by
+# default) or fails it when $GH_API_FAIL is set, and logs every call to
+# $GH_LOG.
 run_issue_step() {
   local ws="$BATS_TEST_TMPDIR/ws" bin="$BATS_TEST_TMPDIR/bin" pair
   mkdir -p "$ws/.status" "$bin"
@@ -550,15 +626,24 @@ if [[ "$*" == "api repos/$GITHUB_REPOSITORY --jq .has_issues" ]]; then
 fi
 [[ "$1 $2" == "issue list" ]] || exit 0
 [[ -z "${GH_FAIL:-}" ]] || exit 1
-limit=30 jq_expr=""
+limit=30 jq_expr="" emoji=""
 while (($#)); do
   case "$1" in
     --limit) limit=$2 && shift ;;
     --jq) jq_expr=$2 && shift ;;
+    --label)
+      case "$2" in
+        auto-update) emoji="❌" ;;
+        update-held) emoji="✋" ;;
+        update-notice) emoji="🔔" ;;
+        aurtomator-update) emoji="🚀" ;;
+      esac
+      shift
+      ;;
   esac
   shift
 done
-titles=$(grep -v '^$' <<<"${GH_TITLES:-}" | head -n "$limit") || true
+titles=$(grep "^$emoji" <<<"${GH_TITLES:-}" | head -n "$limit") || true
 case "$jq_expr" in
   length) grep -c . <<<"$titles" ;;
   ".[].title") [[ -z "$titles" ]] || printf '%s\n' "$titles" ;;
@@ -569,7 +654,7 @@ EOF
   chmod +x "$bin/gh" "$bin/sudo"
   GH_LOG="$BATS_TEST_TMPDIR/gh.log"
   : >"$GH_LOG"
-  step_run publish "Create issues for failed packages" >"$BATS_TEST_TMPDIR/step.sh"
+  step_run publish "Create issues" >"$BATS_TEST_TMPDIR/step.sh"
   run env -C "$ws" PATH="$bin:$PATH" GH_LOG="$GH_LOG" GH_TITLES="${GH_TITLES:-}" \
     GH_FAIL="${GH_FAIL:-}" GH_HAS_ISSUES="${GH_HAS_ISSUES:-}" GH_API_FAIL="${GH_API_FAIL:-}" \
     GITHUB_REPOSITORY=owner/fork \
@@ -632,11 +717,90 @@ EOF
   [ ! -s "$GH_LOG" ]
 }
 
+@test "check-updates: the issue step opens an issue for a held update" {
+  run_issue_step foo="held: 29+1" _alerts=$'foo\thold\tRaise makedepends'
+  [ "$status" -eq 0 ]
+  grep -qx 'label create update-held --color fbca04 --description Update waits for a hand edit' "$GH_LOG"
+  grep -qx 'issue create --title ✋ foo: update held --label update-held --body body' "$GH_LOG"
+}
+
+@test "check-updates: an open issue of a held update holds back another one" {
+  GH_TITLES=$'❌ bar: check failed\n✋ foo: update held' run_issue_step foo="held: 29+2"
+  [ "$status" -eq 0 ]
+  run grep -c '^issue create' "$GH_LOG"
+  [ "$output" = "0" ]
+}
+
+@test "check-updates: the issue step opens an issue for a notice of a published update" {
+  run_issue_step foo="updated: 29+1" bar="downgrade: 1.0" \
+    _alerts=$'foo\tnotice\tCreate the package for the old major\nbar\tnotice\tCheck the old line'
+  [ "$status" -eq 0 ]
+  grep -qx 'label create update-notice --color 1d76db --description Published update needs a hand edit' "$GH_LOG"
+  grep -qx 'issue create --title 🔔 foo: 29+1 notice --label update-notice --body body' "$GH_LOG"
+  grep -qx 'issue create --title 🔔 bar: 1.0 notice --label update-notice --body body' "$GH_LOG"
+}
+
+@test "check-updates: an open notice of the version holds back another one" {
+  GH_TITLES=$'🔔 foo: 29+1 notice\n✋ foo: update held' \
+    run_issue_step foo="updated: 29+1" _alerts=$'foo\tnotice\tCreate the package for the old major'
+  [ "$status" -eq 0 ]
+  run grep -c '^issue create' "$GH_LOG"
+  [ "$output" = "0" ]
+}
+
+@test "check-updates: the issue step opens no notice for an update that was not published or has no notice" {
+  run_issue_step foo="new_version: 29+1" bar="updated: 2.0" baz="up_to_date" \
+    _alerts=$'foo\tnotice\tNot published\nbarfly\tnotice\tAnother package\nbaz\tnotice\tUp to date'
+  [ "$status" -eq 0 ]
+  run grep -c '^issue create' "$GH_LOG"
+  [ "$output" = "0" ]
+}
+
+@test "check-updates: the issue step opens an issue for a newer aurtomator release" {
+  run_issue_step _upstream="newer: 0.7.0"
+  [ "$status" -eq 0 ]
+  grep -qx 'label create aurtomator-update --color 0e8a16 --description Newer aurtomator release' "$GH_LOG"
+  grep -qx 'issue create --title 🚀 aurtomator 0.7.0 available --label aurtomator-update --body body' "$GH_LOG"
+}
+
+@test "check-updates: an open issue of the release holds back another one" {
+  GH_TITLES=$'🚀 aurtomator 0.7.0 available' run_issue_step _upstream="newer: 0.7.0"
+  [ "$status" -eq 0 ]
+  run grep -c '^issue create' "$GH_LOG"
+  [ "$output" = "0" ]
+}
+
+@test "check-updates: the issue step opens nothing for aurtomator at its latest release" {
+  run_issue_step _upstream="current: 0.7.0"
+  [ "$status" -eq 0 ]
+  [ ! -s "$GH_LOG" ]
+}
+
+@test "check-updates: the issue step gives a notice for a newer aurtomator release when Issues are disabled" {
+  GH_HAS_ISSUES=false GH_FAIL=1 run_issue_step _upstream="newer: 0.7.0"
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"::notice::Issues are disabled in owner/fork"* ]]
+  run grep -c '^issue ' "$GH_LOG"
+  [ "$output" = "0" ]
+}
+
+@test "check-updates: the issue step gives a notice for a held update when Issues are disabled" {
+  GH_HAS_ISSUES=false GH_FAIL=1 run_issue_step foo="held: 29+1"
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"::notice::Issues are disabled in owner/fork"* ]]
+  run grep -c '^issue ' "$GH_LOG"
+  [ "$output" = "0" ]
+  GH_HAS_ISSUES=false GH_FAIL=1 run_issue_step foo="updated: 29+1" _alerts=$'foo\tnotice\tNote'
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"::notice::Issues are disabled in owner/fork"* ]]
+}
+
 # Runs the close step of publish in a workspace with the statuses given as
 # name=status pairs. gh lists the open issues in $GH_OPEN, one
-# "<number> <title>" per line, the first 30 unless --limit says otherwise,
-# answers has_issues with $GH_HAS_ISSUES (true by default), fails the list
-# when $GH_FAIL is set and logs every call to $GH_LOG.
+# "<number> <title>" per line, whose title starts with the emoji of the
+# --label it asks for, the first 30 unless --limit says otherwise, answers
+# has_issues with $GH_HAS_ISSUES (true by default), fails the list when
+# $GH_FAIL is set and logs every call to $GH_LOG.
 run_close_step() {
   local ws="$BATS_TEST_TMPDIR/ws" bin="$BATS_TEST_TMPDIR/bin" pair
   mkdir -p "$ws/.status" "$bin"
@@ -650,19 +814,26 @@ case "$1 $2" in
   "api repos/owner/fork") echo "${GH_HAS_ISSUES:-true}" ;;
   "issue list")
     [[ -z "${GH_FAIL:-}" ]] || exit 1
-    limit=30
+    limit=30 emoji=""
     while (($#)); do
       [[ "$1" != --limit ]] || limit=$2
+      if [[ "$1" == --label ]]; then
+        case "$2" in
+          auto-update) emoji="❌" ;;
+          update-held) emoji="✋" ;;
+          aurtomator-update) emoji="🚀" ;;
+        esac
+      fi
       shift
     done
-    [[ -z "${GH_OPEN:-}" ]] || head -n "$limit" <<<"$GH_OPEN"
+    grep "^[0-9]* $emoji" <<<"${GH_OPEN:-}" | head -n "$limit" || true
     ;;
 esac
 EOF
   chmod +x "$bin/gh"
   GH_LOG="$BATS_TEST_TMPDIR/gh.log"
   : >"$GH_LOG"
-  step_run publish "Close issues of recovered packages" >"$BATS_TEST_TMPDIR/step.sh"
+  step_run publish "Close resolved issues" >"$BATS_TEST_TMPDIR/step.sh"
   run env -C "$ws" PATH="$bin:$PATH" GH_LOG="$GH_LOG" GH_OPEN="${GH_OPEN:-}" GH_FAIL="${GH_FAIL:-}" \
     GH_HAS_ISSUES="${GH_HAS_ISSUES:-}" GITHUB_REPOSITORY=owner/fork \
     RUN_URL=https://example.invalid/run sh -e "$BATS_TEST_TMPDIR/step.sh"
@@ -785,8 +956,8 @@ no_commit() {
 
 @test "check-updates: the close step runs before the issue step, and not after a failed step" {
   run yq '[.jobs.publish.steps[].name] | join(",")' "$CHECK_UPDATES"
-  [[ "$output" == *"Close issues of recovered packages,Create issues for failed packages" ]]
-  run yq '.jobs.publish.steps[] | select(.name == "Close issues of recovered packages") | has("if")' "$CHECK_UPDATES"
+  [[ "$output" == *"Close resolved issues,Create issues" ]]
+  run yq '.jobs.publish.steps[] | select(.name == "Close resolved issues") | has("if")' "$CHECK_UPDATES"
   [ "$output" = "false" ]
 }
 
@@ -807,11 +978,11 @@ no_commit() {
 }
 
 @test "check-updates: closes the update issue of a package that reached the AUR" {
-  GH_OPEN=$'12 ❌ foo: update failed\n13 ❌ bar: update failed\n14 ❌ baz: update failed' \
-    run_close_step foo=up_to_date bar="updated: 2.0.0" baz="downgrade: 1.0.0"
+  GH_OPEN=$'12 ❌ foo: update failed\n13 ❌ bar: update failed\n14 ❌ baz: update failed\n15 ❌ qux: update failed' \
+    run_close_step foo=up_to_date bar="updated: 2.0.0" baz="downgrade: 1.0.0" qux="rebuilt: 1.0.0"
   [ "$status" -eq 0 ]
   run grep -c '^issue close' "$GH_LOG"
-  [ "$output" = "3" ]
+  [ "$output" = "4" ]
 }
 
 @test "check-updates: keeps the update issue of a package that has not reached the AUR" {
@@ -833,6 +1004,35 @@ no_commit() {
 @test "check-updates: closes no issue of another package" {
   GH_OPEN=$'12 ❌ foo-bar: check failed\n13 ❌ Check AUR Package Updates failed' \
     run_close_step foo=up_to_date
+  [ "$status" -eq 0 ]
+  run grep -c '^issue close' "$GH_LOG"
+  [ "$output" = "0" ]
+}
+
+@test "check-updates: closes the issue of a package that is no longer held" {
+  GH_OPEN=$'12 ✋ foo: update held\n13 ✋ bar: update held\n14 ❌ baz: check failed' \
+    run_close_step foo=up_to_date bar="held: 29+2" baz="held: 3.0"
+  [ "$status" -eq 0 ]
+  grep -qx 'issue close 12 --comment The status of foo is `up_to_date` in https://example.invalid/run.' "$GH_LOG"
+  grep -qx 'issue close 14 --comment The status of baz is `held: 3.0` in https://example.invalid/run.' "$GH_LOG"
+  run grep -c '^issue close' "$GH_LOG"
+  [ "$output" = "2" ]
+}
+
+@test "check-updates: closes the issue of an aurtomator release once VERSION holds it or a newer one is out" {
+  GH_OPEN=$'21 🚀 aurtomator 0.7.0 available\n22 🚀 aurtomator 0.8.0 available' run_close_step _upstream="current: 0.8.0"
+  [ "$status" -eq 0 ]
+  grep -qx 'issue close 21 --comment The aurtomator release status is `current: 0.8.0` in https://example.invalid/run.' "$GH_LOG"
+  grep -q '^issue close 22 ' "$GH_LOG"
+  GH_OPEN=$'21 🚀 aurtomator 0.7.0 available\n22 🚀 aurtomator 0.8.0 available' run_close_step _upstream="newer: 0.8.0"
+  [ "$status" -eq 0 ]
+  grep -q '^issue close 21 ' "$GH_LOG"
+  run grep -c '^issue close' "$GH_LOG"
+  [ "$output" = "1" ]
+}
+
+@test "check-updates: keeps the issue of an aurtomator release when the run could not read the release" {
+  GH_OPEN=$'21 🚀 aurtomator 0.7.0 available' run_close_step foo=up_to_date
   [ "$status" -eq 0 ]
   run grep -c '^issue close' "$GH_LOG"
   [ "$output" = "0" ]

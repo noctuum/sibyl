@@ -158,6 +158,25 @@ fi
 rm -rf "$STATUS_DIR"
 mkdir -p "$STATUS_DIR"
 
+# The version of aurtomator, and in a mode that runs the strategies its
+# latest release, for the README line and its issue. A failed request
+# records nothing, so it closes no issue. --prepare and --publish carry the
+# record of the check run.
+AURTOMATOR_VERSION=$(aurtomator_version)
+[[ -z "$AURTOMATOR_VERSION" ]] || log_info "aurtomator $AURTOMATOR_VERSION"
+if [[ "$MODE" == "prepare" || "$MODE" == "publish" ]]; then
+  if [[ "${CHECKED[_upstream]:-}" =~ ^(newer|current):\ [0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+    printf '%s\n' "${CHECKED[_upstream]}" >"${STATUS_DIR}/_upstream"
+  fi
+elif [[ -n "$AURTOMATOR_VERSION" ]]; then
+  if UPSTREAM_STATUS=$(upstream_status); then
+    printf '%s\n' "$UPSTREAM_STATUS" >"${STATUS_DIR}/_upstream"
+    [[ "$UPSTREAM_STATUS" != newer:* ]] || log_warn "aurtomator ${UPSTREAM_STATUS#newer: } is out, this repository runs $AURTOMATOR_VERSION"
+  else
+    log_warn "Could not read the latest aurtomator release"
+  fi
+fi
+
 # The update failure that the prepare or the verify run recorded for a
 # package the check run found outdated. Both runs share one user with code
 # from every PKGBUILD, so nothing else of theirs is taken, and a package
@@ -182,12 +201,13 @@ checked=0
 
 # The version the check run found for a package, printed the way
 # check-update.sh prints it: nothing when up to date, an error on failure.
-# A skipped downgrade or version jump prints its version, and the check
-# below skips it again.
+# A rebuild prints the version it rebuilds. A skipped downgrade or version
+# jump, a held update and a pending asset print their version, and the
+# checks below skip, hold or keep it pending again.
 checked_version() {
   local status="${CHECKED[$1]:-}"
   case "$status" in
-    "new_version: "* | "available_downgrade: "* | "downgrade_skipped: "* | "jump_skipped: "*)
+    "new_version: "* | "available_downgrade: "* | "new_build: "* | "downgrade_skipped: "* | "jump_skipped: "* | "held: "* | "pending: "*)
       echo "${status#*: }"
       ;;
     up_to_date) ;;
@@ -202,14 +222,63 @@ checked_version() {
   esac
 }
 
+# Appends the alerts that fired for a package to _alerts, where the issue
+# steps read their notes: the package, a tab and a line of fired_alerts
+# Args: $1=package name, $2=output of fired_alerts
+record_alerts() {
+  [[ -z "$2" ]] || awk -v p="$1" '{ print p "\t" $0 }' <<<"$2" >>"${STATUS_DIR}/_alerts"
+}
+
+# Sets ASSET_VALUE to the value that a release asset name holds for a
+# version of a package with upstream.asset_regex, and records it in
+# _assets: check-asset.sh finds it in a mode that runs the strategies,
+# and --prepare and --publish take the one the check run recorded. A
+# pending value and a failure get their status here, and return 1. A
+# failure that comes fast goes on the list for the second pass, as a
+# failed check does.
+# Args: $1=package file, $2=package name, $3=version, $4=pass, 1 or 2
+find_asset() {
+  local rc=0 err_file err
+  if [[ "$MODE" == "prepare" || "$MODE" == "publish" ]]; then
+    if [[ "${CHECKED[$2]:-}" == "pending: "* ]]; then
+      printf '%s\n' "${CHECKED[$2]}" >"${STATUS_DIR}/$2"
+      return 1
+    fi
+    ASSET_VALUE=$(awk -F'\t' -v p="$2" '$1 == p { v = $2 } END { print v }' <<<"${CHECKED[_assets]:-}")
+    if ! validate_asset_value "$ASSET_VALUE" 2>/dev/null; then
+      echo "check_failed: no asset value from the check run" >"${STATUS_DIR}/$2"
+      return 1
+    fi
+  else
+    err_file=$(mktemp)
+    ASSET_VALUE=$(bounded "$CHECK_TIMEOUT" "${AURTOMATOR_DIR}/scripts/check-asset.sh" "$2" "$3" 2>"$err_file") || rc=$?
+    err=$(script_error "$rc" "$err_file" "$CHECK_TIMEOUT")
+    rm -f "$err_file"
+    if ((rc == 3)); then
+      printf '%s\n' "$err" >&2
+      echo "pending: $3" >"${STATUS_DIR}/$2"
+      return 1
+    fi
+    if ((rc != 0)); then
+      log_err "Failed to check $2: $err"
+      echo "check_failed: ${err}" >"${STATUS_DIR}/$2"
+      if ((rc != 124 && rc != 137 && $4 == 1)); then
+        RECHECK+=("$1")
+      fi
+      return 1
+    fi
+  fi
+  printf '%s\t%s\n' "$2" "$ASSET_VALUE" >>"${STATUS_DIR}/_assets"
+}
+
 # Checks one package, then updates, prepares or publishes it as the mode
 # says, and writes its status. A check that fails fast in a mode that runs
 # the strategies goes on the list for the second pass.
 # Args: $1=package file, $2=pass, 1 or 2
 run_package() {
   local pkg_file="$1" pass="$2"
-  local pkg_name found check_cmd err_file check_rc latest check_err current
-  local is_downgrade cmp available pushed cmd update_rc update_err
+  local pkg_name found check_cmd err_file check_rc latest check_err current asset_regex
+  local is_downgrade cmp alerts fired line held action note available pushed cmd update_rc update_err
   pkg_name=$(pkg_get "$pkg_file" .name)
   # --publish keeps the status of the check run and publishes only a package
   # that run found outdated. Only package names from packages/ reach a path,
@@ -217,7 +286,7 @@ run_package() {
   if [[ "$MODE" == "publish" ]]; then
     found="${CHECKED[$pkg_name]:-}"
     case "$found" in
-      "new_version: "* | "available_downgrade: "*)
+      "new_version: "* | "available_downgrade: "* | "new_build: "*)
         if ! validate_pkgver "${found#*: }" 2>/dev/null; then
           echo "check_failed: invalid status from the check run" >"${STATUS_DIR}/${pkg_name}"
           return
@@ -227,8 +296,10 @@ run_package() {
           return
         fi
         ;;
-      up_to_date | check_failed:* | "downgrade_skipped: "* | "jump_skipped: "*)
+      up_to_date | check_failed:* | "downgrade_skipped: "* | "jump_skipped: "* | "held: "* | "pending: "*)
         printf '%s\n' "$found" >"${STATUS_DIR}/${pkg_name}"
+        # The issue of a held update lists the notes of its alerts
+        [[ "$found" != "held: "* ]] || record_alerts "$pkg_name" "$(fired_alerts "$pkg_file" "$(pkg_get "$pkg_file" '.current // ""')" "${found#held: }" 2>/dev/null)"
         return
         ;;
       "")
@@ -266,6 +337,17 @@ run_package() {
   fi
   rm -f "$err_file"
 
+  # A package with asset_regex that is up to date checks the asset value of
+  # its version as well: a value other than current_asset is a rebuild of
+  # that version. --prepare and --publish get a rebuild as its version.
+  current=$(pkg_get "$pkg_file" '.current // ""')
+  asset_regex=$(pkg_get "$pkg_file" '.upstream.asset_regex // ""')
+  ASSET_VALUE=""
+  if [[ -z "$latest" && -n "$asset_regex" && "$MODE" != "prepare" && "$MODE" != "publish" ]]; then
+    find_asset "$pkg_file" "$pkg_name" "$current" "$pass" || return 0
+    [[ "$ASSET_VALUE" == "$(pkg_get "$pkg_file" '.current_asset // ""')" ]] || latest="$current"
+  fi
+
   if [[ -z "$latest" ]]; then
     echo "up_to_date" >"${STATUS_DIR}/${pkg_name}"
     return
@@ -273,7 +355,6 @@ run_package() {
 
   # Detect downgrade: current from YAML is newer than latest from upstream.
   # vercmp prints -1/0/1 to stdout, always exits 0.
-  current=$(pkg_get "$pkg_file" '.current // ""')
   is_downgrade=false
   if [[ -n "$current" ]]; then
     cmp=$(vercmp "$current" "$latest")
@@ -303,7 +384,45 @@ run_package() {
     return
   fi
 
-  if [[ "$is_downgrade" == "true" ]]; then
+  # An alert names a step of upstream that needs a hand edit. One with
+  # hold: true keeps the update back until the maintainer publishes it.
+  err_file=$(mktemp)
+  check_rc=0
+  alerts=$(fired_alerts "$pkg_file" "$current" "$latest" 2>"$err_file") || check_rc=$?
+  check_err=$(<"$err_file")
+  rm -f "$err_file"
+  if ((check_rc != 0)); then
+    log_err "Failed to check $pkg_name: $check_err"
+    echo "check_failed: ${check_err}" >"${STATUS_DIR}/${pkg_name}"
+    return
+  fi
+  record_alerts "$pkg_name" "$alerts"
+  held=false
+  mapfile -t fired <<<"$alerts"
+  for line in "${fired[@]}"; do
+    IFS=$'\t' read -r action note <<<"$line"
+    case "$action" in
+      hold)
+        held=true
+        log_warn "$pkg_name: update $current → $latest held: $note"
+        ;;
+      notice) log_warn "$pkg_name: update $current → $latest notice: $note" ;;
+    esac
+  done
+  if [[ "$held" == true ]]; then
+    echo "held: ${latest}" >"${STATUS_DIR}/${pkg_name}"
+    return
+  fi
+
+  # The asset value of a new version, once no skip or hold stops it
+  if [[ -n "$asset_regex" && -z "$ASSET_VALUE" ]]; then
+    find_asset "$pkg_file" "$pkg_name" "$latest" "$pass" || return 0
+  fi
+
+  if [[ "$latest" == "$current" ]]; then
+    available="new_build: ${latest}"
+    pushed="rebuilt: ${latest}"
+  elif [[ "$is_downgrade" == "true" ]]; then
     log_warn "$pkg_name: DOWNGRADE detected $current → $latest (mirroring upstream)"
     available="available_downgrade: ${latest}"
     pushed="downgrade: ${latest}"
@@ -319,15 +438,15 @@ run_package() {
       ;;
     update)
       log_info "Updating $pkg_name to $latest"
-      cmd=("${AURTOMATOR_DIR}/scripts/update-pkg.sh" "$pkg_name" "$latest" ${DRY_RUN:+"$DRY_RUN"})
+      cmd=("${AURTOMATOR_DIR}/scripts/update-pkg.sh" "$pkg_name" "$latest" ${ASSET_VALUE:+--asset} ${ASSET_VALUE:+"$ASSET_VALUE"} ${DRY_RUN:+"$DRY_RUN"})
       ;;
     prepare)
       log_info "Preparing $pkg_name $latest"
-      cmd=("${AURTOMATOR_DIR}/scripts/update-pkg.sh" "$pkg_name" "$latest" --prepare "${WORK_DIR}/prepared")
+      cmd=("${AURTOMATOR_DIR}/scripts/update-pkg.sh" "$pkg_name" "$latest" ${ASSET_VALUE:+--asset} ${ASSET_VALUE:+"$ASSET_VALUE"} --prepare "${WORK_DIR}/prepared")
       ;;
     publish)
       log_info "Publishing $pkg_name $latest"
-      cmd=("${AURTOMATOR_DIR}/scripts/publish-pkg.sh" "$pkg_name" "$latest" "${WORK_DIR}/prepared/${pkg_name}" ${DRY_RUN:+"$DRY_RUN"})
+      cmd=("${AURTOMATOR_DIR}/scripts/publish-pkg.sh" "$pkg_name" "$latest" "${WORK_DIR}/prepared/${pkg_name}" ${ASSET_VALUE:+--asset} ${ASSET_VALUE:+"$ASSET_VALUE"} ${DRY_RUN:+"$DRY_RUN"})
       ;;
   esac
 

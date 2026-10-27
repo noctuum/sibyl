@@ -945,6 +945,281 @@ MOCKCURL
   done
 }
 
+# === alerts ===
+
+# Helper: the status of alert_fires for a rule on the step from current to latest
+# Usage: run_alert_fires <kind> <value> <current> <latest>
+run_alert_fires() {
+  run bash -c 'source "$0/scripts/lib.sh"; alert_fires "$@"' "$TEST_TMPDIR" "$@"
+}
+
+@test "lib.sh: alert_fires on a step to a greater first number for when: major" {
+  local pair
+  for pair in "28+25 29+1" "9 10" "1.9 2.0" "r9.abc1234 r10.def5678" "2025.12.13 2026.1.2"; do
+    run_alert_fires when major "${pair% *}" "${pair#* }"
+    [ "$status" -eq 0 ] || {
+      echo "did not fire: $pair"
+      return 1
+    }
+  done
+}
+
+@test "lib.sh: alert_fires leaves a step within the first number for when: major" {
+  local pair
+  for pair in "28+25 28+26" "1.9 1.10" "2.0 1.9" "beta 1.0" "1.0 beta"; do
+    run_alert_fires when major "${pair% *}" "${pair#* }"
+    [ "$status" -eq 1 ] || {
+      echo "fired: $pair"
+      return 1
+    }
+  done
+}
+
+@test "lib.sh: alert_fires on a step across the version of from" {
+  local pair
+  for pair in "0.3.0 0.4.0" "0.3.9 0.4.1" "0.3 1.0" "0.4.0rc1 0.4.0"; do
+    run_alert_fires from 0.4.0 "${pair% *}" "${pair#* }"
+    [ "$status" -eq 0 ] || {
+      echo "did not fire: $pair"
+      return 1
+    }
+  done
+}
+
+@test "lib.sh: alert_fires leaves a step that does not cross the version of from" {
+  local pair
+  for pair in "0.4.0 0.4.1" "0.4.1 0.5" "0.2 0.3" "0.4.0 0.3.9"; do
+    run_alert_fires from 0.4.0 "${pair% *}" "${pair#* }"
+    [ "$status" -eq 1 ] || {
+      echo "fired: $pair"
+      return 1
+    }
+  done
+}
+
+@test "lib.sh: alert_fires when the new version matches and current does not" {
+  run_alert_fires match '^29\+' 28+25 29+1
+  [ "$status" -eq 0 ]
+  local pair
+  for pair in "29+1 29+2" "28+25 28+26" "29+2 28+30"; do
+    run_alert_fires match '^29\+' "${pair% *}" "${pair#* }"
+    [ "$status" -eq 1 ] || {
+      echo "fired: $pair"
+      return 1
+    }
+  done
+}
+
+@test "lib.sh: alert_fires never fires without current" {
+  run_alert_fires when major "" 29+1
+  [ "$status" -eq 1 ]
+  run_alert_fires from 0.4.0 "" 0.4.0
+  [ "$status" -eq 1 ]
+  run_alert_fires match '^29' "" 29+1
+  [ "$status" -eq 1 ]
+}
+
+@test "lib.sh: alert_fires fails on a match bash does not accept or a condition it does not know" {
+  run_alert_fires match '(?:29)' 28+25 29+1
+  [ "$status" -eq 2 ]
+  [ -z "$output" ]
+  run_alert_fires until 30 28+25 29+1
+  [ "$status" -eq 2 ]
+  run_alert_fires match '(?:29)' "" 29+1
+  [ "$status" -eq 2 ]
+  run_alert_fires until 30 "" 29+1
+  [ "$status" -eq 2 ]
+}
+
+@test "lib.sh: fired_alerts prints hold or notice and the note of each fired rule in file order" {
+  create_test_package "pkg" "github-release" "alerts:
+  - when: major
+    note: Create the package for the old major
+  - from: '0.4.0'
+    note: Not reached
+  - match: '^29\\+'
+    hold: true
+    note: Raise makedepends java-environment to 28"
+  run bash -c 'source "$0/scripts/lib.sh"; fired_alerts "$1" 28+25 29+1' "$TEST_TMPDIR" "$TEST_TMPDIR/packages/pkg.yml"
+  [ "$status" -eq 0 ]
+  [ "$output" = $'notice\tCreate the package for the old major\nhold\tRaise makedepends java-environment to 28' ]
+}
+
+@test "lib.sh: fired_alerts prints nothing without alerts or without current" {
+  create_test_package "plain" "github-release" "current: '1.0'"
+  run bash -c 'source "$0/scripts/lib.sh"; fired_alerts "$1" 1.0 2.0' "$TEST_TMPDIR" "$TEST_TMPDIR/packages/plain.yml"
+  [ "$status" -eq 0 ]
+  [ -z "$output" ]
+  create_test_package "new" "github-release" "alerts:
+  - from: '0.1'
+    hold: true
+    note: First release"
+  run bash -c 'source "$0/scripts/lib.sh"; fired_alerts "$1" "" 2.0' "$TEST_TMPDIR" "$TEST_TMPDIR/packages/new.yml"
+  [ "$status" -eq 0 ]
+  [ -z "$output" ]
+}
+
+@test "lib.sh: fired_alerts fails on a rule it cannot evaluate without current too" {
+  create_test_package "new" "github-release" "alerts:
+  - match: '(?:1)'
+    hold: true
+    note: First release"
+  run bash -c 'source "$0/scripts/lib.sh"; fired_alerts "$1" "" 1.0' "$TEST_TMPDIR" "$TEST_TMPDIR/packages/new.yml"
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"alerts[0].match must be a non-empty ERE that bash accepts"* ]]
+}
+
+@test "lib.sh: fired_alerts fails on a rule it cannot evaluate" {
+  local rule message
+  for rule in "hold: true|alerts[0] must hold exactly one of when, from, match" \
+    "when: minor|alerts[0].when must be major" \
+    "match: '(?:29)'|alerts[0].match must be a non-empty ERE that bash accepts"; do
+    create_test_package "pkg" "github-release" "alerts:
+  - ${rule%%|*}
+    note: Something"
+    message="${rule#*|}"
+    run bash -c 'source "$0/scripts/lib.sh"; fired_alerts "$1" 28+25 29+1' "$TEST_TMPDIR" "$TEST_TMPDIR/packages/pkg.yml"
+    [ "$status" -eq 1 ]
+    [[ "$output" == *"$message"* ]] || {
+      echo "rule: $rule"
+      return 1
+    }
+  done
+}
+
+# === version of aurtomator ===
+
+@test "lib.sh: aurtomator_version prints VERSION, or nothing without it" {
+  run bash -c 'source "$0/scripts/lib.sh"; aurtomator_version' "$TEST_TMPDIR"
+  [ "$status" -eq 0 ]
+  [ -z "$output" ]
+  echo "0.6.0" >"$TEST_TMPDIR/VERSION"
+  run bash -c 'source "$0/scripts/lib.sh"; aurtomator_version' "$TEST_TMPDIR"
+  [ "$status" -eq 0 ]
+  [ "$output" = "0.6.0" ]
+}
+
+@test "lib.sh: latest_aurtomator_release prints the version of the latest release tag" {
+  MOCK_UPSTREAM_TAG=v0.7.0 run bash -c 'source "$0/scripts/lib.sh"; latest_aurtomator_release' "$TEST_TMPDIR"
+  [ "$status" -eq 0 ]
+  [ "$output" = "0.7.0" ]
+}
+
+@test "lib.sh: latest_aurtomator_release fails on another tag or a failed request" {
+  local tag
+  for tag in nightly 0.7.0 v0.7 'v0.7.0 x' xv0.7.0 fail; do
+    MOCK_UPSTREAM_TAG="$tag" run bash -c 'source "$0/scripts/lib.sh"; latest_aurtomator_release' "$TEST_TMPDIR"
+    [ "$status" -ne 0 ] || {
+      echo "passed: $tag"
+      return 1
+    }
+  done
+}
+
+@test "lib.sh: upstream_status says newer only for a release above VERSION" {
+  local pair
+  for pair in "0.6.0 v0.7.0 newer: 0.7.0" "0.6.0 v0.6.0 current: 0.6.0" "0.7.0 v0.6.0 current: 0.6.0" "0.9.0 v0.10.0 newer: 0.10.0"; do
+    echo "${pair%% *}" >"$TEST_TMPDIR/VERSION"
+    pair="${pair#* }"
+    MOCK_UPSTREAM_TAG="${pair%% *}" run bash -c 'source "$0/scripts/lib.sh"; upstream_status' "$TEST_TMPDIR"
+    [ "$status" -eq 0 ]
+    [ "$output" = "${pair#* }" ]
+  done
+}
+
+@test "lib.sh: upstream_status fails without VERSION" {
+  run bash -c 'source "$0/scripts/lib.sh"; upstream_status' "$TEST_TMPDIR"
+  [ "$status" -ne 0 ]
+}
+
+@test "check-all: logs the version and records a newer release of aurtomator" {
+  echo "0.6.0" >"$TEST_TMPDIR/VERSION"
+  MOCK_UPSTREAM_TAG=v0.7.0 run "$TEST_TMPDIR/scripts/check-all.sh"
+  [ "$status" -eq 0 ]
+  [[ "${lines[0]}" == *"aurtomator 0.6.0" ]]
+  [[ "$output" == *"aurtomator 0.7.0 is out, this repository runs 0.6.0"* ]]
+  [ "$(cat "$TEST_TMPDIR/.status/_upstream")" = "newer: 0.7.0" ]
+  [ "$(cat "$TEST_TMPDIR/.status/_error_count")" = "0" ]
+}
+
+@test "check-all: records that aurtomator is at its latest release" {
+  echo "0.6.0" >"$TEST_TMPDIR/VERSION"
+  run "$TEST_TMPDIR/scripts/check-all.sh"
+  [ "$status" -eq 0 ]
+  [ "$(cat "$TEST_TMPDIR/.status/_upstream")" = "current: 0.6.0" ]
+}
+
+@test "check-all: warns and records nothing when the release cannot be read" {
+  echo "0.6.0" >"$TEST_TMPDIR/VERSION"
+  MOCK_UPSTREAM_TAG=fail run "$TEST_TMPDIR/scripts/check-all.sh"
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"Could not read the latest aurtomator release"* ]]
+  [ ! -e "$TEST_TMPDIR/.status/_upstream" ]
+  [ "$(cat "$TEST_TMPDIR/.status/_error_count")" = "0" ]
+}
+
+@test "check-all: asks for no release without VERSION" {
+  MOCK_UPSTREAM_TAG=fail run "$TEST_TMPDIR/scripts/check-all.sh"
+  [ "$status" -eq 0 ]
+  [[ "$output" != *"aurtomator"* ]]
+  [ ! -e "$TEST_TMPDIR/.status/_upstream" ]
+}
+
+@test "update-readme: writes the version under the package table" {
+  echo "0.6.0" >"$TEST_TMPDIR/VERSION"
+  cat >"$TEST_TMPDIR/README.md" <<'EOF'
+<!-- PACKAGES:START -->
+<!-- PACKAGES:END -->
+EOF
+  git -C "$TEST_TMPDIR" init -q
+  "$TEST_TMPDIR/scripts/update-readme.sh" 2>/dev/null
+
+  grep -qx '</table>' "$TEST_TMPDIR/README.md"
+  run grep -A2 -x '</table>' "$TEST_TMPDIR/README.md"
+  [ "$output" = $'</table>\n\naurtomator 0.6.0 <!-- x-release-please-version -->' ]
+}
+
+@test "update-readme: links a newer release of aurtomator" {
+  echo "0.6.0" >"$TEST_TMPDIR/VERSION"
+  echo "newer: 0.7.0" >"$TEST_TMPDIR/.status/_upstream"
+  cat >"$TEST_TMPDIR/README.md" <<'EOF'
+<!-- PACKAGES:START -->
+<!-- PACKAGES:END -->
+EOF
+  git -C "$TEST_TMPDIR" init -q
+  "$TEST_TMPDIR/scripts/update-readme.sh" 2>/dev/null
+
+  grep -qxF 'aurtomator 0.6.0 · [0.7.0 available](https://github.com/staticwire/aurtomator/releases/tag/v0.7.0) <!-- x-release-please-version -->' "$TEST_TMPDIR/README.md"
+}
+
+@test "update-readme: links no release for aurtomator at its release or for another _upstream" {
+  local upstream
+  echo "0.6.0" >"$TEST_TMPDIR/VERSION"
+  git -C "$TEST_TMPDIR" init -q
+  for upstream in "current: 0.7.0" "xnewer: 0.7.0" "newer: 0.7.0 x"; do
+    printf '%s\n' "$upstream" >"$TEST_TMPDIR/.status/_upstream"
+    printf '%s\n' '<!-- PACKAGES:START -->' '<!-- PACKAGES:END -->' >"$TEST_TMPDIR/README.md"
+    "$TEST_TMPDIR/scripts/update-readme.sh" 2>/dev/null
+    grep -qxF 'aurtomator 0.6.0 <!-- x-release-please-version -->' "$TEST_TMPDIR/README.md" || {
+      echo "linked for: $upstream"
+      return 1
+    }
+  done
+}
+
+@test "update-readme: writes no version line without VERSION" {
+  echo "current: 0.6.0" >"$TEST_TMPDIR/.status/_upstream"
+  cat >"$TEST_TMPDIR/README.md" <<'EOF'
+<!-- PACKAGES:START -->
+<!-- PACKAGES:END -->
+EOF
+  git -C "$TEST_TMPDIR" init -q
+  "$TEST_TMPDIR/scripts/update-readme.sh" 2>/dev/null
+
+  run grep -c 'aurtomator ' "$TEST_TMPDIR/README.md"
+  [ "$output" = "0" ]
+}
+
 # === tag_versions ===
 
 @test "lib.sh: tag_versions fills the groups and keeps every other character" {
@@ -1636,7 +1911,7 @@ current: '1.0.0'"
 EOF
   git -C "$TEST_TMPDIR" init -q
   "$TEST_TMPDIR/scripts/update-readme.sh" 2>/dev/null
-  grep -q "updated to 2.0.0" "$TEST_TMPDIR/README.md"
+  grep -q "📦 updated to 2.0.0" "$TEST_TMPDIR/README.md"
 }
 
 @test "update-readme: shows new_version status" {
@@ -1652,7 +1927,7 @@ current: '1.0.0'"
 EOF
   git -C "$TEST_TMPDIR" init -q
   "$TEST_TMPDIR/scripts/update-readme.sh" 2>/dev/null
-  grep -q "3.0.0 available" "$TEST_TMPDIR/README.md"
+  grep -q "✨ 3.0.0 available" "$TEST_TMPDIR/README.md"
 }
 
 @test "update-readme: shows workflow badge with github origin" {
@@ -1761,7 +2036,7 @@ current: '1.0.0'"
 
   run "$TEST_TMPDIR/scripts/update-readme.sh"
   [ "$status" -eq 0 ]
-  grep -qF '<tr><td><a href="https://aur.archlinux.org/pkgbase/pkg-new">pkg-new</a></td><td>—</td><td nowrap>github-release</td><td nowrap>—</td><td nowrap>🆕 new</td></tr>' "$TEST_TMPDIR/README.md"
+  grep -qF '<tr><td><a href="https://aur.archlinux.org/pkgbase/pkg-new">pkg-new</a></td><td>—</td><td nowrap>github-release</td><td nowrap>—</td><td nowrap>✨ new</td></tr>' "$TEST_TMPDIR/README.md"
 }
 
 # A package that has not been checked yet has failed nothing
@@ -2643,7 +2918,7 @@ EOF
   git -C "$TEST_TMPDIR" init -q
   "$TEST_TMPDIR/scripts/update-readme.sh" 2>/dev/null
 
-  grep -q "⬇️ downgraded to 1.0.0" "$TEST_TMPDIR/README.md"
+  grep -q "🔻 downgraded to 1.0.0" "$TEST_TMPDIR/README.md"
   # Downgrades count toward pkg_ok, so the badge stays green.
   grep -q "brightgreen" "$TEST_TMPDIR/README.md"
   run ! grep -q "packages-.*-red" "$TEST_TMPDIR/README.md"
@@ -2663,7 +2938,7 @@ EOF
   git -C "$TEST_TMPDIR" init -q
   "$TEST_TMPDIR/scripts/update-readme.sh" 2>/dev/null
 
-  grep -q "⬇️ 1.0.0 available (downgrade)" "$TEST_TMPDIR/README.md"
+  grep -q "🔻 1.0.0 available (downgrade)" "$TEST_TMPDIR/README.md"
   # Available downgrades count toward pkg_ok too, so the badge stays green.
   grep -q "brightgreen" "$TEST_TMPDIR/README.md"
 }
@@ -2682,7 +2957,7 @@ EOF
   git -C "$TEST_TMPDIR" init -q
   "$TEST_TMPDIR/scripts/update-readme.sh" 2>/dev/null
 
-  grep -q "⬇️ 1.0.0 skipped (downgrade)" "$TEST_TMPDIR/README.md"
+  grep -q "🔻 1.0.0 skipped (downgrade)" "$TEST_TMPDIR/README.md"
   grep -q "brightgreen" "$TEST_TMPDIR/README.md"
 }
 
@@ -2740,7 +3015,167 @@ EOF
   git -C "$TEST_TMPDIR" init -q
   "$TEST_TMPDIR/scripts/update-readme.sh" 2>/dev/null
 
-  grep -q "⬆️ 2026102100 skipped (version jump)" "$TEST_TMPDIR/README.md"
+  grep -q "🔺 2026102100 skipped (version jump)" "$TEST_TMPDIR/README.md"
+  grep -q "brightgreen" "$TEST_TMPDIR/README.md"
+}
+
+@test "check-all: holds an update an alert with hold: true fires on" {
+  stand_in_strategy step 29+1
+  create_test_package "pkg-hold" "step" "current: 28+25
+alerts:
+  - when: major
+    hold: true
+    note: Raise makedepends java-environment to 28"
+
+  run "$TEST_TMPDIR/scripts/check-all.sh"
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"pkg-hold: update 28+25 → 29+1 held: Raise makedepends java-environment to 28"* ]]
+  [ "$(cat "$TEST_TMPDIR/.status/pkg-hold")" = "held: 29+1" ]
+  [ "$(cat "$TEST_TMPDIR/.status/_error_count")" = "0" ]
+}
+
+@test "check-all: logs the note of an alert without hold and keeps the update" {
+  stand_in_strategy step 29+1
+  create_test_package "pkg-note" "step" "current: 28+25
+alerts:
+  - when: major
+    note: Create the package for the old major"
+
+  run "$TEST_TMPDIR/scripts/check-all.sh"
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"pkg-note: update 28+25 → 29+1 notice: Create the package for the old major"* ]]
+  [ "$(cat "$TEST_TMPDIR/.status/pkg-note")" = "new_version: 29+1" ]
+}
+
+@test "check-all: logs every fired alert of a held update" {
+  stand_in_strategy step 29+1
+  create_test_package "pkg-both" "step" "current: 28+25
+alerts:
+  - when: major
+    note: Create the package for the old major
+  - match: '^29\\+'
+    hold: true
+    note: Raise makedepends java-environment to 28"
+
+  run "$TEST_TMPDIR/scripts/check-all.sh"
+  [[ "$output" == *"pkg-both: update 28+25 → 29+1 notice: Create the package for the old major"* ]]
+  [[ "$output" == *"pkg-both: update 28+25 → 29+1 held: Raise makedepends java-environment to 28"* ]]
+  [ "$(cat "$TEST_TMPDIR/.status/pkg-both")" = "held: 29+1" ]
+}
+
+@test "check-all: records the fired alerts of a package in _alerts" {
+  stand_in_strategy step 29+1
+  create_test_package "pkg-both" "step" "current: 28+25
+alerts:
+  - when: major
+    note: Create the package for the old major
+  - match: '^29\\+'
+    hold: true
+    note: Raise makedepends java-environment to 28"
+  create_test_package "pkg-calm" "step" "current: 29+0
+alerts:
+  - when: major
+    note: Not fired"
+
+  run "$TEST_TMPDIR/scripts/check-all.sh"
+  [ "$status" -eq 0 ]
+  [ "$(cat "$TEST_TMPDIR/.status/_alerts")" = $'pkg-both\tnotice\tCreate the package for the old major\npkg-both\thold\tRaise makedepends java-environment to 28' ]
+  [ "$(cat "$TEST_TMPDIR/.status/_error_count")" = "0" ]
+}
+
+@test "check-all: writes no _alerts when no alert fires" {
+  stand_in_strategy step 29+1
+  create_test_package "pkg-calm" "step" "current: 29+0
+alerts:
+  - when: major
+    note: Not fired"
+
+  run "$TEST_TMPDIR/scripts/check-all.sh"
+  [ "$status" -eq 0 ]
+  [ ! -e "$TEST_TMPDIR/.status/_alerts" ]
+}
+
+@test "check-all: a skipped version jump or downgrade wins over a hold" {
+  stand_in_strategy jump 2026102100
+  create_test_package "pkg-jump" "jump" "current: '13'
+alerts:
+  - when: major
+    hold: true
+    note: New major"
+  stand_in_strategy older 1.0
+  create_test_package "pkg-down" "older" "current: '2.0'
+alerts:
+  - match: '^1'
+    hold: true
+    note: Old line"
+
+  run "$TEST_TMPDIR/scripts/check-all.sh"
+  [ "$status" -eq 0 ]
+  [ "$(cat "$TEST_TMPDIR/.status/pkg-jump")" = "jump_skipped: 2026102100" ]
+  [ "$(cat "$TEST_TMPDIR/.status/pkg-down")" = "downgrade_skipped: 1.0" ]
+  [[ "$output" != *"held:"* ]]
+}
+
+@test "check-all: holds nothing for a package without current" {
+  stand_in_strategy step 1.0
+  create_test_package "pkg-new" "step" "alerts:
+  - from: '0.1'
+    hold: true
+    note: First release"
+
+  run "$TEST_TMPDIR/scripts/check-all.sh"
+  [ "$status" -eq 0 ]
+  [ "$(cat "$TEST_TMPDIR/.status/pkg-new")" = "new_version: 1.0" ]
+}
+
+@test "check-all: fails the check of a package with an alert it cannot evaluate" {
+  stand_in_strategy step 29+1
+  create_test_package "pkg-bad" "step" "current: 28+25
+alerts:
+  - match: '(?:29)'
+    hold: true
+    note: New major"
+
+  run "$TEST_TMPDIR/scripts/check-all.sh"
+  [[ "$(cat "$TEST_TMPDIR/.status/pkg-bad")" == "check_failed: "*"alerts[0].match must be a non-empty ERE that bash accepts: (?:29)" ]]
+  [ "$(cat "$TEST_TMPDIR/.status/_error_count")" = "1" ]
+}
+
+@test "check-all --update: runs no update of a held version" {
+  stand_in_strategy step 29+1
+  create_test_package "pkg-hold" "step" "current: 28+25
+alerts:
+  - when: major
+    hold: true
+    note: Raise makedepends java-environment to 28"
+  rm -f "$TEST_TMPDIR/scripts/update-pkg.sh"
+  cat >"$TEST_TMPDIR/scripts/update-pkg.sh" <<EOF
+#!/usr/bin/env bash
+echo "\$*" >>"$TEST_TMPDIR/update-pkg.args"
+EOF
+  chmod +x "$TEST_TMPDIR/scripts/update-pkg.sh"
+
+  run "$TEST_TMPDIR/scripts/check-all.sh" --update
+  [ "$status" -eq 0 ]
+  [ ! -e "$TEST_TMPDIR/update-pkg.args" ]
+  [ "$(cat "$TEST_TMPDIR/.status/pkg-hold")" = "held: 29+1" ]
+}
+
+@test "update-readme: renders a held update and keeps the badge green" {
+  create_test_package "pkg-hold" "github-release" "upstream:
+  project: owner/repo
+current: 28+25"
+
+  echo "held: 29+1" >"$TEST_TMPDIR/.status/pkg-hold"
+
+  cat >"$TEST_TMPDIR/README.md" <<'EOF'
+<!-- PACKAGES:START -->
+<!-- PACKAGES:END -->
+EOF
+  git -C "$TEST_TMPDIR" init -q
+  "$TEST_TMPDIR/scripts/update-readme.sh" 2>/dev/null
+
+  grep -q "<td nowrap>✋ 29+1 held</td>" "$TEST_TMPDIR/README.md"
   grep -q "brightgreen" "$TEST_TMPDIR/README.md"
 }
 
@@ -2801,4 +3236,324 @@ EOF
   "$TEST_TMPDIR/scripts/check-all.sh" --update 2>/dev/null || true
   [ -f "$TEST_TMPDIR/.status/pkg-up" ]
   [ "$(cat "$TEST_TMPDIR/.status/pkg-up")" = "updated: 2.0.0" ]
+}
+
+# === check-asset.sh ===
+
+# Helper: the git of tests/helpers/mock-git.sh, which answers ls-remote
+mock_tags() {
+  cp "$TESTS_DIR/helpers/mock-git.sh" "$MOCK_DIR/git"
+  chmod +x "$MOCK_DIR/git"
+}
+
+# Helper: liquidsoap-bin on the mock of savonet/liquidsoap, with the given
+# asset_regex
+# Usage: liquidsoap_package [asset_regex]
+liquidsoap_package() {
+  mock_tags
+  create_test_package "liq" "github-tag" "upstream:
+  project: asset-owner/asset-repo
+  tag_version_regex: '^v([0-9.]+(-rc[0-9]+)?)\$'
+  asset_regex: '${1:-^liquidsoap_([0-9.]+-debian-forky-ocaml5\\.[0-9.]+-[0-9]+)_amd64\\.deb\$}'
+  asset_var: _deb
+pkgver_dash: ''"
+}
+
+@test "check-asset: prints the value of the one asset that matches" {
+  liquidsoap_package
+  run --separate-stderr "$TEST_TMPDIR/scripts/check-asset.sh" liq 2.5.0rc1
+  [ "$status" -eq 0 ]
+  [ "$output" = "2.5.0-debian-forky-ocaml5.5.1-1" ]
+}
+
+# The regex of the brief takes the OCaml 4 and the OCaml 5 build of 2.4.6
+@test "check-asset: fails when two assets match" {
+  liquidsoap_package '^liquidsoap_([0-9.]+-debian-forky-ocaml[0-9.]+-[0-9]+)_amd64\.deb$'
+  run "$TEST_TMPDIR/scripts/check-asset.sh" liq 2.4.6
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"2 assets of release v2.4.6 match upstream.asset_regex, expected one: liquidsoap_2.4.6-debian-forky-ocaml4.14.2-3_amd64.deb liquidsoap_2.4.6-debian-forky-ocaml5.4.0-3_amd64.deb"* ]]
+}
+
+@test "check-asset: waits for the asset of a release younger than a day" {
+  liquidsoap_package
+  MOCK_ASSETS="" MOCK_RELEASE_AGE=2 run "$TEST_TMPDIR/scripts/check-asset.sh" liq 2.5.0rc1
+  [ "$status" -eq 3 ]
+  [[ "$output" == *"liq 2.5.0rc1: no asset of release v2.5.0-rc1 matches upstream.asset_regex"* ]]
+}
+
+@test "check-asset: fails for a release older than a day without the asset" {
+  liquidsoap_package
+  MOCK_ASSETS="liquidsoap_2.5.0-debian-forky-ocaml5.5.1-1_riscv64.deb other.txt" \
+    run "$TEST_TMPDIR/scripts/check-asset.sh" liq 2.5.0rc1
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"liq 2.5.0rc1: no asset of release v2.5.0-rc1 matches upstream.asset_regex"* ]]
+  [[ "$output" == *"liquidsoap_2.5.0-debian-forky-ocaml5.5.1-1_riscv64.deb other.txt"* ]]
+}
+
+@test "check-asset: waits for the release of a tag younger than a day" {
+  liquidsoap_package
+  MOCK_TAG_AGE=1 run "$TEST_TMPDIR/scripts/check-asset.sh" liq 2.5.0rc2
+  [ "$status" -eq 3 ]
+  [[ "$output" == *"liq 2.5.0rc2: tag v2.5.0-rc2 has no release"* ]]
+}
+
+@test "check-asset: fails for a tag that has no release after a day" {
+  liquidsoap_package
+  run "$TEST_TMPDIR/scripts/check-asset.sh" liq 2.5.0rc2
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"liq 2.5.0rc2: tag v2.5.0-rc2 has no release"* ]]
+}
+
+@test "check-asset: fails when the tags cannot be read" {
+  mock_tags
+  create_test_package "gone" "github-tag" "upstream:
+  project: missing-owner/missing-repo
+  asset_regex: '^gone-(.+)\\.tar\\.gz\$'
+  asset_var: _gone"
+  run "$TEST_TMPDIR/scripts/check-asset.sh" gone 1.0.0
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"Failed to fetch tags for missing-owner/missing-repo"* ]]
+}
+
+@test "check-asset: fails when no tag gives the version" {
+  liquidsoap_package
+  run "$TEST_TMPDIR/scripts/check-asset.sh" liq 9.9.9
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"No tag of asset-owner/asset-repo gives version 9.9.9"* ]]
+}
+
+@test "check-asset: fails when two tags give the version" {
+  mock_tags
+  create_test_package "twin" "github-tag" "upstream:
+  project: asset-owner/twin-repo
+  asset_regex: '^twin-(.+)\\.tar\\.gz\$'
+  asset_var: _twin"
+  run "$TEST_TMPDIR/scripts/check-asset.sh" twin 1.0.0
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"Tags v1.0.0 1.0.0 of asset-owner/twin-repo all give version 1.0.0"* ]]
+}
+
+@test "check-asset: fails when the release cannot be read" {
+  liquidsoap_package
+  MOCK_RELEASE_STATUS=500 run "$TEST_TMPDIR/scripts/check-asset.sh" liq 2.5.0rc1
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"The requested URL returned error: 500"* ]]
+  [[ "$output" == *"Failed to read the release of tag v2.5.0-rc1 of asset-owner/asset-repo"* ]]
+}
+
+@test "check-asset: fails when the commit of a tag without a release cannot be read" {
+  liquidsoap_package
+  MOCK_COMMIT_STATUS=500 run "$TEST_TMPDIR/scripts/check-asset.sh" liq 2.5.0rc2
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"Failed to read the commit of tag v2.5.0-rc2 of asset-owner/asset-repo"* ]]
+}
+
+# bash expands a tilde at the start of an assignment
+@test "check-asset: refuses a value that starts with a tilde" {
+  liquidsoap_package '^liquidsoap_(.+)_amd64\.deb$'
+  MOCK_ASSETS="liquidsoap_~root_amd64.deb" run "$TEST_TMPDIR/scripts/check-asset.sh" liq 2.5.0rc1
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"Asset value rejected"* ]]
+}
+
+@test "check-asset: refuses a date of another form" {
+  liquidsoap_package
+  MOCK_ASSETS="" MOCK_RELEASE_DATE=soon run "$TEST_TMPDIR/scripts/check-asset.sh" liq 2.5.0rc1
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"Unexpected date from the GitHub API: 'soon'"* ]]
+}
+
+@test "check-asset: percent-encodes the tag in the URL of its release" {
+  mock_tags
+  create_test_package "plus" "github-tag" "upstream:
+  project: asset-owner/plus-repo
+  asset_regex: '^plus_(.+)\\.tar\\.gz\$'
+  asset_var: _plus"
+  run --separate-stderr "$TEST_TMPDIR/scripts/check-asset.sh" plus 1.0+1
+  [ "$status" -eq 0 ]
+  [ "$output" = "1.0-build7" ]
+}
+
+@test "check-asset: needs upstream.asset_regex" {
+  create_test_package "plain" "github-tag" "upstream:
+  project: asset-owner/asset-repo"
+  run "$TEST_TMPDIR/scripts/check-asset.sh" plain 2.4.6
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"plain has no upstream.asset_regex"* ]]
+}
+
+# === check-all.sh: values from release asset names ===
+
+# Helper: a check-asset.sh that logs its arguments to check-asset.args and
+# prints the given value, or exits with 3 for pending and 1 for fail
+# Usage: stand_in_asset <value|pending|fail>
+stand_in_asset() {
+  local body="echo $1"
+  case "$1" in
+    pending) body='echo "no asset yet" >&2; exit 3' ;;
+    fail) body='echo "release unreadable" >&2; exit 1' ;;
+  esac
+  rm -f "$TEST_TMPDIR/scripts/check-asset.sh"
+  printf '#!/usr/bin/env bash\necho "$*" >>%q\n%s\n' "$TEST_TMPDIR/check-asset.args" "$body" >"$TEST_TMPDIR/scripts/check-asset.sh"
+  chmod +x "$TEST_TMPDIR/scripts/check-asset.sh"
+}
+
+# Helper: pkg on the stand-in strategy step, with asset_regex, at
+# <current>, and with <current_asset> when it is given
+# Usage: asset_package <current> [current_asset]
+asset_package() {
+  create_test_package "pkg" "step" "upstream:
+  asset_regex: '^x_(.+)\$'
+  asset_var: _x
+current: '$1'${2:+
+current_asset: '$2'}"
+}
+
+@test "check-all: records the asset value of a new version" {
+  stand_in_strategy step 2.0.0
+  asset_package 1.0.0 1.0.0-a
+  stand_in_asset 2.0.0-a
+  run "$TEST_TMPDIR/scripts/check-all.sh"
+  [ "$status" -eq 0 ]
+  [ "$(cat "$TEST_TMPDIR/.status/pkg")" = "new_version: 2.0.0" ]
+  [ "$(cat "$TEST_TMPDIR/.status/_assets")" = $'pkg\t2.0.0-a' ]
+  [ "$(cat "$TEST_TMPDIR/check-asset.args")" = "pkg 2.0.0" ]
+}
+
+@test "check-all: keeps a package up to date while its asset value stays" {
+  stand_in_strategy step 1.0.0
+  asset_package 1.0.0 1.0.0-a
+  stand_in_asset 1.0.0-a
+  run "$TEST_TMPDIR/scripts/check-all.sh"
+  [ "$status" -eq 0 ]
+  [ "$(cat "$TEST_TMPDIR/.status/pkg")" = "up_to_date" ]
+  [ "$(cat "$TEST_TMPDIR/check-asset.args")" = "pkg 1.0.0" ]
+}
+
+@test "check-all: finds a rebuild in a new asset value of the current version" {
+  stand_in_strategy step 1.0.0
+  asset_package 1.0.0 1.0.0-a
+  stand_in_asset 1.0.0-b
+  run "$TEST_TMPDIR/scripts/check-all.sh"
+  [ "$status" -eq 0 ]
+  [ "$(cat "$TEST_TMPDIR/.status/pkg")" = "new_build: 1.0.0" ]
+  [ "$(cat "$TEST_TMPDIR/.status/_assets")" = $'pkg\t1.0.0-b' ]
+  [ "$(cat "$TEST_TMPDIR/check-asset.args")" = "pkg 1.0.0" ]
+}
+
+@test "check-all: takes a missing current_asset for another asset value" {
+  stand_in_strategy step 1.0.0
+  asset_package 1.0.0
+  stand_in_asset 1.0.0-a
+  run "$TEST_TMPDIR/scripts/check-all.sh"
+  [ "$status" -eq 0 ]
+  [ "$(cat "$TEST_TMPDIR/.status/pkg")" = "new_build: 1.0.0" ]
+}
+
+@test "check-all: writes pending while the asset of a new version is not out" {
+  stand_in_strategy step 2.0.0
+  asset_package 1.0.0 1.0.0-a
+  stand_in_asset pending
+  run "$TEST_TMPDIR/scripts/check-all.sh"
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"no asset yet"* ]]
+  [ "$(cat "$TEST_TMPDIR/.status/pkg")" = "pending: 2.0.0" ]
+  [ "$(cat "$TEST_TMPDIR/.status/_error_count")" = "0" ]
+  [ ! -e "$TEST_TMPDIR/.status/_assets" ]
+}
+
+@test "check-all: writes pending while the asset of the current version is not out" {
+  stand_in_strategy step 1.0.0
+  asset_package 1.0.0 1.0.0-a
+  stand_in_asset pending
+  run "$TEST_TMPDIR/scripts/check-all.sh"
+  [ "$status" -eq 0 ]
+  [ "$(cat "$TEST_TMPDIR/.status/pkg")" = "pending: 1.0.0" ]
+}
+
+@test "check-all: fails the check when the asset value cannot be found, and checks again" {
+  stand_in_strategy step 2.0.0
+  asset_package 1.0.0 1.0.0-a
+  stand_in_asset fail
+  run "$TEST_TMPDIR/scripts/check-all.sh"
+  [ "$status" -eq 0 ]
+  [ "$(cat "$TEST_TMPDIR/.status/pkg")" = "check_failed: release unreadable" ]
+  [ "$(cat "$TEST_TMPDIR/check-asset.args")" = $'pkg 2.0.0\npkg 2.0.0' ]
+}
+
+@test "check-all: asks no asset value for a held update" {
+  stand_in_strategy step 29+1
+  create_test_package "pkg" "step" "upstream:
+  asset_regex: '^x_(.+)\$'
+  asset_var: _x
+current: 28+25
+alerts:
+  - when: major
+    hold: true
+    note: Raise makedepends java-environment to 28"
+  stand_in_asset 29+1-a
+  run "$TEST_TMPDIR/scripts/check-all.sh"
+  [ "$status" -eq 0 ]
+  [ "$(cat "$TEST_TMPDIR/.status/pkg")" = "held: 29+1" ]
+  [ ! -e "$TEST_TMPDIR/check-asset.args" ]
+}
+
+@test "check-all: asks no asset value for a package without asset_regex" {
+  stand_in_strategy step 2.0.0
+  create_test_package "pkg" "step" "current: '1.0.0'"
+  stand_in_asset 2.0.0-a
+  run "$TEST_TMPDIR/scripts/check-all.sh"
+  [ "$status" -eq 0 ]
+  [ "$(cat "$TEST_TMPDIR/.status/pkg")" = "new_version: 2.0.0" ]
+  [ ! -e "$TEST_TMPDIR/check-asset.args" ]
+  [ ! -e "$TEST_TMPDIR/.status/_assets" ]
+}
+
+# Helper: an update-pkg.sh that logs its arguments to update-pkg.args
+log_update_pkg() {
+  rm -f "$TEST_TMPDIR/scripts/update-pkg.sh"
+  printf '#!/usr/bin/env bash\necho "$*" >>%q\n' "$TEST_TMPDIR/update-pkg.args" >"$TEST_TMPDIR/scripts/update-pkg.sh"
+  chmod +x "$TEST_TMPDIR/scripts/update-pkg.sh"
+}
+
+@test "check-all --update: passes the asset value to update-pkg" {
+  stand_in_strategy step 2.0.0
+  asset_package 1.0.0 1.0.0-a
+  stand_in_asset 2.0.0-a
+  log_update_pkg
+  run "$TEST_TMPDIR/scripts/check-all.sh" --update
+  [ "$status" -eq 0 ]
+  [ "$(cat "$TEST_TMPDIR/update-pkg.args")" = "pkg 2.0.0 --asset 2.0.0-a" ]
+  [ "$(cat "$TEST_TMPDIR/.status/pkg")" = "updated: 2.0.0" ]
+}
+
+@test "check-all --update: pushes a rebuild" {
+  stand_in_strategy step 1.0.0
+  asset_package 1.0.0 1.0.0-a
+  stand_in_asset 1.0.0-b
+  log_update_pkg
+  run "$TEST_TMPDIR/scripts/check-all.sh" --update
+  [ "$status" -eq 0 ]
+  [ "$(cat "$TEST_TMPDIR/update-pkg.args")" = "pkg 1.0.0 --asset 1.0.0-b" ]
+  [ "$(cat "$TEST_TMPDIR/.status/pkg")" = "rebuilt: 1.0.0" ]
+}
+
+@test "update-readme: renders a rebuild and a pending asset, and keeps the badge green" {
+  local name
+  for name in built rebuilt waiting; do
+    create_test_package "$name" "github-release" "upstream:
+  project: owner/repo
+current: '1.0.0'"
+  done
+  echo "new_build: 1.0.0" >"$TEST_TMPDIR/.status/built"
+  echo "rebuilt: 1.0.0" >"$TEST_TMPDIR/.status/rebuilt"
+  echo "pending: 2.0.0" >"$TEST_TMPDIR/.status/waiting"
+  printf '%s\n' "<!-- PACKAGES:START -->" "<!-- PACKAGES:END -->" >"$TEST_TMPDIR/README.md"
+  git -C "$TEST_TMPDIR" init -q
+  run "$TEST_TMPDIR/scripts/update-readme.sh"
+  [ "$status" -eq 0 ]
+  grep -qF '<td nowrap>🔨 1.0.0 rebuild available</td>' "$TEST_TMPDIR/README.md"
+  grep -qF '<td nowrap>🔨 1.0.0 rebuilt</td>' "$TEST_TMPDIR/README.md"
+  grep -qF '<td nowrap>⏳ 2.0.0 pending</td>' "$TEST_TMPDIR/README.md"
+  grep -q "brightgreen" "$TEST_TMPDIR/README.md"
 }

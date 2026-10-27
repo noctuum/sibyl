@@ -42,6 +42,13 @@ pkg_set() {
   yq -i "${query} = ${value}" "$file"
 }
 
+# Write current and, when an asset value is given, current_asset
+# Usage: pkg_set_current packages/my-package.yml 2.5.0 [asset value]
+pkg_set_current() {
+  pkg_set "$1" .current "\"$2\""
+  [[ -z "${3:-}" ]] || pkg_set "$1" .current_asset "\"$3\""
+}
+
 # The pkgver_dash of a package: _ or ., drop for '', which drops the dash,
 # and nothing when the package does not set it
 # Usage: pkgver_dash packages/my-package.yml
@@ -50,6 +57,45 @@ pkgver_dash() {
   [[ $(pkg_get "$file" '.pkgver_dash | tag') != "!!null" ]] || return 0
   dash=$(pkg_get "$file" '.pkgver_dash')
   printf '%s\n' "${dash:-drop}"
+}
+
+# The pkgver of an upstream version, as check-update.sh makes it from the
+# version of a strategy. pkgver holds no dash. The PKGBUILD turns
+# pkgver_dash back into a dash where a URL needs one, as in ${pkgver//_/-}.
+# pkgver_dash: '' drops the dash, so 2.5.0-rc1 gives 2.5.0rc1, which vercmp
+# puts below 2.5.0, and the PKGBUILD puts it back as in ${pkgver/rc/-rc}.
+# pkgver is the upstream version with the text of pkgver_format around it,
+# as 4.4215 for build 4215. The PKGBUILD cuts that text off where a URL
+# needs the upstream version, as in ${pkgver#4.}.
+# Args: $1=upstream version, $2=pkgver_dash character or drop, if any,
+#       $3=pkgver_format, if any
+to_pkgver() {
+  local version="$1"
+  if [[ "$2" == drop ]]; then
+    version=${version//-/}
+  elif [[ -n "$2" ]]; then
+    version=${version//-/"$2"}
+  fi
+  if [[ -n "$3" ]]; then
+    version=${3/"%s"/"$version"}
+  fi
+  printf '%s\n' "$version"
+}
+
+# The asset_var of a package, the PKGBUILD variable that holds a value from
+# the name of a release asset, and nothing when the package does not set it.
+# The name reaches a sed command and an awk program, so it has to be a
+# variable name that starts with _.
+# Usage: pkg_asset_var packages/my-package.yml
+# Returns: 1 when the name is of another form (reason on stderr)
+pkg_asset_var() {
+  local var
+  var=$(pkg_get "$1" '.upstream.asset_var // ""')
+  if [[ -n "$var" && ! "$var" =~ ^_[A-Za-z0-9_]+$ ]]; then
+    log_err "$1: upstream.asset_var must be a name that starts with _: ${var@Q}"
+    return 1
+  fi
+  printf '%s\n' "$var"
 }
 
 # =============================================================================
@@ -218,6 +264,35 @@ validate_pkgver() {
   fi
 }
 
+# Reject a value from the name of a release asset before it is written into
+# a PKGBUILD, as validate_pkgver does for a version. bash expands a tilde at
+# the start of an assignment, so the value starts with a letter or a digit.
+# Args: $1=value
+# Returns: 0=ok, 1=rejected (reason on stderr)
+validate_asset_value() {
+  local LC_ALL=C
+  if [[ ! "$1" =~ ^[A-Za-z0-9][A-Za-z0-9._+~-]*$ ]]; then
+    log_err "Asset value rejected, it must start with a letter or a digit and hold only A-Za-z0-9 . _ + ~ -: ${1@Q}"
+    return 1
+  fi
+}
+
+# The --asset option of update-pkg.sh and publish-pkg.sh: a package with
+# asset_var needs it, any other package must not get it
+# Args: $1=asset_var of the package, $2=value of --asset
+# Returns: 1 when one is set without the other or the value is rejected
+check_asset_option() {
+  if [[ -n "$1" && -z "$2" ]]; then
+    log_err "upstream.asset_var is set, so --asset is needed"
+    return 1
+  fi
+  if [[ -z "$1" && -n "$2" ]]; then
+    log_err "--asset needs upstream.asset_var"
+    return 1
+  fi
+  [[ -z "$2" ]] || validate_asset_value "$2"
+}
+
 # Args: $1=current version, $2=new version
 # Returns: 0 when the first number in the new version has at least two
 #          digits more than the first number in the current one, as in
@@ -237,6 +312,22 @@ version_jump() {
 remote_tags() {
   GIT_ALLOW_PROTOCOL=https GIT_TERMINAL_PROMPT=0 \
     git ls-remote --tags --refs "$1" | cut -f2 | sed 's|^refs/tags/||'
+}
+
+# Print every tag name of a GitHub repository, with GITHUB_TOKEN when it is
+# set. The tags API answers 100 tags at most per page. git takes the token
+# from the environment: as an argument, it is visible in ps to every local
+# user.
+# Args: $1=owner/repo
+github_tags() {
+  (
+    if [[ -n "${GITHUB_TOKEN:-}" ]]; then
+      export GIT_CONFIG_COUNT=1 GIT_CONFIG_KEY_0=http.https://github.com/.extraHeader
+      GIT_CONFIG_VALUE_0="Authorization: Basic $(printf 'x-access-token:%s' "$GITHUB_TOKEN" | base64 -w0)"
+      export GIT_CONFIG_VALUE_0
+    fi
+    remote_tags "https://github.com/$1.git"
+  )
 }
 
 # The newest of the versions on stdin, one per line, in the order of
