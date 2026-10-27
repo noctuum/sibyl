@@ -2,4 +2,8 @@ name: pgtui-bin
 strategy: github-release
 upstream:
   project: pgplex/pgtui
+alerts:
+  - from: '0.3.1'
+    hold: true
+    note: Upstream moved from MIT to Apache-2.0 after v0.3.0; check LICENSE at the tag and update license
 current: 0.3.0

@@ -3,4 +3,8 @@ strategy: github-tag
 upstream:
   project: openjdk/jdk
   tag_version_regex: '^jdk-([0-9]+\+[0-9]+)$'
+alerts:
+  - when: major
+    hold: true
+    note: Raise makedepends java-environment to the lowest DEFAULT_ACCEPTABLE_BOOT_VERSIONS of the new tag
 current: 28+21
