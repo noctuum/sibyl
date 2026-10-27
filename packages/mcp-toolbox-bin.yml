@@ -2,3 +2,4 @@ name: mcp-toolbox-bin
 strategy: github-release
 upstream:
   project: googleapis/mcp-toolbox
+current: 1.15.0
