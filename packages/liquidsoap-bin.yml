@@ -6,3 +6,5 @@ upstream:
   asset_regex: '^liquidsoap_([0-9.]+-debian-forky-ocaml5\.[0-9.]+-[0-9]+)_amd64\.deb$'
   asset_var: _deb
 pkgver_dash: ''
+current: 2.5.0rc1
+current_asset: 2.5.0-debian-forky-ocaml5.5.1-1
