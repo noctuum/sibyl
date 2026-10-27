@@ -1,0 +1,4 @@
+name: greenmask
+strategy: github-release
+upstream:
+  project: GreenmaskIO/greenmask

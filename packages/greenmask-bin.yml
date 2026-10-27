@@ -1,0 +1,4 @@
+name: greenmask-bin
+strategy: github-release
+upstream:
+  project: GreenmaskIO/greenmask
