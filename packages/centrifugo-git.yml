@@ -3,3 +3,4 @@ strategy: git-latest
 upstream:
   type: github
   project: centrifugal/centrifugo
+current: r1996.3a8731a

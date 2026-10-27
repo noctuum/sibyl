@@ -3,3 +3,4 @@ strategy: git-latest
 upstream:
   type: github
   project: GreenmaskIO/greenmask
+current: r602.3a1befc

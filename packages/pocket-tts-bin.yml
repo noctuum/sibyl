@@ -4,3 +4,5 @@ upstream:
   project: kyutai-labs/pocket-tts
   asset_regex: '^(pocket-tts-[0-9.]+)-x86_64-unknown-linux-gnu\.tar\.gz$'
   asset_var: _bin
+current: 4.0.1
+current_asset: pocket-tts-3.3.0

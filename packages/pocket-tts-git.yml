@@ -3,3 +3,4 @@ strategy: git-latest
 upstream:
   type: github
   project: kyutai-labs/pocket-tts
+current: r206.77c3d76
