@@ -1,0 +1,4 @@
+name: webdav-bin
+strategy: github-release
+upstream:
+  project: hacdias/webdav
