@@ -4,3 +4,5 @@ upstream:
   project: clidey/whodb
   asset_regex: '^(whodb-[0-9.]+)-linux-amd64$'
   asset_var: _bin
+current: 0.136.0
+current_asset: whodb-0.136.0

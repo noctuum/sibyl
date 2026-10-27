@@ -12,7 +12,7 @@ Automated AUR package updates from a single GitHub repo.
 ## Packages
 
 <!-- PACKAGES:START -->
-![Check Updates](https://github.com/noctuum/sibyl/actions/workflows/check-updates.yml/badge.svg) ![packages](https://img.shields.io/badge/packages-39%2F39-brightgreen)
+![Check Updates](https://github.com/noctuum/sibyl/actions/workflows/check-updates.yml/badge.svg) ![packages](https://img.shields.io/badge/packages-42%2F42-brightgreen)
 
 <table>
 <tr><th>Package</th><th>Version</th><th>Strategy</th><th>Updated</th><th>Status</th></tr>
@@ -39,6 +39,7 @@ Automated AUR package updates from a single GitHub repo.
 <tr><td><a href="https://aur.archlinux.org/pkgbase/neovim-nightly-bin">neovim-nightly-bin</a></td><td>0.13.0+dev+1953+g3ee26cf91f</td><td nowrap>github-nightly</td><td nowrap>2026-10-27</td><td nowrap>✅ up to date</td></tr>
 <tr><td><a href="https://aur.archlinux.org/pkgbase/oasdiff-bin">oasdiff-bin</a></td><td>1.34.1</td><td nowrap>github-release</td><td nowrap>—</td><td nowrap>✅ up to date</td></tr>
 <tr><td><a href="https://aur.archlinux.org/pkgbase/oasdiff">oasdiff</a></td><td>1.34.1</td><td nowrap>github-release</td><td nowrap>—</td><td nowrap>✅ up to date</td></tr>
+<tr><td><a href="https://aur.archlinux.org/pkgbase/pg-schema-diff">pg-schema-diff</a></td><td>1.0.9</td><td nowrap>github-release</td><td nowrap>—</td><td nowrap>✅ up to date</td></tr>
 <tr><td><a href="https://aur.archlinux.org/pkgbase/pgconsole">pgconsole</a></td><td>1.3.0</td><td nowrap>npm</td><td nowrap>—</td><td nowrap>✅ up to date</td></tr>
 <tr><td><a href="https://aur.archlinux.org/pkgbase/pgtui-bin">pgtui-bin</a></td><td>0.3.0</td><td nowrap>github-release</td><td nowrap>—</td><td nowrap>✅ up to date</td></tr>
 <tr><td><a href="https://aur.archlinux.org/pkgbase/pgtui">pgtui</a></td><td>0.3.0</td><td nowrap>github-release</td><td nowrap>—</td><td nowrap>✅ up to date</td></tr>
@@ -53,6 +54,8 @@ Automated AUR package updates from a single GitHub repo.
 <tr><td><a href="https://aur.archlinux.org/pkgbase/webdav-bin">webdav-bin</a></td><td>5.17.2</td><td nowrap>github-release</td><td nowrap>—</td><td nowrap>✅ up to date</td></tr>
 <tr><td><a href="https://aur.archlinux.org/pkgbase/webdav-git">webdav-git</a></td><td>r292.0ca5bbb</td><td nowrap>git-latest</td><td nowrap>—</td><td nowrap>✅ up to date</td></tr>
 <tr><td><a href="https://aur.archlinux.org/pkgbase/webdav">webdav</a></td><td>5.17.2</td><td nowrap>github-release</td><td nowrap>—</td><td nowrap>✅ up to date</td></tr>
+<tr><td><a href="https://aur.archlinux.org/pkgbase/whodb-bin">whodb-bin</a></td><td>0.136.0</td><td nowrap>github-release</td><td nowrap>—</td><td nowrap>✅ up to date</td></tr>
+<tr><td><a href="https://aur.archlinux.org/pkgbase/whodb-cli-bin">whodb-cli-bin</a></td><td>0.136.0</td><td nowrap>github-release</td><td nowrap>—</td><td nowrap>✅ up to date</td></tr>
 <tr><td><a href="https://aur.archlinux.org/pkgbase/wireguard-gui-bin">wireguard-gui-bin</a></td><td>0.1.13</td><td nowrap>github-release</td><td nowrap>2026-10-26</td><td nowrap>✅ up to date</td></tr>
 <tr><td><a href="https://aur.archlinux.org/pkgbase/ydiskarc">ydiskarc</a></td><td>1.1.0</td><td nowrap>pypi</td><td nowrap>—</td><td nowrap>✅ up to date</td></tr>
 </table>
