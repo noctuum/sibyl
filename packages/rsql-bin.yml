@@ -1,0 +1,4 @@
+name: rsql-bin
+strategy: github-release
+upstream:
+  project: theseus-rs/rsql
