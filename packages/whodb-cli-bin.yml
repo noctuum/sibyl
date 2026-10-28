@@ -4,5 +4,6 @@ upstream:
   project: clidey/whodb
   asset_regex: '^(whodb-cli)-linux-amd64$'
   asset_var: _cli
-current: 0.136.0
+current: 0.138.0
 current_asset: whodb-cli
+last_updated: "2026-10-28"
