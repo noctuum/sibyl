@@ -2,3 +2,4 @@ name: rsql
 strategy: github-release
 upstream:
   project: theseus-rs/rsql
+current: 0.21.0
