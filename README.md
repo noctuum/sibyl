@@ -12,7 +12,7 @@ Automated AUR package updates from a single GitHub repo.
 ## Packages
 
 <!-- PACKAGES:START -->
-![Check Updates](https://github.com/noctuum/sibyl/actions/workflows/check-updates.yml/badge.svg) ![packages](https://img.shields.io/badge/packages-45%2F45-brightgreen)
+![Check Updates](https://github.com/noctuum/sibyl/actions/workflows/check-updates.yml/badge.svg) ![packages](https://img.shields.io/badge/packages-47%2F47-brightgreen)
 
 <table>
 <tr><th>Package</th><th>Version</th><th>Strategy</th><th>Updated</th><th>Status</th></tr>
@@ -32,18 +32,20 @@ Automated AUR package updates from a single GitHub repo.
 <tr><td><a href="https://aur.archlinux.org/pkgbase/liquidsoap-bin">liquidsoap-bin</a></td><td>2.5.0rc1</td><td nowrap>github-tag</td><td nowrap>—</td><td nowrap>✅ up to date</td></tr>
 <tr><td><a href="https://aur.archlinux.org/pkgbase/marp-cli-bin">marp-cli-bin</a></td><td>4.5.1</td><td nowrap>github-release</td><td nowrap>2026-09-06</td><td nowrap>✅ up to date</td></tr>
 <tr><td><a href="https://aur.archlinux.org/pkgbase/mcp-toolbox-bin">mcp-toolbox-bin</a></td><td>1.15.0</td><td nowrap>github-release</td><td nowrap>—</td><td nowrap>✅ up to date</td></tr>
-<tr><td><a href="https://aur.archlinux.org/pkgbase/mcp-toolbox-git">mcp-toolbox-git</a></td><td>r2351.bfd4ffa</td><td nowrap>git-latest</td><td nowrap>2026-10-27</td><td nowrap>✅ up to date</td></tr>
+<tr><td><a href="https://aur.archlinux.org/pkgbase/mcp-toolbox-git">mcp-toolbox-git</a></td><td>r2353.fae6849</td><td nowrap>git-latest</td><td nowrap>2026-10-28</td><td nowrap>📦 updated to r2353.fae6849</td></tr>
 <tr><td><a href="https://aur.archlinux.org/pkgbase/mcp-toolbox">mcp-toolbox</a></td><td>1.15.0</td><td nowrap>github-release</td><td nowrap>—</td><td nowrap>✅ up to date</td></tr>
 <tr><td><a href="https://aur.archlinux.org/pkgbase/memos-bin">memos-bin</a></td><td>0.31.0</td><td nowrap>github-release</td><td nowrap>2026-09-19</td><td nowrap>✅ up to date</td></tr>
 <tr><td><a href="https://aur.archlinux.org/pkgbase/miniflux-bin">miniflux-bin</a></td><td>2.3.4</td><td nowrap>github-release</td><td nowrap>2026-10-20</td><td nowrap>✅ up to date</td></tr>
 <tr><td><a href="https://aur.archlinux.org/pkgbase/mp4ff-bin">mp4ff-bin</a></td><td>0.61.0</td><td nowrap>github-release</td><td nowrap>—</td><td nowrap>✅ up to date</td></tr>
-<tr><td><a href="https://aur.archlinux.org/pkgbase/mp4ff-git">mp4ff-git</a></td><td>r1278.d5f2a9f</td><td nowrap>git-latest</td><td nowrap>—</td><td nowrap>✅ up to date</td></tr>
+<tr><td><a href="https://aur.archlinux.org/pkgbase/mp4ff-git">mp4ff-git</a></td><td>r1293.cbcc7ab</td><td nowrap>git-latest</td><td nowrap>2026-10-28</td><td nowrap>📦 updated to r1293.cbcc7ab</td></tr>
 <tr><td><a href="https://aur.archlinux.org/pkgbase/mp4ff">mp4ff</a></td><td>0.61.0</td><td nowrap>github-release</td><td nowrap>—</td><td nowrap>✅ up to date</td></tr>
 <tr><td><a href="https://aur.archlinux.org/pkgbase/neovim-nightly-bin">neovim-nightly-bin</a></td><td>0.13.0+dev+1959+g61e71ccf8a</td><td nowrap>github-nightly</td><td nowrap>2026-10-28</td><td nowrap>✅ up to date</td></tr>
-<tr><td><a href="https://aur.archlinux.org/pkgbase/oasdiff-bin">oasdiff-bin</a></td><td>1.35.0</td><td nowrap>github-release</td><td nowrap>2026-10-28</td><td nowrap>📦 updated to 1.35.0</td></tr>
-<tr><td><a href="https://aur.archlinux.org/pkgbase/oasdiff">oasdiff</a></td><td>1.35.0</td><td nowrap>github-release</td><td nowrap>2026-10-28</td><td nowrap>📦 updated to 1.35.0</td></tr>
+<tr><td><a href="https://aur.archlinux.org/pkgbase/oasdiff-bin">oasdiff-bin</a></td><td>1.35.0</td><td nowrap>github-release</td><td nowrap>2026-10-28</td><td nowrap>✅ up to date</td></tr>
+<tr><td><a href="https://aur.archlinux.org/pkgbase/oasdiff">oasdiff</a></td><td>1.35.0</td><td nowrap>github-release</td><td nowrap>2026-10-28</td><td nowrap>✅ up to date</td></tr>
 <tr><td><a href="https://aur.archlinux.org/pkgbase/pg-schema-diff">pg-schema-diff</a></td><td>1.0.9</td><td nowrap>github-release</td><td nowrap>—</td><td nowrap>✅ up to date</td></tr>
 <tr><td><a href="https://aur.archlinux.org/pkgbase/pgconsole">pgconsole</a></td><td>1.3.0</td><td nowrap>npm</td><td nowrap>—</td><td nowrap>✅ up to date</td></tr>
+<tr><td><a href="https://aur.archlinux.org/pkgbase/pgstream-bin">pgstream-bin</a></td><td>1.5.0</td><td nowrap>github-release</td><td nowrap>—</td><td nowrap>✅ up to date</td></tr>
+<tr><td><a href="https://aur.archlinux.org/pkgbase/pgstream">pgstream</a></td><td>1.5.0</td><td nowrap>github-release</td><td nowrap>—</td><td nowrap>✅ up to date</td></tr>
 <tr><td><a href="https://aur.archlinux.org/pkgbase/pgtui-bin">pgtui-bin</a></td><td>0.3.0</td><td nowrap>github-release</td><td nowrap>—</td><td nowrap>✅ up to date</td></tr>
 <tr><td><a href="https://aur.archlinux.org/pkgbase/pgtui">pgtui</a></td><td>0.3.0</td><td nowrap>github-release</td><td nowrap>—</td><td nowrap>✅ up to date</td></tr>
 <tr><td><a href="https://aur.archlinux.org/pkgbase/pocket-tts-bin">pocket-tts-bin</a></td><td>4.0.1</td><td nowrap>github-release</td><td nowrap>—</td><td nowrap>✅ up to date</td></tr>

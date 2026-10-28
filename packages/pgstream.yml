@@ -2,3 +2,4 @@ name: pgstream
 strategy: github-release
 upstream:
   project: xataio/pgstream
+current: 1.5.0
