@@ -1,0 +1,4 @@
+name: pgstream-bin
+strategy: github-release
+upstream:
+  project: xataio/pgstream
