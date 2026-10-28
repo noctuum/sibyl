@@ -1,0 +1,4 @@
+name: mp4ff-bin
+strategy: github-release
+upstream:
+  project: Eyevinn/mp4ff

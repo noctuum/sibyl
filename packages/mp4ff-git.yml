@@ -1,0 +1,5 @@
+name: mp4ff-git
+strategy: git-latest
+upstream:
+  type: github
+  project: Eyevinn/mp4ff
