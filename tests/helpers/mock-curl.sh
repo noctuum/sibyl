@@ -87,6 +87,27 @@ case "$url" in
   *archlinux.org/packages/search/json*name=ffmpeg*)
     echo '{"results": [{"repo": "extra", "epoch": 2, "pkgver": "9.0.2", "pkgrel": "2"}]}'
     ;;
+  # Arch repos: a testing build listed before the stable one, as amd-ucode
+  *archlinux.org/packages/search/json*name=arch-split*)
+    echo '{"results": [{"repo": "core-testing", "epoch": 0, "pkgver": "2.0", "pkgrel": "1"}, {"repo": "core", "epoch": 0, "pkgver": "1.0", "pkgrel": "1"}]}'
+    ;;
+  # Arch repos: a testing build older than the stable one, and a newer
+  # build in kde-unstable
+  *archlinux.org/packages/search/json*name=arch-stale*)
+    echo '{"results": [{"repo": "extra", "epoch": 0, "pkgver": "3.0", "pkgrel": "1"}, {"repo": "extra-testing", "epoch": 0, "pkgver": "2.9", "pkgrel": "1"}, {"repo": "kde-unstable", "epoch": 0, "pkgver": "9.0", "pkgrel": "1"}]}'
+    ;;
+  # Arch repos: a package in a testing repository only
+  *archlinux.org/packages/search/json*name=arch-testing-only*)
+    echo '{"results": [{"repo": "multilib-testing", "epoch": 0, "pkgver": "5.0", "pkgrel": "1"}]}'
+    ;;
+  # Arch repos: the epoch of the testing build makes it the newer one
+  *archlinux.org/packages/search/json*name=arch-epoch*)
+    echo '{"results": [{"repo": "extra", "epoch": 1, "pkgver": "2.0", "pkgrel": "1"}, {"repo": "extra-testing", "epoch": 2, "pkgver": "1.0", "pkgrel": "1"}]}'
+    ;;
+  # Arch repos: a package of multilib
+  *archlinux.org/packages/search/json*name=arch-multilib*)
+    echo '{"results": [{"repo": "multilib", "epoch": 0, "pkgver": "4.0", "pkgrel": "1"}]}'
+    ;;
   # KDE tarball: no versions in listing
   *download.kde.org/stable/no-versions-here/*)
     echo '<html><body>Parent Directory</body></html>'
@@ -270,6 +291,11 @@ case "$url" in
   *"api.github.com/repos/multi-product/repo/releases?per_page=100&page=1")
     echo '[{"tag_name": "app-desktop-release-361.0", "published_at": "2026-10-12T08:34:32Z", "prerelease": false}, {"tag_name": "app-web-release-362.0", "published_at": "2026-10-21T08:32:50Z", "prerelease": false}, {"tag_name": "app-desktop-release-363.0", "published_at": "2026-10-22T00:00:00Z", "prerelease": true}, {"tag_name": "app-desktop-release-362.0", "published_at": "2026-10-21T08:33:13Z", "prerelease": false}, {"tag_name": "app-desktop-release-364.0", "published_at": null, "prerelease": false}]'
     ;;
+  # A maintenance release of the old line, published after the new line,
+  # and a tag that gives an empty version
+  *"api.github.com/repos/maint-line/repo/releases?per_page=100&page=1")
+    echo '[{"tag_name": "v", "published_at": "2026-10-26T00:00:00Z", "prerelease": false}, {"tag_name": "v2.1.0-rc1", "published_at": "2026-10-25T00:00:00Z", "prerelease": true}, {"tag_name": "v1.9.5", "published_at": "2026-10-20T00:00:00Z", "prerelease": false}, {"tag_name": "v2.0.1", "published_at": "2026-10-01T00:00:00Z", "prerelease": false}, {"tag_name": "v2.0.0", "published_at": "2026-09-20T00:00:00Z", "prerelease": false}]'
+    ;;
   # /releases/latest answers 404 when every release is a pre-release, as
   # for FreeTubeApp/FreeTube, and when there is no release at all
   *api.github.com/repos/prerelease-only/repo/releases/latest | \
@@ -391,7 +417,7 @@ case "$url" in
     ;;
   # Arch repos API
   *archlinux.org/packages/search/json*)
-    echo '{"results": [{"pkgver": "6.10.2", "pkgrel": "1"}]}'
+    echo '{"results": [{"repo": "extra", "epoch": 0, "pkgver": "6.10.2", "pkgrel": "1"}]}'
     ;;
   # KDE tarball directory listing
   *download.kde.org/stable/*)

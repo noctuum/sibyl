@@ -879,6 +879,18 @@ MOCKCURL
   [ "$output" = "✓ done" ]
 }
 
+# The log goes to stderr, so check-all.sh 2>run.log on a terminal writes a
+# log without color codes, and check-all.sh | less keeps them on the terminal
+@test "lib.sh: the colors of the log follow stderr, not stdout" {
+  printf 'source "$1/scripts/lib.sh"\nlog_ok done\n' >"$TEST_TMPDIR/color.sh"
+  run script -qec "bash $TEST_TMPDIR/color.sh $TEST_TMPDIR 2>$TEST_TMPDIR/err" /dev/null
+  [ "$status" -eq 0 ]
+  [ "$(cat "$TEST_TMPDIR/err")" = "✓ done" ]
+  run script -qec "bash $TEST_TMPDIR/color.sh $TEST_TMPDIR >/dev/null" /dev/null
+  [ "$status" -eq 0 ]
+  [[ "$output" == *$'\e[0;32m✓\e[0m done'* ]]
+}
+
 # === validate_pkgver ===
 
 @test "lib.sh: validate_pkgver accepts versions the strategies produce" {
@@ -1087,6 +1099,25 @@ run_alert_fires() {
   done
 }
 
+# Each line of the note would become a line of _alerts
+@test "lib.sh: fired_alerts fails on a note that is not one line of text" {
+  local note
+  for note in "" "note: ''" "note: |
+      Rename the binary
+      hold" "note: \"Rename\\rthe binary\"" "note: 42"; do
+    echo "$note"
+    create_test_package "pkg" "github-release" "alerts:
+  - from: '0.4.0'
+    $note"
+    run bash -c 'source "$0/scripts/lib.sh"; fired_alerts "$1" 0.3 29+1 2>/dev/null' "$TEST_TMPDIR" "$TEST_TMPDIR/packages/pkg.yml"
+    [ "$status" -eq 1 ]
+    [ -z "$output" ]
+    run bash -c 'source "$0/scripts/lib.sh"; fired_alerts "$1" "" 29+1' "$TEST_TMPDIR" "$TEST_TMPDIR/packages/pkg.yml"
+    [ "$status" -eq 1 ]
+    [[ "$output" == *"alerts[0].note must be one line of text"* ]]
+  done
+}
+
 # === version of aurtomator ===
 
 @test "lib.sh: aurtomator_version prints VERSION, or nothing without it" {
@@ -1127,9 +1158,11 @@ run_alert_fires() {
   done
 }
 
+# It returns before it asks the API, and says nothing
 @test "lib.sh: upstream_status fails without VERSION" {
   run bash -c 'source "$0/scripts/lib.sh"; upstream_status' "$TEST_TMPDIR"
-  [ "$status" -ne 0 ]
+  [ "$status" -eq 1 ]
+  [ -z "$output" ]
 }
 
 @test "check-all: logs the version and records a newer release of aurtomator" {
@@ -1828,6 +1861,30 @@ EOF
   [[ "$output" == *"PACKAGES:START"* ]]
 }
 
+# sed prints nothing from a marker that is missing, so the text after the
+# start marker would be lost
+@test "update-readme: fails and keeps the README without the end marker of the table" {
+  printf '%s\n' '# test' '<!-- BADGES:START -->' '<!-- BADGES:END -->' '<!-- PACKAGES:START -->' \
+    'old table' '## License' >"$TEST_TMPDIR/README.md"
+  cp "$TEST_TMPDIR/README.md" "$TEST_TMPDIR/README.orig"
+  git -C "$TEST_TMPDIR" init -q
+  run "$TEST_TMPDIR/scripts/update-readme.sh"
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"No <!-- PACKAGES:END --> marker found in README.md"* ]]
+  cmp "$TEST_TMPDIR/README.orig" "$TEST_TMPDIR/README.md"
+}
+
+@test "update-readme: fails and keeps the README without the end marker of the badges" {
+  printf '%s\n' '# test' '<!-- BADGES:START -->' 'old badges' '## Intro' \
+    '<!-- PACKAGES:START -->' '<!-- PACKAGES:END -->' >"$TEST_TMPDIR/README.md"
+  cp "$TEST_TMPDIR/README.md" "$TEST_TMPDIR/README.orig"
+  git -C "$TEST_TMPDIR" init -q
+  run "$TEST_TMPDIR/scripts/update-readme.sh"
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"No <!-- BADGES:END --> marker found in README.md"* ]]
+  cmp "$TEST_TMPDIR/README.orig" "$TEST_TMPDIR/README.md"
+}
+
 @test "update-readme: badge is green when all packages ok" {
   create_test_package "pkg-ok" "github-release" "upstream:
   project: owner/repo
@@ -1979,7 +2036,7 @@ EOF
 
 # Codecov shows no tokenless badge for a private repository. mikefarah yq
 # prints the "true" of select(...) | "true" whatever the input.
-@test "update-readme: a private repo or a failed API call links the Codecov of aurtomator" {
+@test "update-readme: a private repo, or a failed API call on a README without a Codecov badge, links the Codecov of aurtomator" {
   create_test_package "pkg-a" "github-release" "upstream:
   project: owner/repo
 current: '1.0.0'"
@@ -1995,6 +2052,46 @@ current: '1.0.0'"
     [ "$status" -eq 0 ]
     grep -qF '(https://github.com/someone/private/actions/workflows/ci.yml)' "$TEST_TMPDIR/README.md"
     grep -qF '[![codecov](https://codecov.io/github/staticwire/aurtomator/graph/badge.svg)](https://codecov.io/github/staticwire/aurtomator)' "$TEST_TMPDIR/README.md"
+  done
+}
+
+@test "update-readme: a repo made private gets the Codecov badge of aurtomator in place of its own" {
+  create_test_package "pkg-a" "github-release" "upstream:
+  project: owner/repo
+current: '1.0.0'"
+  git -C "$TEST_TMPDIR" init -q
+  git -C "$TEST_TMPDIR" remote add origin "https://github.com/someone/fork.git"
+  printf '%s\n' '# test' '<!-- BADGES:START -->' \
+    '[![codecov](https://codecov.io/github/someone/fork/graph/badge.svg)](https://codecov.io/github/someone/fork)' \
+    '<!-- BADGES:END -->' '<!-- PACKAGES:START -->' '<!-- PACKAGES:END -->' >"$TEST_TMPDIR/README.md"
+  printf '#!/usr/bin/env bash\n%s\n' "echo '{\"private\": true}'" >"$MOCK_DIR/curl"
+  chmod +x "$MOCK_DIR/curl"
+
+  run "$TEST_TMPDIR/scripts/update-readme.sh"
+  [ "$status" -eq 0 ]
+  grep -qF '[![codecov](https://codecov.io/github/staticwire/aurtomator/graph/badge.svg)](https://codecov.io/github/staticwire/aurtomator)' "$TEST_TMPDIR/README.md"
+  run ! grep -q 'codecov.io/github/someone' "$TEST_TMPDIR/README.md"
+}
+
+# A rate limit of the anonymous API call switched the badge of a public fork
+# to aurtomator and back in the next run
+@test "update-readme: keeps the Codecov badge of the README without a definite answer from the API" {
+  create_test_package "pkg-a" "github-release" "upstream:
+  project: owner/repo
+current: '1.0.0'"
+  git -C "$TEST_TMPDIR" init -q
+  git -C "$TEST_TMPDIR" remote add origin "https://github.com/someone/fork.git"
+  local answer own='[![codecov](https://codecov.io/github/someone/fork/graph/badge.svg)](https://codecov.io/github/someone/fork)'
+  for answer in "exit 22" "echo 'rate limited'" "echo '{}'"; do
+    printf '%s\n' '# test' '<!-- BADGES:START -->' "[![Lint & Test](x)](y) $own [![Bash](z)](w)" '<!-- BADGES:END -->' \
+      '<!-- PACKAGES:START -->' '<!-- PACKAGES:END -->' >"$TEST_TMPDIR/README.md"
+    printf '#!/usr/bin/env bash\n%s\n' "$answer" >"$MOCK_DIR/curl"
+    chmod +x "$MOCK_DIR/curl"
+
+    run "$TEST_TMPDIR/scripts/update-readme.sh"
+    [ "$status" -eq 0 ]
+    grep -qF "(https://github.com/someone/fork/actions/workflows/ci.yml) $own [![Bash]" "$TEST_TMPDIR/README.md"
+    run ! grep -q 'codecov.io/github/staticwire' "$TEST_TMPDIR/README.md"
   done
 }
 
@@ -3139,6 +3236,20 @@ alerts:
   run "$TEST_TMPDIR/scripts/check-all.sh"
   [[ "$(cat "$TEST_TMPDIR/.status/pkg-bad")" == "check_failed: "*"alerts[0].match must be a non-empty ERE that bash accepts: (?:29)" ]]
   [ "$(cat "$TEST_TMPDIR/.status/_error_count")" = "1" ]
+}
+
+@test "check-all: fails the check of a package with an alert note of several lines" {
+  stand_in_strategy step 29+1
+  create_test_package "pkg-note" "step" "current: 28+25
+alerts:
+  - when: major
+    note: |
+      Rename the binary
+      hold"
+
+  run "$TEST_TMPDIR/scripts/check-all.sh"
+  [[ "$(cat "$TEST_TMPDIR/.status/pkg-note")" == "check_failed: "*"alerts[0].note must be one line of text" ]]
+  [ ! -e "$TEST_TMPDIR/.status/_alerts" ]
 }
 
 @test "check-all --update: runs no update of a held version" {

@@ -246,6 +246,36 @@ current: '$current'"
   create_test_package "mypkg" "archpkg" ""
   run "$TEST_TMPDIR/scripts/validate-pkg.sh" "mypkg"
   [ "$status" -eq 0 ]
+  [ "$output" = "✓ mypkg: valid" ]
+}
+
+@test "validate: archpkg with testing passes" {
+  local value
+  for value in true false; do
+    create_test_package "mypkg" "archpkg" "upstream:
+  testing: $value"
+    run "$TEST_TMPDIR/scripts/validate-pkg.sh" "mypkg"
+    [ "$status" -eq 0 ]
+  done
+}
+
+@test "validate: testing for another strategy rejected" {
+  create_test_package "mypkg" "repology" "upstream:
+  testing: true"
+  run "$TEST_TMPDIR/scripts/validate-pkg.sh" "mypkg"
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"upstream.testing applies to the archpkg strategy only"* ]]
+}
+
+@test "validate: testing that is not a boolean rejected" {
+  local value
+  for value in yes '"true"' 1; do
+    create_test_package "mypkg" "archpkg" "upstream:
+  testing: $value"
+    run "$TEST_TMPDIR/scripts/validate-pkg.sh" "mypkg"
+    [ "$status" -eq 1 ]
+    [[ "$output" == *"upstream.testing must be true or false"* ]]
+  done
 }
 
 @test "validate: repology passes (no extra fields)" {
@@ -354,6 +384,93 @@ EOF
   run "$TEST_TMPDIR/scripts/validate-pkg.sh" "mypkg"
   [ "$status" -ne 0 ]
   [[ "$output" == *"unknown strategy '../scripts/check-all'"* ]]
+}
+
+# === Unknown keys ===
+
+@test "validate: names every unknown top-level key in one error" {
+  create_test_package "mypkg" "github-release" "upstream:
+  project: owner/repo
+allow_downgrades: true
+pkgver_dashes: _"
+  run "$TEST_TMPDIR/scripts/validate-pkg.sh" "mypkg"
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"mypkg.yml has an unknown key: allow_downgrades, pkgver_dashes"* ]]
+}
+
+# The keys come from the reads of the scripts, so a key that a script
+# starts to read cannot be refused
+@test "validate: every top-level key a script reads passes" {
+  local keys key extra=""
+  keys=$(cd "$PROJECT_DIR" && grep -rhoE "pkg_get [^ ]+ '?\"?\.[a-z_]+" scripts strategies | grep -oE '[a-z_]+$' | sort -u)
+  [[ $'\n'"$keys"$'\n' == *$'\nallow_downgrade\n'* ]]
+  for key in $keys; do
+    case "$key" in
+      name | strategy | upstream) ;;
+      *) extra+=$'\n'"$key: x" ;;
+    esac
+  done
+  create_test_package "mypkg" "github-release" "upstream:
+  project: owner/repo$extra"
+  run "$TEST_TMPDIR/scripts/validate-pkg.sh" "mypkg"
+  echo "$output"
+  [[ "$output" != *"unknown key"* ]]
+}
+
+@test "validate: a YAML that is not a map rejected" {
+  printf '%s\n' '- name: mypkg' '- strategy: github-release' >"$TEST_TMPDIR/packages/mypkg.yml"
+  run "$TEST_TMPDIR/scripts/validate-pkg.sh" "mypkg"
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"mypkg.yml must be a map of fields"* ]]
+  [[ "$output" != *"cannot index"* ]]
+}
+
+@test "validate: an upstream that is not a map rejected" {
+  create_test_package "mypkg" "github-release" "upstream: owner/repo"
+  run "$TEST_TMPDIR/scripts/validate-pkg.sh" "mypkg"
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"mypkg.yml: upstream must be a map"* ]]
+  [[ "$output" != *"applies to"* ]]
+}
+
+@test "validate: an upstream key of no strategy rejected" {
+  create_test_package "mypkg" "github-release" "upstream:
+  project: owner/repo
+  projet: owner/repo"
+  run "$TEST_TMPDIR/scripts/validate-pkg.sh" "mypkg"
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"mypkg.yml: upstream.projet is not a field of any strategy"* ]]
+}
+
+# A key that a strategy script starts to read cannot be refused
+@test "validate: every upstream key a strategy script reads passes with that strategy" {
+  local file strategy key extra
+  for file in "$PROJECT_DIR"/strategies/*.sh; do
+    strategy=$(basename "$file" .sh)
+    extra=""
+    for key in $(grep -oE '\.upstream\.[a-z_]+' "$file" | sort -u); do
+      extra+=$'\n'"  ${key#.upstream.}: x"
+    done
+    create_test_package "mypkg" "$strategy" "upstream:$extra"
+    run "$TEST_TMPDIR/scripts/validate-pkg.sh" "mypkg"
+    echo "$strategy: $output"
+    [[ "$output" != *"strategy only"* && "$output" != *"strategies only"* ]]
+    [[ "$output" != *"not a field of any strategy"* && "$output" != *"lists no upstream keys"* ]]
+  done
+}
+
+@test "validate: a strategy without a line of upstream keys takes no upstream key" {
+  printf '#!/usr/bin/env bash\n' >"$TEST_TMPDIR/strategies/forked.sh"
+  create_test_package "mypkg" "forked" "upstream:
+  url: https://example.com/"
+  run "$TEST_TMPDIR/scripts/validate-pkg.sh" "mypkg"
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"mypkg.yml: validate-pkg.sh lists no upstream keys for the strategy forked"* ]]
+  [[ "$output" != *"upstream.url applies to"* ]]
+
+  create_test_package "mypkg" "forked" ""
+  run "$TEST_TMPDIR/scripts/validate-pkg.sh" "mypkg"
+  [ "$status" -eq 0 ]
 }
 
 # === Strategy-specific field errors ===
@@ -528,6 +645,98 @@ EOF
   [[ "$output" == *"unknown type 'bitbucket'"* ]]
 }
 
+@test "validate: git-latest fields that the type does not read rejected" {
+  local entry type field message base
+  for entry in "github|host: invent.kde.org|upstream.host applies to type gitlab only" \
+    "github|url: https://git.example.com/repo.git|upstream.url applies to type git only" \
+    "gitlab|url: https://git.example.com/repo.git|upstream.url applies to type git only" \
+    "git|host: invent.kde.org|upstream.host applies to type gitlab only" \
+    "git|project: owner/repo|upstream.project applies to types github and gitlab only"; do
+    IFS='|' read -r type field message <<<"$entry"
+    case "$type" in
+      github) base="project: owner/repo" ;;
+      gitlab) base="host: invent.kde.org
+  project: group/project" ;;
+      git) base="url: https://git.example.com/repo.git" ;;
+    esac
+    create_test_package "mypkg" "git-latest" "upstream:
+  type: $type
+  $base
+  $field"
+    run "$TEST_TMPDIR/scripts/validate-pkg.sh" "mypkg"
+    echo "$entry: $output"
+    [ "$status" -eq 1 ]
+    [[ "$output" == *"mypkg.yml: $message"* ]]
+  done
+}
+
+# === github-nightly fields by version_source and pattern ===
+
+@test "validate: the github-nightly patterns of the sample pass" {
+  local pattern
+  for pattern in "nightly_tag: nightly
+  version_source: release_body
+  version_pattern: 'NVIM v\\K\\S+'" "nightly_tag: nightly-
+  version_source: tag_date" "nightly_tag_regex: '^[0-9]{4}-[0-9]{2}-[0-9]{2}\$'
+  version_source: tag_date" "nightly_tag: latest" "channel: Nightly
+  version_source: tag"; do
+    create_test_package "mypkg" "github-nightly" "upstream:
+  project: owner/repo
+  $pattern"
+    run "$TEST_TMPDIR/scripts/validate-pkg.sh" "mypkg"
+    echo "$pattern: $output"
+    [ "$status" -eq 0 ]
+  done
+}
+
+@test "validate: github-nightly version_source it does not know rejected" {
+  create_test_package "mypkg" "github-nightly" "upstream:
+  project: owner/repo
+  version_source: release_date"
+  run "$TEST_TMPDIR/scripts/validate-pkg.sh" "mypkg"
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"mypkg.yml: upstream.version_source must be tag, release_body, tag_date or published_date: release_date"* ]]
+}
+
+@test "validate: github-nightly release_body without version_pattern rejected" {
+  create_test_package "mypkg" "github-nightly" "upstream:
+  project: owner/repo
+  version_source: release_body"
+  run "$TEST_TMPDIR/scripts/validate-pkg.sh" "mypkg"
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"mypkg.yml: upstream.version_source release_body needs upstream.version_pattern"* ]]
+}
+
+# Without version_source the strategy reads the tag
+@test "validate: version_pattern with another version_source rejected" {
+  local source
+  for source in 'version_source: tag' 'version_source: tag_date' 'version_source: published_date' ''; do
+    create_test_package "mypkg" "github-nightly" "upstream:
+  project: owner/repo
+  $source
+  version_pattern: 'v\\K\\S+'"
+    run "$TEST_TMPDIR/scripts/validate-pkg.sh" "mypkg"
+    echo "$source: $output"
+    [ "$status" -eq 1 ]
+    [[ "$output" == *"mypkg.yml: upstream.version_pattern applies to version_source release_body only"* ]]
+  done
+}
+
+# nightly_tag: latest wins over channel, and channel over any other tag
+@test "validate: nightly_tag next to channel rejected" {
+  local tag
+  for tag in latest nightly; do
+    create_test_package "mypkg" "github-nightly" "upstream:
+  project: owner/repo
+  nightly_tag: $tag
+  channel: Nightly"
+    run "$TEST_TMPDIR/scripts/validate-pkg.sh" "mypkg"
+    echo "$tag: $output"
+    [ "$status" -eq 1 ]
+    [[ "$output" == *"mypkg.yml: upstream.channel takes the place of nightly_tag"* ]]
+  done
+}
+
 @test "validate: pypi fails without upstream.registry" {
   create_test_package "mypkg" "pypi" ""
   run "$TEST_TMPDIR/scripts/validate-pkg.sh" "mypkg"
@@ -669,6 +878,20 @@ EOF
     run "$TEST_TMPDIR/scripts/validate-pkg.sh" "mypkg"
     [ "$status" -ne 0 ]
     [[ "$output" == *"not valid ERE regex"* ]]
+  done
+}
+
+# The strategy prints the first group of each match, and a pattern without
+# one stopped it with BASH_REMATCH[1]: unbound variable
+@test "validate: webpage-scrape rejects a pattern without a capture group" {
+  local pattern
+  for pattern in 'app-[0-9.]+\.tar\.gz' 'app-\(x\)[0-9.]+'; do
+    create_test_package "mypkg" "webpage-scrape" "upstream:
+  url: https://example.com/releases
+  pattern: '$pattern'"
+    run "$TEST_TMPDIR/scripts/validate-pkg.sh" "mypkg"
+    [ "$status" -ne 0 ]
+    [[ "$output" == *"upstream.pattern must contain a capture group: $pattern"* ]]
   done
 }
 
@@ -1067,6 +1290,63 @@ pkgver_dash: _"
   [[ "$output" == *"capture group"* ]]
 }
 
+# A strategy reads the field when its script names it
+@test "validate: tag_version_regex for a strategy that does not read it rejected" {
+  local file strategy
+  for file in "$PROJECT_DIR"/strategies/*.sh; do
+    strategy=$(basename "$file" .sh)
+    create_test_package "mypkg" "$strategy" "upstream:
+  tag_version_regex: '^v(.+)$'"
+    run "$TEST_TMPDIR/scripts/validate-pkg.sh" "mypkg"
+    echo "$strategy: $output"
+    if grep -q 'tag_version_regex' "$file"; then
+      [[ "$output" != *"upstream.tag_version_regex applies to"* ]]
+    else
+      [ "$status" -eq 1 ]
+      [[ "$output" == *"upstream.tag_version_regex applies to the github-release, github-tag, github-nightly, gitlab-tag, gitea-tag and git-tag strategies only"* ]]
+    fi
+  done
+}
+
+# Without version_source github-nightly reads the tag
+@test "validate: tag_version_regex for github-nightly with version_source tag passes" {
+  local source
+  for source in 'version_source: tag' ''; do
+    create_test_package "mypkg" "github-nightly" "upstream:
+  project: owner/repo
+  $source
+  tag_version_regex: '^v(.+)$'"
+    run "$TEST_TMPDIR/scripts/validate-pkg.sh" "mypkg"
+    [ "$status" -eq 0 ]
+  done
+}
+
+# Only github-nightly reads version_source
+@test "validate: tag_version_regex for github-release with a version_source refuses the version_source only" {
+  create_test_package "mypkg" "github-release" "upstream:
+  project: owner/repo
+  version_source: release_body
+  tag_version_regex: '^v(.+)$'"
+  run "$TEST_TMPDIR/scripts/validate-pkg.sh" "mypkg"
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"upstream.version_source applies to the github-nightly strategy only"* ]]
+  [[ "$output" != *"tag_version_regex applies to version_source tag only"* ]]
+}
+
+@test "validate: tag_version_regex for github-nightly with another version_source rejected" {
+  local source
+  for source in release_body tag_date published_date; do
+    create_test_package "mypkg" "github-nightly" "upstream:
+  project: owner/repo
+  version_source: $source
+  version_pattern: 'v\\K\\S+'
+  tag_version_regex: '^v(.+)$'"
+    run "$TEST_TMPDIR/scripts/validate-pkg.sh" "mypkg"
+    [ "$status" -eq 1 ]
+    [[ "$output" == *"upstream.tag_version_regex applies to version_source tag only"* ]]
+  done
+}
+
 # === tag_version_replace validation ===
 
 @test "validate: tag_version_replace with the groups of the regex passes" {
@@ -1232,7 +1512,7 @@ ${3:-}"
   asset_var: _build"
   run "$TEST_TMPDIR/scripts/validate-pkg.sh" "mypkg"
   [ "$status" -ne 0 ]
-  [[ "$output" == *"upstream.asset_regex applies to the github-tag and github-release strategies only"* ]]
+  [[ "$output" == *"upstream.asset_regex applies to the github-release and github-tag strategies only"* ]]
 }
 
 @test "validate: asset_regex without exactly one capture group rejected" {

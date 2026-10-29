@@ -23,7 +23,9 @@
 #   alerts          - rules for steps of upstream that need a hand edit,
 #                     see the example below and docs/WORKFLOW.md 4.5
 #
-# Written by update-pkg.sh after every push, do not edit by hand:
+# Written by update-pkg.sh after every push. Set current by hand only to the
+# version the AUR has: for a new package, as the git-latest example of
+# docs/WORKFLOW.md 3.7 does, and after a hand publish of a held update (4.5).
 #   current      - last pushed version
 #   last_updated - date of the last push, YYYY-MM-DD
 #   current_asset - value from a release asset name of the last push, for a
@@ -147,6 +149,7 @@ upstream:
 # upstream:
 #   project: owner/repo                    # required
 #   nightly_tag: nightly                   # optional, default "nightly"
+#   nightly_tag_regex: '^nightly-'         # optional, pattern B, in place of nightly_tag and channel
 #   version_source: tag                    # optional: tag|release_body|tag_date|published_date
 #   version_pattern: 'NVIM v\K\S+'         # required if version_source=release_body
 #   channel: Nightly                       # optional, filter by release name
@@ -248,13 +251,15 @@ upstream:
 #                                          # as ruby:rmagick
 
 # --- archpkg ----------------------------------------------------------------
-# Follows the pkgver of a package in the Arch official repos, without
-# epoch and pkgrel. A rebuild there raises only pkgrel and gives no new
-# version.
+# Follows the pkgver of a package in core, extra or multilib, without
+# epoch and pkgrel. testing: true also reads their testing repositories
+# and takes the newer build. A rebuild there raises only pkgrel and gives
+# no new version.
 #
 # strategy: archpkg
 # upstream:
 #   archpkg: qt6-base                      # optional, defaults to `name` above
+#   testing: true                          # optional, default false
 
 # --- kde-tarball ------------------------------------------------------------
 # Reads a directory on https://download.kde.org/ for
@@ -274,3 +279,4 @@ upstream:
 # upstream:
 #   url: https://example.com/downloads/    # required, HTTPS only
 #   pattern: 'app-([0-9]+\.[0-9]+)\.tar\.gz'  # required, ERE, the first capture group is the version
+#   user_agent: 'Example/2.0 (+https://example.com/bot)'  # optional, default aurtomator/1.0, printable ASCII
