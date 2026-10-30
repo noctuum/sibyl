@@ -3,4 +3,5 @@ strategy: git-latest
 upstream:
   type: github
   project: hacdias/webdav
-current: r292.0ca5bbb
+current: r315.614d975
+last_updated: "2026-10-30"

@@ -2,4 +2,5 @@ name: webdav-bin
 strategy: github-release
 upstream:
   project: hacdias/webdav
-current: 5.17.2
+current: 5.17.3
+last_updated: "2026-10-30"
