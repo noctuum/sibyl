@@ -1201,6 +1201,15 @@ run_alert_fires() {
   done
 }
 
+@test "lib.sh: fired_alerts asks for quotes around a note that YAML reads as a number" {
+  create_test_package "pkg" "github-release" "alerts:
+  - from: '0.4.0'
+    note: 2024"
+  run bash -c 'source "$0/scripts/lib.sh"; fired_alerts "$1" 0.3 29+1' "$TEST_TMPDIR" "$TEST_TMPDIR/packages/pkg.yml"
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"alerts[0].note must be one line of text: put 2024 in quotes"* ]]
+}
+
 # === version of aurtomator ===
 
 @test "lib.sh: aurtomator_version prints VERSION, or nothing without it" {
@@ -1305,7 +1314,7 @@ EOF
   git -C "$TEST_TMPDIR" init -q
   "$TEST_TMPDIR/scripts/update-readme.sh" 2>/dev/null
 
-  grep -qxF 'aurtomator 0.6.0 · [0.7.0 available](https://github.com/staticwire/aurtomator/releases/tag/v0.7.0) <!-- x-release-please-version -->' "$TEST_TMPDIR/README.md"
+  grep -qxF 'aurtomator 0.6.0 ([0.7.0 available](https://github.com/staticwire/aurtomator/releases/tag/v0.7.0)) <!-- x-release-please-version -->' "$TEST_TMPDIR/README.md"
 }
 
 @test "update-readme: links no release for aurtomator at its release or for another _upstream" {
@@ -2088,7 +2097,7 @@ EOF
   "$TEST_TMPDIR/scripts/update-readme.sh" 2>/dev/null
   [ "$(sed -n '/<table>/,$p' "$TEST_TMPDIR/README.md")" = '<table>
 <tr><th>Package</th><th>Version</th><th>Strategy</th><th>Updated</th><th>Status</th></tr>
-<tr><td><em>No packages configured</em></td><td>—</td><td nowrap>—</td><td nowrap>—</td><td nowrap>—</td></tr>
+<tr><td><em>No packages configured</em></td><td>-</td><td nowrap>-</td><td nowrap>-</td><td nowrap>-</td></tr>
 </table>
 <!-- PACKAGES:END -->' ]
 }
@@ -2271,6 +2280,25 @@ current: '1.0.0'"
   [[ "$badges" != *"Lint & Test"* && "$badges" != *"codecov"* ]]
 }
 
+@test "update-readme: an origin outside GitHub, or a local path, gives only the static badges" {
+  create_test_package "pkg-a" "github-release" "upstream:
+  project: owner/repo
+current: '1.0.0'"
+  git -C "$TEST_TMPDIR" init -q
+  git -C "$TEST_TMPDIR" remote add origin "https://gitlab.com/someone/fork.git"
+  local origin
+  for origin in "https://gitlab.com/someone/fork.git" "https://notgithub.com/someone/fork.git" "$TEST_TMPDIR/clone"; do
+    git -C "$TEST_TMPDIR" remote set-url origin "$origin"
+    readme_with_badges
+    run "$TEST_TMPDIR/scripts/update-readme.sh"
+    echo "$origin: $output"
+    [ "$status" -eq 0 ]
+    [[ "$output" == *"Badges updated (repo: unknown)"* ]]
+    ! grep -qF -e 'someone/fork' -e "$TEST_TMPDIR" "$TEST_TMPDIR/README.md"
+    [[ "$(sed -n '3p' "$TEST_TMPDIR/README.md")" != *"Lint & Test"* ]]
+  done
+}
+
 @test "update-readme: an unknown status reads as tracking" {
   create_test_package "pkg-a" "github-release" "upstream:
   project: owner/repo
@@ -2281,7 +2309,7 @@ current: '1.0.0'"
 
   run "$TEST_TMPDIR/scripts/update-readme.sh"
   [ "$status" -eq 0 ]
-  grep -qF '<td>1.0.0</td><td nowrap>github-release</td><td nowrap>—</td><td nowrap>✅ tracking</td>' "$TEST_TMPDIR/README.md"
+  grep -qF '<td>1.0.0</td><td nowrap>github-release</td><td nowrap>-</td><td nowrap>✅ tracking</td>' "$TEST_TMPDIR/README.md"
   grep -qF 'packages-1%2F1-brightgreen' "$TEST_TMPDIR/README.md"
 }
 
@@ -2293,7 +2321,7 @@ current: '1.0.0'"
 
   run "$TEST_TMPDIR/scripts/update-readme.sh"
   [ "$status" -eq 0 ]
-  grep -qF '<tr><td><a href="https://aur.archlinux.org/pkgbase/pkg-new">pkg-new</a></td><td>—</td><td nowrap>github-release</td><td nowrap>—</td><td nowrap>✨ new</td></tr>' "$TEST_TMPDIR/README.md"
+  grep -qF '<tr><td><a href="https://aur.archlinux.org/pkgbase/pkg-new">pkg-new</a></td><td>-</td><td nowrap>github-release</td><td nowrap>-</td><td nowrap>✨ new</td></tr>' "$TEST_TMPDIR/README.md"
 }
 
 # A package that has not been checked yet has failed nothing
@@ -2343,7 +2371,7 @@ current: '1.0.0'"
 EOF
   git -C "$TEST_TMPDIR" init -q
   "$TEST_TMPDIR/scripts/update-readme.sh" 2>/dev/null
-  grep -qF '<td nowrap>github-release</td><td nowrap>—</td>' "$TEST_TMPDIR/README.md"
+  grep -qF '<td nowrap>github-release</td><td nowrap>-</td>' "$TEST_TMPDIR/README.md"
 }
 
 # === update-pkg.sh: argument validation ===
@@ -3601,7 +3629,7 @@ pkgver_dash: ''"
   asset_var: _twin"
   run "$TEST_TMPDIR/scripts/check-asset.sh" twin 1.0.0
   [ "$status" -eq 1 ]
-  [[ "$output" == *"Tags v1.0.0 1.0.0 of asset-owner/twin-repo all give version 1.0.0"* ]]
+  [[ "$output" == *"Tags v1.0.0 1.0.0 of asset-owner/twin-repo all give version 1.0.0; set upstream.tag_version_regex to match one of them"* ]]
 }
 
 @test "check-asset: fails when the release cannot be read" {

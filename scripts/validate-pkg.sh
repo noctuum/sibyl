@@ -45,6 +45,18 @@ readonly UPSTREAM_KEYS=(
   "kde-tarball: project path"
 )
 
+# Succeeds when $1 is one of the words of $2. A substring match would pass
+# a key such as "name strategy".
+# Args: $1=word, $2=words separated by spaces
+in_words() {
+  local words word
+  read -ra words <<<"$2"
+  for word in "${words[@]}"; do
+    [[ "$word" != "$1" ]] || return 0
+  done
+  return 1
+}
+
 # Prints the upstream keys of a strategy, or fails when UPSTREAM_KEYS has
 # no line for it
 # Args: $1=strategy
@@ -66,7 +78,7 @@ upstream_keys() {
 key_strategies() {
   local line names=() list i
   for line in "${UPSTREAM_KEYS[@]}"; do
-    [[ " ${line#*: } " != *" $1 "* ]] || names+=("${line%%:*}")
+    ! in_words "$1" "${line#*: }" || names+=("${line%%:*}")
   done
   case ${#names[@]} in
     0) return 1 ;;
@@ -126,7 +138,7 @@ validate_alert() {
   fi
 
   if ! alert_note "$file" "$i" >/dev/null; then
-    log_err "$rule.note must be one line of text"
+    log_err "$rule.$(alert_note_error "$file" "$i")"
     errors=1
   fi
 
@@ -191,7 +203,7 @@ validate_pkg() {
   local keys key unknown=() list strategy_keys where
   mapfile -t keys < <(pkg_get "$file" 'keys | .[]')
   for key in "${keys[@]}"; do
-    [[ " $PACKAGE_KEYS " == *" $key "* ]] || unknown+=("$key")
+    in_words "$key" "$PACKAGE_KEYS" || unknown+=("$key")
   done
   if ((${#unknown[@]} > 0)); then
     printf -v list '%s, ' "${unknown[@]}"
@@ -210,7 +222,7 @@ validate_pkg() {
     ((errors++))
   elif ((${#keys[@]} > 0)); then
     for key in "${keys[@]}"; do
-      [[ " $strategy_keys " != *" $key "* ]] || continue
+      ! in_words "$key" "$strategy_keys" || continue
       if where=$(key_strategies "$key"); then
         log_err "$file: upstream.$key applies to $where only"
       else
@@ -353,7 +365,10 @@ validate_pkg() {
   local tag_version_replace
   tag_version_replace=$(pkg_get "$file" '.upstream.tag_version_replace // ""')
   if [[ -n "$tag_version_replace" ]]; then
-    if [[ -z "$tag_version_regex" ]]; then
+    if [[ "$strategy" == "github-nightly" && $(pkg_get "$file" '.upstream.version_source // "tag"') != "tag" ]]; then
+      log_err "$file: upstream.tag_version_replace applies to version_source tag only"
+      ((errors++))
+    elif [[ -z "$tag_version_regex" ]]; then
       log_err "$file: upstream.tag_version_replace needs upstream.tag_version_regex"
       ((errors++))
     elif [[ ! "$tag_version_replace" =~ ^([A-Za-z0-9._+]|\\[1-9])+$ ]]; then
@@ -451,7 +466,11 @@ validate_pkg() {
         fi
         # nightly_tag: latest wins over channel, and channel over any other tag
         if [[ $(pkg_get "$file" '.upstream | (has("nightly_tag") and has("channel"))') == true ]]; then
-          log_err "$file: upstream.channel takes the place of nightly_tag"
+          if [[ "$nightly_tag" == latest ]]; then
+            log_err "$file: upstream.nightly_tag latest takes the place of channel"
+          else
+            log_err "$file: upstream.channel takes the place of nightly_tag"
+          fi
           ((errors++))
         fi
       fi

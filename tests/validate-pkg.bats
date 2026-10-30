@@ -398,6 +398,17 @@ pkgver_dashes: _"
   [[ "$output" == *"mypkg.yml has an unknown key: allow_downgrades, pkgver_dashes"* ]]
 }
 
+@test "validate: a key made of two known names rejected" {
+  create_test_package "mypkg" "github-release" "upstream:
+  project: owner/repo
+  \"project tag_version_regex\": x
+\"name strategy\": x"
+  run "$TEST_TMPDIR/scripts/validate-pkg.sh" "mypkg"
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"mypkg.yml has an unknown key: name strategy"* ]]
+  [[ "$output" == *"mypkg.yml: upstream.project tag_version_regex is not a field of any strategy"* ]]
+}
+
 # The keys come from the reads of the scripts, so a key that a script
 # starts to read cannot be refused
 @test "validate: every top-level key a script reads passes" {
@@ -771,18 +782,21 @@ pkgver_dashes: _"
 }
 
 # nightly_tag: latest wins over channel, and channel over any other tag
-@test "validate: nightly_tag next to channel rejected" {
-  local tag
-  for tag in latest nightly; do
-    create_test_package "mypkg" "github-nightly" "upstream:
+@test "validate: nightly_tag next to channel rejected with the field that is read" {
+  create_test_package "mypkg" "github-nightly" "upstream:
   project: owner/repo
-  nightly_tag: $tag
+  nightly_tag: latest
   channel: Nightly"
-    run "$TEST_TMPDIR/scripts/validate-pkg.sh" "mypkg"
-    echo "$tag: $output"
-    [ "$status" -eq 1 ]
-    [[ "$output" == *"mypkg.yml: upstream.channel takes the place of nightly_tag"* ]]
-  done
+  run "$TEST_TMPDIR/scripts/validate-pkg.sh" "mypkg"
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"mypkg.yml: upstream.nightly_tag latest takes the place of channel"* ]]
+  create_test_package "mypkg" "github-nightly" "upstream:
+  project: owner/repo
+  nightly_tag: nightly
+  channel: Nightly"
+  run "$TEST_TMPDIR/scripts/validate-pkg.sh" "mypkg"
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"mypkg.yml: upstream.channel takes the place of nightly_tag"* ]]
 }
 
 @test "validate: pypi fails without upstream.registry" {
@@ -1121,7 +1135,7 @@ alerts:
   local note
   for note in "" "note: ''" "note: |
       First line
-      Second line" "note: [a, b]" "note: {text: x}" "note: 42"; do
+      Second line" "note: [a, b]" "note: {text: x}"; do
     create_test_package "mypkg" "github-release" "upstream:
   project: owner/repo
 alerts:
@@ -1130,6 +1144,21 @@ alerts:
     run "$TEST_TMPDIR/scripts/validate-pkg.sh" "mypkg"
     [ "$status" -ne 0 ]
     [[ "$output" == *"alerts[0].note must be one line of text"* ]]
+    [[ "$output" != *"in quotes"* ]]
+  done
+}
+
+@test "validate: an alert note that YAML reads as a number, a boolean or a date asks for quotes" {
+  local value
+  for value in 2024 1.5 true 2024-10-30; do
+    create_test_package "mypkg" "github-release" "upstream:
+  project: owner/repo
+alerts:
+  - when: major
+    note: $value"
+    run "$TEST_TMPDIR/scripts/validate-pkg.sh" "mypkg"
+    [ "$status" -ne 0 ]
+    [[ "$output" == *"alerts[0].note must be one line of text: put $value in quotes"* ]]
   done
 }
 
@@ -1374,11 +1403,13 @@ pkgver_dash: _"
   create_test_package "mypkg" "github-release" "upstream:
   project: owner/repo
   version_source: release_body
-  tag_version_regex: '^v(.+)$'"
+  tag_version_regex: '^v(.+)$'
+  tag_version_replace: '\\1'"
   run "$TEST_TMPDIR/scripts/validate-pkg.sh" "mypkg"
   [ "$status" -eq 1 ]
   [[ "$output" == *"upstream.version_source applies to the github-nightly strategy only"* ]]
   [[ "$output" != *"tag_version_regex applies to version_source tag only"* ]]
+  [[ "$output" != *"tag_version_replace applies to version_source tag only"* ]]
 }
 
 @test "validate: tag_version_regex for github-nightly with another version_source rejected" {
@@ -1392,6 +1423,23 @@ pkgver_dash: _"
     run "$TEST_TMPDIR/scripts/validate-pkg.sh" "mypkg"
     [ "$status" -eq 1 ]
     [[ "$output" == *"upstream.tag_version_regex applies to version_source tag only"* ]]
+  done
+}
+
+# A tag_version_regex there is refused as well, so asking for one would
+# send the author in a circle
+@test "validate: tag_version_replace for github-nightly with another version_source rejected" {
+  local source
+  for source in release_body tag_date published_date; do
+    create_test_package "mypkg" "github-nightly" "upstream:
+  project: owner/repo
+  version_source: $source
+  version_pattern: 'v\\K\\S+'
+  tag_version_replace: '\\1'"
+    run "$TEST_TMPDIR/scripts/validate-pkg.sh" "mypkg"
+    [ "$status" -eq 1 ]
+    [[ "$output" == *"upstream.tag_version_replace applies to version_source tag only"* ]]
+    [[ "$output" != *"needs upstream.tag_version_regex"* ]]
   done
 }
 
