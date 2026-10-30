@@ -42,7 +42,7 @@ source_x86_64=("https://example.com/app-${pkgver}-x86_64.tar.gz")
 source_aarch64=("https://example.com/app-${pkgver}-aarch64.tar.gz")
 ```
 
-`updpkgsums` handles arch-specific checksum arrays, and source URL validation covers every `source_<arch>` array. A stable URL pattern is enough.
+`updpkgsums` handles arch-specific checksum arrays and writes all of them in one block at the place of the first one, so a `sha256sums_<arch>` array next to its `source_<arch>` moves into that block on the first update. Source URL validation covers every `source_<arch>` array. A stable URL pattern is enough.
 
 ### VCS packages (-git) with the git-latest strategy
 
@@ -75,9 +75,9 @@ b2sums_x86_64=('SKIP')
 b2sums_aarch64=('SKIP')
 ```
 
-aurtomator reads every checksum array, with and without an arch suffix. A `SKIP` at any position makes it skip `updpkgsums`, which would otherwise replace the `SKIP` of a download with a real hash and clone the repository of every VCS source. The `SKIP` of a signature is the exception, see [Sources with a signature](#sources-with-a-signature). `updpkgsums` also runs next to the `SKIP` of a VCS source without a pin when a remote source has a real hash. The source URLs are checked either way, see [Source URL returns HTML](#source-url-returns-html-blocked).
+aurtomator reads every checksum array, with and without an arch suffix. A `SKIP` at any position makes it skip `updpkgsums`, which would otherwise replace the `SKIP` of a download with a real hash and clone the repository of every VCS source. The `SKIP` of a signature is the exception, see [Sources with a signature](#sources-with-a-signature). `updpkgsums` also runs next to a `SKIP` that makepkg gives a VCS source itself, see [Mixed SKIP and real checksums](#mixed-skip-and-real-checksums-blocked), when a remote source has a real hash. The source URLs are checked either way, see [Source URL returns HTML](#source-url-returns-html-blocked).
 
-A real hash for a remote source next to a `SKIP` other than that of a signature or of a VCS source without a pin is blocked by the PKGBUILD audit. See "Mixed SKIP and real checksums" below.
+A real hash for a remote source next to a `SKIP` that makepkg does not give itself is blocked by the PKGBUILD audit. See "Mixed SKIP and real checksums" below.
 
 ### Sources with a signature
 
@@ -224,7 +224,7 @@ A URL built from `$pkgver`, such as `releases/download/${pkgver}/` for the tag `
 
 ### Mixed SKIP and real checksums (BLOCKED)
 
-A PKGBUILD with a `SKIP` and a real hash for a remote source, in any order and in any checksum array. The `SKIP` of a signature does not count, see [Sources with a signature](#sources-with-a-signature), and neither does that of a VCS source without a `#commit=`, `#tag=` or `#revision=` pin: makepkg writes both itself, so `updpkgsums` keeps them.
+A PKGBUILD with a `SKIP` and a real hash for a remote source, in any order and in any checksum array. A `SKIP` that makepkg 7.1 writes itself does not count, since `updpkgsums` keeps it: that of a signature, see [Sources with a signature](#sources-with-a-signature), that of an svn source, and that of a git, hg or bzr source without the pin makepkg hashes, which is `#commit=` or `#tag=` for git, `#tag=` or `#revision=` for hg and `#revision=` for bzr. makepkg clones a fossil repository into one file and hashes it as a download, so the `SKIP` of a fossil source counts with or without a pin.
 
 ```bash
 source=("git+https://example.com/app.git#commit=1a2b3c4" "https://example.com/data.tar.gz")
@@ -234,13 +234,15 @@ sha256sums=('SKIP'
 
 **Detection:** `audit_pkgbuild()` sources the PKGBUILD and pairs every entry of every checksum array (`ck`, `md5`, `sha1`, `sha224`, `sha256`, `sha384`, `sha512`, `b2`, with and without an arch suffix) with the entry at the same index of `source` or `source_<arch>`. A real hash for a URL with `://` next to any other `SKIP` blocks the update. A real hash for a local file is allowed, because that file lives in the AUR repo and does not change between versions.
 
-`updpkgsums` would replace such a `SKIP` with a real hash. Without `updpkgsums`, the real hash of the remote source would be stale after the version bump.
+`update-pkg.sh` runs `updpkgsums` for the real hash, which would turn such a `SKIP` into a hash, and the check of the prepared files refuses a `SKIP` that changes.
+
+**Correct approach:** run `updpkgsums` once and push the PKGBUILD with the hashes it writes, so the AUR copy holds them, as for a source pinned to a tag or a commit. A download whose file changes under the same URL has to keep its `SKIP`, and such a package needs a manual update.
 
 ### Sources that do not follow pkgver (BLOCKED)
 
 A PKGBUILD whose sources take the version from another variable, as with `_pkgver=2025-04-03` and `pkgver="${_pkgver//-/.}"`, a download URL without the version, such as `https://example.org/download/latest/player.tar.zst`, whose file has not changed, or a VCS source pinned to a commit the version does not set, as with `source=("git+https://example.org/player.git#commit=$_commit")`. The version in the name a download is saved under does not count, as in `"player-$pkgver.zip::https://example.org/archive/$_commit.zip"`.
 
-**Detection:** the `.SRCINFO` check refuses a new `pkgver` when no source URL, the part after `::`, and no checksum changed and a download over `http`, `https` or `ftp` has a real checksum, or a VCS source is pinned by `#commit=`, `#tag=` or `#revision=`. Publish runs it, and `update-pkg.sh` runs it before the commit. See step 5 of publish in [WORKFLOW.md section 4.4](WORKFLOW.md#44-prepare-and-publish).
+**Detection:** the `.SRCINFO` check refuses a new `pkgver` when no source URL, the part after `::`, and no checksum changed and a download over `http`, `https` or `ftp` has a real checksum, or a VCS source is pinned by `#commit=`, `#tag=` or `#revision=`. It checks this for each architecture, the common sources counting for all of them, so a `source_aarch64` built from its own `_armver` is refused while `source_x86_64` follows `pkgver`. A download saved under the new version from the URL and the checksum of the old one is refused even when another source changes. A VCS pin that stays counts only when nothing else changes: a pin next to a LICENSE fetched from the tag passes. Publish runs it, and `update-pkg.sh` runs it before the commit. See step 5 of publish in [WORKFLOW.md section 4.4](WORKFLOW.md#44-prepare-and-publish).
 
 `sed` sets only `pkgver`. When the sources stay the same, `updpkgsums` hashes the old files again, and makepkg checks out the same pin, so the new version would hold the old files.
 

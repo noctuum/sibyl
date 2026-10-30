@@ -216,6 +216,33 @@ write_pkgver_pkgbuild() {
   done
 }
 
+# bash also takes a space before the parentheses, the function keyword and
+# an indented header
+@test "audit_pkgbuild: blocks pkgver() under every header bash takes" {
+  source "$TEST_TMPDIR/scripts/lib.sh"
+  local header
+  for header in 'pkgver () {' 'function pkgver {' '  pkgver() {'; do
+    # shellcheck disable=SC2016
+    printf '%s\n' 'pkgname=test' 'pkgver=2.2.0' 'pkgrel=1' 'arch=(any)' \
+      'source=("https://example.com/test-$pkgver.tar.gz")' "sha256sums=('abc123')" \
+      "$header" '  date +%Y%m%d' '}' >"$TEST_TMPDIR/test.PKGBUILD"
+    run audit_pkgbuild "$TEST_TMPDIR/test.PKGBUILD" "github-release"
+    echo "$header: $status"
+    [ "$status" -eq 1 ]
+    [[ "$output" == *"BLOCKED: pkgver() function detected with strategy 'github-release'."* ]]
+  done
+}
+
+@test "audit_pkgbuild: keeps the errors of sourcing the PKGBUILD out of its output" {
+  source "$TEST_TMPDIR/scripts/lib.sh"
+  write_pkgver_pkgbuild '  date +%Y%m%d'
+  # shellcheck disable=SC2016
+  printf '%s\n' '_tool=$(aurtomator-no-such-tool)' >>"$TEST_TMPDIR/test.PKGBUILD"
+  run audit_pkgbuild "$TEST_TMPDIR/test.PKGBUILD" "github-release"
+  [ "$status" -eq 1 ]
+  [[ "$output" != *"aurtomator-no-such-tool"* ]]
+}
+
 @test "audit_pkgbuild: allows pkgver() with git-latest strategy" {
   source "$TEST_TMPDIR/scripts/lib.sh"
   cat >"$TEST_TMPDIR/test.PKGBUILD" <<'EOF'
@@ -450,7 +477,7 @@ EOF
   local vcs
   for vcs in "git+https://example.com/app.git" "app::git+https://example.com/app.git#branch=main" \
     "hg+https://example.com/app" "svn+https://example.com/app/trunk" \
-    "bzr+https://example.com/app" "fossil+https://example.com/app"; do
+    "bzr+https://example.com/app"; do
     cat >"$TEST_TMPDIR/test.PKGBUILD" <<EOF
 pkgname=test-vcs-data
 pkgver=1.0.0
@@ -498,7 +525,8 @@ EOF
   source "$TEST_TMPDIR/scripts/lib.sh"
   local vcs
   for vcs in "git+https://example.com/app.git#commit=abc123" "app::git+https://example.com/app.git?signed#tag=v1" \
-    "hg+https://example.com/app#revision=4" "bzr+https://example.com/app#revision=4"; do
+    "hg+https://example.com/app#revision=4" "hg+https://example.com/app#tag=v1" \
+    "bzr+https://example.com/app#revision=4"; do
     cat >"$TEST_TMPDIR/test.PKGBUILD" <<EOF
 pkgname=test-vcs-data
 pkgver=1.0.0
@@ -512,6 +540,61 @@ source=("$vcs"
 sha256sums=('SKIP'
             'abc123')
 EOF
+    run audit_pkgbuild "$TEST_TMPDIR/test.PKGBUILD" "github-release"
+    [ "$status" -eq 1 ] || {
+      echo "allowed: $vcs"
+      return 1
+    }
+    [[ "$output" == *"SKIP checksums mixed with real hashes for remote"* ]]
+  done
+}
+
+# Helper: test.PKGBUILD with the given VCS source at SKIP and a download
+# with a real hash
+write_vcs_data_pkgbuild() {
+  cat >"$TEST_TMPDIR/test.PKGBUILD" <<EOF
+pkgname=test-vcs-data
+pkgver=1.0.0
+pkgrel=1
+pkgdesc="test"
+arch=('x86_64')
+url="https://example.com"
+license=('MIT')
+source=("$1"
+        "https://example.com/data-\${pkgver}.tar.gz")
+sha256sums=('SKIP'
+            'abc123')
+EOF
+}
+
+# update-pkg.sh runs updpkgsums next to a real remote hash, so the fix is the
+# hash that updpkgsums writes
+@test "audit_pkgbuild: names the source whose SKIP updpkgsums would turn into a hash" {
+  source "$TEST_TMPDIR/scripts/lib.sh"
+  # shellcheck disable=SC2016
+  write_vcs_data_pkgbuild 'git+https://example.org/foo.git#tag=v${pkgver}'
+  run audit_pkgbuild "$TEST_TMPDIR/test.PKGBUILD" "github-release"
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"updpkgsums runs for the real hashes and would turn the SKIP of these sources into a hash, which the check of the prepared files refuses:"* ]]
+  [[ "$output" == *"    git+https://example.org/foo.git#tag=v1.0.0"* ]]
+  [[ "$output" == *"Run updpkgsums once and push the PKGBUILD with these hashes to the AUR"* ]]
+  [[ "$output" != *"data-1.0.0.tar.gz"* ]]
+}
+
+# makepkg 7.1 has no checksum for svn and writes SKIP at any pin
+@test "audit_pkgbuild: allows the SKIP of an svn source pinned by revision next to a real hash" {
+  source "$TEST_TMPDIR/scripts/lib.sh"
+  write_vcs_data_pkgbuild "svn+https://svn.example.org/foo/trunk#revision=1234"
+  run audit_pkgbuild "$TEST_TMPDIR/test.PKGBUILD" "github-release"
+  [ "$status" -eq 0 ]
+}
+
+# A fossil clone is one file, which makepkg -g hashes as a download
+@test "audit_pkgbuild: blocks the SKIP of a fossil source next to a real hash" {
+  source "$TEST_TMPDIR/scripts/lib.sh"
+  local vcs
+  for vcs in "fossil+https://example.com/app" "fossil+https://example.com/app#commit=abc123"; do
+    write_vcs_data_pkgbuild "$vcs"
     run audit_pkgbuild "$TEST_TMPDIR/test.PKGBUILD" "github-release"
     [ "$status" -eq 1 ] || {
       echo "allowed: $vcs"
@@ -1118,6 +1201,15 @@ run_alert_fires() {
   done
 }
 
+@test "lib.sh: fired_alerts asks for quotes around a note that YAML reads as a number" {
+  create_test_package "pkg" "github-release" "alerts:
+  - from: '0.4.0'
+    note: 2024"
+  run bash -c 'source "$0/scripts/lib.sh"; fired_alerts "$1" 0.3 29+1' "$TEST_TMPDIR" "$TEST_TMPDIR/packages/pkg.yml"
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"alerts[0].note must be one line of text: put 2024 in quotes"* ]]
+}
+
 # === version of aurtomator ===
 
 @test "lib.sh: aurtomator_version prints VERSION, or nothing without it" {
@@ -1222,7 +1314,7 @@ EOF
   git -C "$TEST_TMPDIR" init -q
   "$TEST_TMPDIR/scripts/update-readme.sh" 2>/dev/null
 
-  grep -qxF 'aurtomator 0.6.0 · [0.7.0 available](https://github.com/staticwire/aurtomator/releases/tag/v0.7.0) <!-- x-release-please-version -->' "$TEST_TMPDIR/README.md"
+  grep -qxF 'aurtomator 0.6.0 ([0.7.0 available](https://github.com/staticwire/aurtomator/releases/tag/v0.7.0)) <!-- x-release-please-version -->' "$TEST_TMPDIR/README.md"
 }
 
 @test "update-readme: links no release for aurtomator at its release or for another _upstream" {
@@ -1885,6 +1977,83 @@ EOF
   cmp "$TEST_TMPDIR/README.orig" "$TEST_TMPDIR/README.md"
 }
 
+# A section is written up to its start marker and from its end marker, so a
+# swapped or second marker would copy the README into itself on every run
+@test "update-readme: fails and keeps the README with the table markers swapped" {
+  printf '%s\n' '# test' '<!-- PACKAGES:END -->' 'text' '<!-- PACKAGES:START -->' 'old table' >"$TEST_TMPDIR/README.md"
+  cp "$TEST_TMPDIR/README.md" "$TEST_TMPDIR/README.orig"
+  git -C "$TEST_TMPDIR" init -q
+  run "$TEST_TMPDIR/scripts/update-readme.sh"
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"README.md has <!-- PACKAGES:END --> above <!-- PACKAGES:START -->"* ]]
+  cmp "$TEST_TMPDIR/README.orig" "$TEST_TMPDIR/README.md"
+}
+
+@test "update-readme: fails and keeps the README with a second start marker" {
+  printf '%s\n' '# test' '<!-- PACKAGES:START -->' 'text' '<!-- PACKAGES:START -->' 'old table' \
+    '<!-- PACKAGES:END -->' >"$TEST_TMPDIR/README.md"
+  cp "$TEST_TMPDIR/README.md" "$TEST_TMPDIR/README.orig"
+  git -C "$TEST_TMPDIR" init -q
+  run "$TEST_TMPDIR/scripts/update-readme.sh"
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"README.md has the <!-- PACKAGES:START --> line 2 times, it needs it once"* ]]
+  cmp "$TEST_TMPDIR/README.orig" "$TEST_TMPDIR/README.md"
+}
+
+@test "update-readme: fails and keeps the README with the badge markers swapped" {
+  printf '%s\n' '# test' '<!-- BADGES:END -->' '<!-- BADGES:START -->' '<!-- PACKAGES:START -->' \
+    '<!-- PACKAGES:END -->' >"$TEST_TMPDIR/README.md"
+  cp "$TEST_TMPDIR/README.md" "$TEST_TMPDIR/README.orig"
+  git -C "$TEST_TMPDIR" init -q
+  run "$TEST_TMPDIR/scripts/update-readme.sh"
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"README.md has <!-- BADGES:END --> above <!-- BADGES:START -->"* ]]
+  cmp "$TEST_TMPDIR/README.orig" "$TEST_TMPDIR/README.md"
+}
+
+@test "update-readme: leaves a line that quotes the markers in its text" {
+  create_test_package "pkg-a" "github-release" "upstream:
+  project: owner/repo
+current: '1.0.0'"
+  local prose='Keep <!-- BADGES:START -->, <!-- BADGES:END -->, <!-- PACKAGES:START --> and <!-- PACKAGES:END --> on lines of their own.'
+  printf '%s\n' '# test' "$prose" '<!-- BADGES:START -->' 'old badges' '<!-- BADGES:END -->' \
+    '<!-- PACKAGES:START -->' 'old table' '<!-- PACKAGES:END -->' >"$TEST_TMPDIR/README.md"
+  git -C "$TEST_TMPDIR" init -q
+  run "$TEST_TMPDIR/scripts/update-readme.sh"
+  [ "$status" -eq 0 ]
+  [ "$(sed -n 2p "$TEST_TMPDIR/README.md")" = "$prose" ]
+  [ "$(grep -cxF '<!-- BADGES:START -->' "$TEST_TMPDIR/README.md")" -eq 1 ]
+  [ "$(grep -cxF '<!-- PACKAGES:START -->' "$TEST_TMPDIR/README.md")" -eq 1 ]
+  ! grep -q 'old badges' "$TEST_TMPDIR/README.md"
+  ! grep -q 'old table' "$TEST_TMPDIR/README.md"
+}
+
+@test "update-readme: writes the table when its start marker is the first line" {
+  create_test_package "pkg-a" "github-release" "upstream:
+  project: owner/repo
+current: '1.0.0'"
+  printf '%s\n' '<!-- PACKAGES:START -->' 'old table' '<!-- PACKAGES:END -->' '# test' >"$TEST_TMPDIR/README.md"
+  git -C "$TEST_TMPDIR" init -q
+  run "$TEST_TMPDIR/scripts/update-readme.sh"
+  [ "$status" -eq 0 ]
+  [ "$(grep -cxF '<!-- PACKAGES:START -->' "$TEST_TMPDIR/README.md")" -eq 1 ]
+  ! grep -q 'old table' "$TEST_TMPDIR/README.md"
+}
+
+# sed takes 1,/re/ from line 2 for the end of the range
+@test "update-readme: writes the badges when their start marker is the first line" {
+  create_test_package "pkg-a" "github-release" "upstream:
+  project: owner/repo
+current: '1.0.0'"
+  printf '%s\n' '<!-- BADGES:START -->' 'old badges' '<!-- BADGES:END -->' '# test' '<!-- PACKAGES:START -->' \
+    '<!-- PACKAGES:END -->' >"$TEST_TMPDIR/README.md"
+  git -C "$TEST_TMPDIR" init -q
+  run "$TEST_TMPDIR/scripts/update-readme.sh"
+  [ "$status" -eq 0 ]
+  [ "$(grep -cxF '<!-- BADGES:START -->' "$TEST_TMPDIR/README.md")" -eq 1 ]
+  ! grep -q 'old badges' "$TEST_TMPDIR/README.md"
+}
+
 @test "update-readme: badge is green when all packages ok" {
   create_test_package "pkg-ok" "github-release" "upstream:
   project: owner/repo
@@ -1928,7 +2097,7 @@ EOF
   "$TEST_TMPDIR/scripts/update-readme.sh" 2>/dev/null
   [ "$(sed -n '/<table>/,$p' "$TEST_TMPDIR/README.md")" = '<table>
 <tr><th>Package</th><th>Version</th><th>Strategy</th><th>Updated</th><th>Status</th></tr>
-<tr><td><em>No packages configured</em></td><td>—</td><td nowrap>—</td><td nowrap>—</td><td nowrap>—</td></tr>
+<tr><td><em>No packages configured</em></td><td>-</td><td nowrap>-</td><td nowrap>-</td><td nowrap>-</td></tr>
 </table>
 <!-- PACKAGES:END -->' ]
 }
@@ -2111,6 +2280,25 @@ current: '1.0.0'"
   [[ "$badges" != *"Lint & Test"* && "$badges" != *"codecov"* ]]
 }
 
+@test "update-readme: an origin outside GitHub, or a local path, gives only the static badges" {
+  create_test_package "pkg-a" "github-release" "upstream:
+  project: owner/repo
+current: '1.0.0'"
+  git -C "$TEST_TMPDIR" init -q
+  git -C "$TEST_TMPDIR" remote add origin "https://gitlab.com/someone/fork.git"
+  local origin
+  for origin in "https://gitlab.com/someone/fork.git" "https://notgithub.com/someone/fork.git" "$TEST_TMPDIR/clone"; do
+    git -C "$TEST_TMPDIR" remote set-url origin "$origin"
+    readme_with_badges
+    run "$TEST_TMPDIR/scripts/update-readme.sh"
+    echo "$origin: $output"
+    [ "$status" -eq 0 ]
+    [[ "$output" == *"Badges updated (repo: unknown)"* ]]
+    ! grep -qF -e 'someone/fork' -e "$TEST_TMPDIR" "$TEST_TMPDIR/README.md"
+    [[ "$(sed -n '3p' "$TEST_TMPDIR/README.md")" != *"Lint & Test"* ]]
+  done
+}
+
 @test "update-readme: an unknown status reads as tracking" {
   create_test_package "pkg-a" "github-release" "upstream:
   project: owner/repo
@@ -2121,7 +2309,7 @@ current: '1.0.0'"
 
   run "$TEST_TMPDIR/scripts/update-readme.sh"
   [ "$status" -eq 0 ]
-  grep -qF '<td>1.0.0</td><td nowrap>github-release</td><td nowrap>—</td><td nowrap>✅ tracking</td>' "$TEST_TMPDIR/README.md"
+  grep -qF '<td>1.0.0</td><td nowrap>github-release</td><td nowrap>-</td><td nowrap>✅ tracking</td>' "$TEST_TMPDIR/README.md"
   grep -qF 'packages-1%2F1-brightgreen' "$TEST_TMPDIR/README.md"
 }
 
@@ -2133,7 +2321,7 @@ current: '1.0.0'"
 
   run "$TEST_TMPDIR/scripts/update-readme.sh"
   [ "$status" -eq 0 ]
-  grep -qF '<tr><td><a href="https://aur.archlinux.org/pkgbase/pkg-new">pkg-new</a></td><td>—</td><td nowrap>github-release</td><td nowrap>—</td><td nowrap>✨ new</td></tr>' "$TEST_TMPDIR/README.md"
+  grep -qF '<tr><td><a href="https://aur.archlinux.org/pkgbase/pkg-new">pkg-new</a></td><td>-</td><td nowrap>github-release</td><td nowrap>-</td><td nowrap>✨ new</td></tr>' "$TEST_TMPDIR/README.md"
 }
 
 # A package that has not been checked yet has failed nothing
@@ -2183,7 +2371,7 @@ current: '1.0.0'"
 EOF
   git -C "$TEST_TMPDIR" init -q
   "$TEST_TMPDIR/scripts/update-readme.sh" 2>/dev/null
-  grep -qF '<td nowrap>github-release</td><td nowrap>—</td>' "$TEST_TMPDIR/README.md"
+  grep -qF '<td nowrap>github-release</td><td nowrap>-</td>' "$TEST_TMPDIR/README.md"
 }
 
 # === update-pkg.sh: argument validation ===
@@ -3441,7 +3629,7 @@ pkgver_dash: ''"
   asset_var: _twin"
   run "$TEST_TMPDIR/scripts/check-asset.sh" twin 1.0.0
   [ "$status" -eq 1 ]
-  [[ "$output" == *"Tags v1.0.0 1.0.0 of asset-owner/twin-repo all give version 1.0.0"* ]]
+  [[ "$output" == *"Tags v1.0.0 1.0.0 of asset-owner/twin-repo all give version 1.0.0; set upstream.tag_version_regex to match one of them"* ]]
 }
 
 @test "check-asset: fails when the release cannot be read" {

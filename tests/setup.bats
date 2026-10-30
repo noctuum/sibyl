@@ -352,6 +352,15 @@ EOF
   [[ "$output" == *"SSH key:"* ]]
 }
 
+# The home directory of another user is not $HOME
+@test "setup ssh: leaves a tilde with a user name as it is" {
+  HOME="$TEST_TMPDIR/fakehome" run "$TEST_TMPDIR/scripts/setup.sh" ssh \
+    --ssh-key "~nobody/keys/aur.pem" \
+    --non-interactive
+  [ "$status" -ne 0 ]
+  [[ "$output" == *"SSH key not found: ~nobody/keys/aur.pem"* ]]
+}
+
 @test "setup ssh: nonexistent key rejected" {
   run "$TEST_TMPDIR/scripts/setup.sh" ssh \
     --ssh-key "/nonexistent/path/key.pem" \
@@ -363,7 +372,9 @@ EOF
 # === Config persistence ===
 
 @test "setup: saves config file" {
-  "$TEST_TMPDIR/scripts/setup.sh" gpg --gpg-key VALIDKEY123 --non-interactive 2>/dev/null
+  run "$TEST_TMPDIR/scripts/setup.sh" gpg --gpg-key VALIDKEY123 --non-interactive
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"Config saved to .aurtomator.conf"* ]]
   [ -f "$TEST_TMPDIR/.aurtomator.conf" ]
   grep -q "VALIDKEY123" "$TEST_TMPDIR/.aurtomator.conf"
 }
@@ -502,6 +513,19 @@ EOF
   [[ "$output" == *"1 issue(s) found."* ]]
   grep -qx "GIT_AUTHOR_NAME='Jane Doe'" "$TEST_TMPDIR/.aurtomator.conf"
   grep -qx "AUR_SSH_KEY='$TEST_TMPDIR/ssh/aur.pem'" "$TEST_TMPDIR/.aurtomator.conf"
+}
+
+# A full setup runs every step in one go, and a step that fails ends it
+@test "setup: full setup keeps the identity when the ssh step fails" {
+  mkdir -p "$TEST_TMPDIR/ssh-pass"
+  ssh-keygen -t ed25519 -f "$TEST_TMPDIR/ssh-pass/key" -N "testpass" -q
+
+  run "$TEST_TMPDIR/scripts/setup.sh" \
+    --git-name "Jane Doe" --git-email "jane@example.com" \
+    --ssh-key "$TEST_TMPDIR/ssh-pass/key" --non-interactive
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"SSH key has a passphrase"* ]]
+  grep -qx "GIT_AUTHOR_NAME='Jane Doe'" "$TEST_TMPDIR/.aurtomator.conf"
 }
 
 # === Secrets step ===

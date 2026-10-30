@@ -108,6 +108,14 @@ case "$url" in
   *archlinux.org/packages/search/json*name=arch-multilib*)
     echo '{"results": [{"repo": "multilib", "epoch": 0, "pkgver": "4.0", "pkgrel": "1"}]}'
     ;;
+  # Arch repos: the server reads a + in the query as a space, so only %2B
+  # finds libsigc++
+  *archlinux.org/packages/search/json*name=libsigc%2B%2B*)
+    echo '{"results": [{"repo": "extra", "epoch": 0, "pkgver": "2.12.2", "pkgrel": "1"}]}'
+    ;;
+  *archlinux.org/packages/search/json*name=libsigc++*)
+    echo '{"results": []}'
+    ;;
   # KDE tarball: no versions in listing
   *download.kde.org/stable/no-versions-here/*)
     echo '<html><body>Parent Directory</body></html>'
@@ -220,13 +228,33 @@ case "$url" in
   *"api.github.com/repos/short-nightly/repo/releases?per_page=100&page=1")
     echo '[{"tag_name": "v0.7.0-rc1", "published_at": "2026-10-01T20:28:19Z"}, {"tag_name": "v0.6.0-rc2", "published_at": "2026-09-24T16:52:22Z"}]'
     ;;
-  # A full page of 100 releases with the match among them
+  # A full page of 100 releases with the match among them, and a later
+  # match on page 2
   *"api.github.com/repos/full-nightly/repo/releases?per_page=100&page=1")
     printf '[{"tag_name": "2026-10-21", "published_at": "2026-10-22T00:25:00Z"}'
     for i in $(seq 1 99); do
       printf ', {"tag_name": "v0.%d-rc1", "published_at": "2026-01-01T00:00:00Z"}' "$i"
     done
     printf ']\n'
+    ;;
+  *"api.github.com/repos/full-nightly/repo/releases?per_page=100&page=2")
+    echo '[{"tag_name": "2026-10-23", "published_at": "2026-10-24T00:00:00Z"}]'
+    ;;
+  # 100 fix releases of the old line, created after the new major and so
+  # listed before it, and the major on page 2
+  *"api.github.com/repos/two-lines/repo/releases?per_page=100&page=1")
+    sep=""
+    printf '['
+    for i in $(seq 1 100); do
+      printf '%s{"tag_name": "v1.0.%d", "published_at": "2026-10-20T%02d:%02d:00Z", "prerelease": false}' "$sep" "$i" $((i / 60)) $((i % 60))
+      sep=", "
+    done
+    printf ']\n'
+    ;;
+  # The major, and the last release of page 1 again: a release created
+  # while the pages are read moves it to page 2
+  *"api.github.com/repos/two-lines/repo/releases?per_page=100&page=2")
+    echo '[{"tag_name": "v1.0.100", "published_at": "2026-10-20T01:40:00Z", "prerelease": false}, {"tag_name": "v2.0.0", "published_at": "2026-09-01T00:00:00Z", "prerelease": false}]'
     ;;
   # A page of 100 releases without a match, and the match on page 2
   *"api.github.com/repos/later-nightly/repo/releases?per_page=100&page=2")

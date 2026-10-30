@@ -4,8 +4,9 @@
 #
 # The job that executes a PKGBUILD holds no secrets, so the files it hands
 # over are untrusted. The job that pushes accepts them only when they differ
-# from the AUR copy in pkgver, pkgrel, checksum values and the value of the
-# asset_var line. None of these checks sources the file.
+# from the AUR copy in pkgver, pkgrel, the checksums as updpkgsums writes
+# them and the value of the asset_var line. None of these checks sources the
+# file.
 #
 # Sourced by lib.sh, after common.sh.
 
@@ -81,12 +82,31 @@ _pkgbuild_parts() {
   ' "$1"
 }
 
+# Print the SKEL lines among the parts in $2 with one SUMS line in place of
+# the checksum arrays: one for each run of consecutive arrays with $1=runs,
+# one for all of them at the place of the first with $1=all
+_merged_skel() {
+  awk -v mode="$1" '
+    !/^SKEL\t/ { next }
+    /^SKEL\tSUMS / { if (!merged) print "SKEL\tSUMS"; merged = 1; next }
+    mode == "runs" { merged = 0 }
+    { print }
+  ' <<<"$2"
+}
+
+# Print the checksum arrays among the parts in $1 whatever their place: a
+# line with the name of each array and a line per checksum, sorted by name,
+# those of arrays of one name in file order
+_sum_arrays() {
+  grep -E $'^(SKEL\tSUMS |SUM\t)' <<<"$1" | sort -s -t $'\t' -k2,2
+}
+
 # Args: $1=AUR PKGBUILD, $2=prepared PKGBUILD, $3=expected version,
 #       $4=expected pkgrel (default 1), $5=asset_var of the package, if
 #       any, $6=expected asset value
 # Returns: 0 when the prepared file changes only pkgver (to $3), pkgrel
-#          (to $4), checksum values and the value of its one asset_var line
-#          (to $6), 1 otherwise (reason on stderr)
+#          (to $4), the checksums as updpkgsums writes them and the value of
+#          its one asset_var line (to $6), 1 otherwise (reason on stderr)
 check_prepared_pkgbuild() {
   local version="$3" rel="${4:-1}" asset_var="${5:-}" asset="${6:-}"
   local old_parts new_parts value
@@ -105,11 +125,14 @@ check_prepared_pkgbuild() {
     grep $'^BAD\t' <<<"$new_parts" | cut -f2- >&2
     return 1
   fi
-  if [[ "$(grep $'^SKEL\t' <<<"$old_parts")" != "$(grep $'^SKEL\t' <<<"$new_parts")" ]]; then
+  # updpkgsums writes all checksum arrays in one block at the place of the
+  # first one, and a run without it leaves them where they stand
+  if [[ "$(grep $'^SKEL\t' <<<"$old_parts")" != "$(grep $'^SKEL\t' <<<"$new_parts")" ]] &&
+    [[ "$(_merged_skel all "$old_parts")" != "$(_merged_skel runs "$new_parts")" ]]; then
     log_err "Prepared PKGBUILD changes lines outside pkgver, pkgrel and checksums"
     return 1
   fi
-  if [[ "$(grep $'^SUM\t' <<<"$old_parts")" != "$(grep $'^SUM\t' <<<"$new_parts")" ]]; then
+  if [[ "$(_sum_arrays "$old_parts")" != "$(_sum_arrays "$new_parts")" ]]; then
     log_err "Prepared PKGBUILD changes the checksum arrays: their names, lengths or SKIP entries differ from the AUR"
     return 1
   fi
@@ -152,6 +175,18 @@ _asset_line_value() {
   printf '%s\n' "${values[0]}"
 }
 
+# Print the value of the first line of a PKGBUILD that sets the variable,
+# without the double or single quotes around it, as bash reads it
+# Args: $1=PKGBUILD, $2=variable name
+_plain_value() {
+  local value dq='^"(.*)"$' sq="^'(.*)'$"
+  value=$(sed -n "s/^$2=//p" "$1" | head -1)
+  if [[ "$value" =~ $dq || "$value" =~ $sq ]]; then
+    value="${BASH_REMATCH[1]}"
+  fi
+  printf '%s\n' "$value"
+}
+
 # Print the pkgrel of an update of a package with asset_var: 1 for a new
 # version, the AUR pkgrel plus one for a rebuild, which is a new asset
 # value of the same version, and the AUR pkgrel when the AUR already has
@@ -162,11 +197,11 @@ _asset_line_value() {
 _asset_pkgrel() {
   local old_asset old_rel
   old_asset=$(_asset_line_value "$1" "$2" "AUR PKGBUILD") || return 1
-  if [[ "$3" != "$(sed -n 's/^pkgver=//p' "$1" | head -1)" ]]; then
+  if [[ "$3" != "$(_plain_value "$1" pkgver)" ]]; then
     echo 1
     return 0
   fi
-  old_rel=$(sed -n 's/^pkgrel=//p' "$1" | head -1)
+  old_rel=$(_plain_value "$1" pkgrel)
   if [[ "$4" == "$old_asset" ]]; then
     printf '%s\n' "$old_rel"
     return 0
@@ -185,13 +220,15 @@ _asset_pkgrel() {
 # of KDE Frameworks. That last form counts only while it keeps a dot, as a
 # lone major version is too common in other text. One pass from left to
 # right, longest form first, so a replaced part is not matched again: with
-# 5.1.0 -> 5.10.0 the 5.1 at the start of 5.10.0 stays. With
-# pkgver_format, the upstream version inside the version is the last form,
-# as 4215 in 4.4215.
+# 5.1.0 -> 5.10.0 the 5.1 at the start of 5.10.0 stays. A form counts only
+# where it does not continue another number, with no digit or dot before it
+# and no digit after it, so the 0.1 inside 10.1 stays. With pkgver_format,
+# the upstream version inside the version is the last form, as 4215 in
+# 4.4215.
 # Args: $1=line, $2=old version, $3=new version, $4=old upstream version,
 #       $5=new upstream version
 _bump_version() {
-  local rest="$1" old="$2" new="$3" out="" i matched
+  local rest="$1" lead=" $1" old="$2" new="$3" out="" i matched
   if [[ -z "$old" ]]; then
     printf '%s\n' "$rest"
     return 0
@@ -217,10 +254,12 @@ _bump_version() {
     news+=("$5")
   fi
 
+  # lead is the line after a space, so its character at the length of the
+  # part already read is the one before rest
   while [[ -n "$rest" ]]; do
     matched=false
     for i in "${!olds[@]}"; do
-      if [[ "$rest" == "${olds[$i]}"* ]]; then
+      if [[ "${lead:${#1}-${#rest}:1}" != [0-9.] && "$rest" == "${olds[$i]}"* && "${rest:${#olds[$i]}:1}" != [0-9] ]]; then
         out+="${news[$i]}"
         rest="${rest:${#olds[$i]}}"
         matched=true
@@ -369,10 +408,14 @@ _drop_trailing_blank() {
 # download by the date: verify_prepared_sums never fetches it, and makepkg
 # takes the sources from the PKGBUILD. When pkgver changes and a download
 # has a real checksum, or a VCS source is pinned to a commit, a tag or a
-# revision, some source URL or checksum has to change too: a pkgver built
-# from another variable, a source URL without the version, a pin that
-# stays, or a version only in the name a download is saved under, the part
-# before ::, would otherwise label the old files with the new version. With
+# revision, some source URL or checksum has to change too, for each
+# architecture, the common sources and checksums counting for all of them:
+# a pkgver built from another variable, a source URL without the version,
+# a pin that stays, or a version only in the name a download is saved
+# under, the part before ::, would otherwise label the old files with the
+# new version. A download with a real checksum that gets a new name and
+# keeps its URL and its checksum is refused on its own, whatever another
+# source does. With
 # pkgver_dash, a version with a dash in place of that character, as
 # ${pkgver//_/-} writes it, counts as the version, and with pkgver_dash: ''
 # a version with a dash between two characters. With pkgver_format, so
@@ -422,7 +465,10 @@ check_prepared_srcinfo() {
     fi
   done < <(_source_checksums "$1")
 
-  local i old new key kind old_val new_val n expected pinned=false changed=false
+  # A group is the common sources and checksums, _, or those of one
+  # architecture, _x86_64
+  local -A arch_groups=() arches=() pinned_in=() changed_in=() sum_counts=() sum_moved=() renamed=()
+  local i old new key kind old_val new_val n expected group arch has_arch=false changed=false
   for i in "${!new_lines[@]}"; do
     old="${old_lines[$i]}"
     new="${new_lines[$i]}"
@@ -463,7 +509,16 @@ check_prepared_srcinfo() {
           log_err "Prepared .SRCINFO line $((i + 1)) is not a checksum matching the AUR copy: $new"
           return 1
         fi
-        [[ "$new" == "$old" ]] || changed=true
+        group="${key#*sums}"
+        group="${group:-_}"
+        arch_groups["$group"]=1
+        n="${sum_counts[$key]:-0}"
+        sum_counts[$key]=$((n + 1))
+        if [[ "$new" != "$old" ]]; then
+          changed=true
+          changed_in["$group"]=1
+          sum_moved["${key#*sums}:$n"]=1
+        fi
         ;;
       source)
         n="${source_counts[$key]:-0}"
@@ -472,16 +527,26 @@ check_prepared_srcinfo() {
         if ! _bumped_line "$old" "$new" "$old_ver" "$version" "$old_up" "$new_up" "$dash" "$old_asset" "$new_asset" &&
           ! { [[ -n "${skip_sources["${key#source}:$n"]:-}" ]] &&
             _name_differs_in_digits "$expected" "$new"; }; then
-          log_err "Prepared .SRCINFO line $((i + 1)) is not the AUR source with the new version: $new"
+          log_err "Prepared .SRCINFO line $((i + 1)) is not the AUR source with the new version: ${new#"${new%%[![:space:]]*}"}, expected ${expected#"${expected%%[![:space:]]*}"}"
           return 1
         fi
-        [[ "${new_val#*::}" == "${old_val#*::}" ]] || changed=true
+        group="${key#source}"
+        group="${group:-_}"
+        arch_groups["$group"]=1
+        if [[ "${new_val#*::}" != "${old_val#*::}" ]]; then
+          changed=true
+          changed_in["$group"]=1
+        elif [[ "${new_val%%::*}" != "${old_val%%::*}" && -n "${hashed_sources["${key#source}:$n"]:-}" ]] &&
+          _is_download "$old_val"; then
+          renamed["${key#source}:$n"]="line $((i + 1)) saves the download of the old version under a new name: $new_val"
+        fi
         if { [[ -n "${hashed_sources["${key#source}:$n"]:-}" ]] && _is_download "$old_val"; } ||
           _is_vcs_pin "$old_val"; then
-          pinned=true
+          pinned_in["$group"]=1
         fi
         ;;
       *)
+        [[ "$key" != arch ]] || arches["$new_val"]=1
         if [[ "$new" != "$old" ]] &&
           ! _bumped_line "$old" "$new" "$old_ver" "$version" "$old_up" "$new_up" "$dash" "$old_asset" "$new_asset"; then
           log_err "Prepared .SRCINFO line $((i + 1)) changes more than the version: $new"
@@ -490,14 +555,34 @@ check_prepared_srcinfo() {
         ;;
     esac
   done
-  if [[ "$pinned" == true && "$changed" == false && "$version" != "$old_ver" ]]; then
-    log_err "Prepared .SRCINFO changes no source URL and no checksum, so the new version would hold the files of the old one"
-    return 1
+  for group in "${!arch_groups[@]}"; do
+    [[ "$group" == _ ]] || has_arch=true
+  done
+  if [[ "$version" != "$old_ver" && "$has_arch" == false ]]; then
+    if [[ -n "${pinned_in[_]:-}" && -z "${changed_in[_]:-}" ]]; then
+      log_err "Prepared .SRCINFO changes no source URL and no checksum, so the new version would hold the files of the old one"
+      return 1
+    fi
+  elif [[ "$version" != "$old_ver" ]]; then
+    # The arch lines name every architecture, one that builds from the
+    # common sources alone too
+    for arch in "${!arches[@]}"; do
+      if [[ -n "${pinned_in[_]:-}${pinned_in[_$arch]:-}" && -z "${changed_in[_]:-}${changed_in[_$arch]:-}" ]]; then
+        log_err "Prepared .SRCINFO changes no source URL and no checksum for $arch, so the new version would hold the files of the old one"
+        return 1
+      fi
+    done
   fi
   if [[ "$changed" == false && "$new_asset" != "$old_asset" ]]; then
     log_err "Prepared .SRCINFO changes no source URL and no checksum, so the new asset value reaches no source"
     return 1
   fi
+  for key in "${!renamed[@]}"; do
+    if [[ -z "${sum_moved[$key]:-}" ]]; then
+      log_err "Prepared .SRCINFO ${renamed[$key]}"
+      return 1
+    fi
+  done
   return 0
 }
 

@@ -117,7 +117,7 @@ teardown() {
   [ "$(nightly_pages)" = "1 2 " ]
 }
 
-@test "github-release: tag_version_regex stops at a full page with a match" {
+@test "github-release: tag_version_regex reads the page after a full page with a match" {
   record_curl
   create_test_package "test-pages" "github-release" "upstream:
   project: full-nightly/repo
@@ -125,8 +125,22 @@ teardown() {
 
   run "$TEST_TMPDIR/strategies/github-release.sh" "test-pages"
   [ "$status" -eq 0 ]
-  [ "$output" = "2026-10-21" ]
-  [ "$(nightly_pages)" = "1 " ]
+  [ "$output" = "2026-10-23" ]
+  [ "$(nightly_pages)" = "1 2 " ]
+}
+
+# The API lists by the date of the tagged commit, so 100 fix releases of the
+# old line push the new major to page 2
+@test "github-release: tag_version_regex takes the highest version of all pages" {
+  record_curl
+  create_test_package "test-pages" "github-release" "upstream:
+  project: two-lines/repo
+  tag_version_regex: '^v(.*)$'"
+
+  run "$TEST_TMPDIR/strategies/github-release.sh" "test-pages"
+  [ "$status" -eq 0 ]
+  [ "$output" = "2.0.0" ]
+  [ "$(nightly_pages)" = "1 2 " ]
 }
 
 @test "github-release: tag_version_regex stops at a short page" {
@@ -158,6 +172,21 @@ teardown() {
   project: owner/repo
   tag_version_regex: '^v(.*)$'"
   printf '#!/usr/bin/env bash\nexit 7\n' >"$TEST_TMPDIR/mock-bin/curl"
+  chmod +x "$TEST_TMPDIR/mock-bin/curl"
+
+  run "$TEST_TMPDIR/strategies/github-release.sh" "test-pages"
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"Failed to fetch releases for owner/repo"* ]]
+}
+
+@test "github-release: tag_version_regex fails on a cut-off list" {
+  create_test_package "test-pages" "github-release" "upstream:
+  project: owner/repo
+  tag_version_regex: '^v(.*)$'"
+  cat >"$TEST_TMPDIR/mock-bin/curl" <<'EOF'
+#!/usr/bin/env bash
+echo '[{"tag_name": "v1.0", "published_at":'
+EOF
   chmod +x "$TEST_TMPDIR/mock-bin/curl"
 
   run "$TEST_TMPDIR/strategies/github-release.sh" "test-pages"
@@ -215,6 +244,7 @@ teardown() {
   [ "$status" -eq 1 ]
   [[ "$output" == *'tag_version_replace names \4, a group tag_version_regex does not have'* ]]
   [[ "$output" != *"did not match"* ]]
+  [[ "$output" != *"No release of"* ]]
 }
 
 # === github-tag ===
@@ -677,6 +707,14 @@ teardown() {
     [ "$status" -eq 0 ]
     [ "$output" = "${entry#*:}" ]
   done
+}
+
+@test "archpkg: finds a package with a plus sign in its name" {
+  create_test_package "test-archpkg" "archpkg" "upstream:
+  archpkg: libsigc++"
+  run "$TEST_TMPDIR/strategies/archpkg.sh" "test-archpkg"
+  [ "$status" -eq 0 ]
+  [ "$output" = "2.12.2" ]
 }
 
 @test "archpkg: names the repositories it read when the package is in none of them" {
@@ -1189,7 +1227,7 @@ nightly_pages() {
   [ "$(nightly_pages)" = "1 2 3 " ]
 }
 
-@test "github-nightly: nightly_tag_regex stops at the page with a match" {
+@test "github-nightly: nightly_tag_regex reads the page after a full page with a match" {
   record_curl
   create_test_package "test-nightly-regex" "github-nightly" "upstream:
   project: full-nightly/repo
@@ -1198,8 +1236,20 @@ nightly_pages() {
 
   run "$TEST_TMPDIR/strategies/github-nightly.sh" "test-nightly-regex"
   [ "$status" -eq 0 ]
-  [ "$output" = "2026.10.21" ]
-  [ "$(nightly_pages)" = "1 " ]
+  [ "$output" = "2026.10.23" ]
+  [ "$(nightly_pages)" = "1 2 " ]
+}
+
+@test "github-nightly: nightly_tag_regex takes the match published last of all pages" {
+  record_curl
+  create_test_package "test-nightly-regex" "github-nightly" "upstream:
+  project: two-lines/repo
+  nightly_tag_regex: '^v[0-9.]+$'"
+
+  run "$TEST_TMPDIR/strategies/github-nightly.sh" "test-nightly-regex"
+  [ "$status" -eq 0 ]
+  [ "$output" = "1.0.100" ]
+  [ "$(nightly_pages)" = "1 2 " ]
 }
 
 @test "github-nightly: nightly_tag_regex stops at a page of fewer than 100" {
@@ -2076,7 +2126,7 @@ EOF
   # The mock returns v2.0.0, v1.9.0 and v1.0.0, and none matches ^release-
   run "$TEST_TMPDIR/strategies/github-tag.sh" "test-filter"
   [ "$status" -eq 1 ]
-  [[ "$output" == *"No matching tags found"* ]]
+  [[ "$output" == *"No tag gives a version with upstream.tag_version_regex '^release-(.+)\$', tags read: 3"* ]]
 }
 
 @test "gitlab-tag: tag_version_regex filters out all tags" {
@@ -2087,7 +2137,7 @@ EOF
 
   run "$TEST_TMPDIR/strategies/gitlab-tag.sh" "test-filter"
   [ "$status" -eq 1 ]
-  [[ "$output" == *"No matching tags found"* ]]
+  [[ "$output" == *"No tag gives a version with upstream.tag_version_regex '^release-(.+)\$', tags read: 3"* ]]
 }
 
 @test "gitea-tag: tag_version_regex filters out all tags" {
@@ -2098,7 +2148,7 @@ EOF
 
   run "$TEST_TMPDIR/strategies/gitea-tag.sh" "test-filter"
   [ "$status" -eq 1 ]
-  [[ "$output" == *"No matching tags found"* ]]
+  [[ "$output" == *"No tag gives a version with upstream.tag_version_regex '^release-(.+)\$', tags read: 2"* ]]
 }
 
 # A pin to one release line leaves out v2.0.0 and the v2.1.0 rc tags
