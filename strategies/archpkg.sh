@@ -28,9 +28,10 @@ if [[ $(pkg_get "$pkg_file" '.upstream.testing') == true ]]; then
   repos+=(core-testing extra-testing multilib-testing)
 fi
 
+# The server reads a + in the query as a space, so it goes as %2B
+search_url="https://archlinux.org/packages/search/json/?name=${archpkg_name//+/%2B}"
 # One line per entry: repo, epoch and pkgver
-entries=$(http_get "https://archlinux.org/packages/search/json/?name=${archpkg_name}" |
-  yq -o csv '.results[] | [.repo, .epoch, .pkgver]') || {
+entries=$(http_get "$search_url" | yq -o csv '.results[] | [.repo, .epoch, .pkgver]') || {
   echo "Failed to fetch Arch package info for ${archpkg_name}" >&2
   exit 1
 }
