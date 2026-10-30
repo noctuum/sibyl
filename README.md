@@ -51,7 +51,7 @@ Automated AUR package updates from a single GitHub repo.
 <tr><td><a href="https://aur.archlinux.org/pkgbase/pgtui-bin">pgtui-bin</a></td><td>0.3.0</td><td nowrap>github-release</td><td nowrap>-</td><td nowrap>✅ up to date</td></tr>
 <tr><td><a href="https://aur.archlinux.org/pkgbase/pgtui">pgtui</a></td><td>0.3.0</td><td nowrap>github-release</td><td nowrap>-</td><td nowrap>✅ up to date</td></tr>
 <tr><td><a href="https://aur.archlinux.org/pkgbase/pocket-tts-bin">pocket-tts-bin</a></td><td>4.0.1</td><td nowrap>github-release</td><td nowrap>-</td><td nowrap>✅ up to date</td></tr>
-<tr><td><a href="https://aur.archlinux.org/pkgbase/pocket-tts-git">pocket-tts-git</a></td><td>r208.c2af77e</td><td nowrap>git-latest</td><td nowrap>2026-10-30</td><td nowrap>📦 updated to r208.c2af77e</td></tr>
+<tr><td><a href="https://aur.archlinux.org/pkgbase/pocket-tts-git">pocket-tts-git</a></td><td>r208.c2af77e</td><td nowrap>git-latest</td><td nowrap>2026-10-30</td><td nowrap>✅ up to date</td></tr>
 <tr><td><a href="https://aur.archlinux.org/pkgbase/pocket-tts">pocket-tts</a></td><td>4.0.1</td><td nowrap>github-release</td><td nowrap>-</td><td nowrap>✅ up to date</td></tr>
 <tr><td><a href="https://aur.archlinux.org/pkgbase/rsql-bin">rsql-bin</a></td><td>0.21.0</td><td nowrap>github-release</td><td nowrap>-</td><td nowrap>✅ up to date</td></tr>
 <tr><td><a href="https://aur.archlinux.org/pkgbase/rsql">rsql</a></td><td>0.21.0</td><td nowrap>github-release</td><td nowrap>-</td><td nowrap>✅ up to date</td></tr>
@@ -60,9 +60,9 @@ Automated AUR package updates from a single GitHub repo.
 <tr><td><a href="https://aur.archlinux.org/pkgbase/sherpa-onnx-piper-voice-ru-dmitri">sherpa-onnx-piper-voice-ru-dmitri</a></td><td>20251202</td><td nowrap>github-asset</td><td nowrap>-</td><td nowrap>✅ up to date</td></tr>
 <tr><td><a href="https://aur.archlinux.org/pkgbase/sherpa-onnx-piper-voice-ru-ruslan">sherpa-onnx-piper-voice-ru-ruslan</a></td><td>20251202</td><td nowrap>github-asset</td><td nowrap>-</td><td nowrap>✅ up to date</td></tr>
 <tr><td><a href="https://aur.archlinux.org/pkgbase/transfuse">transfuse</a></td><td>0.6.0</td><td nowrap>gitlab-tag</td><td nowrap>-</td><td nowrap>✅ up to date</td></tr>
-<tr><td><a href="https://aur.archlinux.org/pkgbase/webdav-bin">webdav-bin</a></td><td>5.17.3</td><td nowrap>github-release</td><td nowrap>2026-10-30</td><td nowrap>📦 updated to 5.17.3</td></tr>
-<tr><td><a href="https://aur.archlinux.org/pkgbase/webdav-git">webdav-git</a></td><td>r315.614d975</td><td nowrap>git-latest</td><td nowrap>2026-10-30</td><td nowrap>📦 updated to r315.614d975</td></tr>
-<tr><td><a href="https://aur.archlinux.org/pkgbase/webdav">webdav</a></td><td>5.17.3</td><td nowrap>github-release</td><td nowrap>2026-10-30</td><td nowrap>📦 updated to 5.17.3</td></tr>
+<tr><td><a href="https://aur.archlinux.org/pkgbase/webdav-bin">webdav-bin</a></td><td>5.17.3</td><td nowrap>github-release</td><td nowrap>2026-10-30</td><td nowrap>✅ up to date</td></tr>
+<tr><td><a href="https://aur.archlinux.org/pkgbase/webdav-git">webdav-git</a></td><td>r315.614d975</td><td nowrap>git-latest</td><td nowrap>2026-10-30</td><td nowrap>✅ up to date</td></tr>
+<tr><td><a href="https://aur.archlinux.org/pkgbase/webdav">webdav</a></td><td>5.17.3</td><td nowrap>github-release</td><td nowrap>2026-10-30</td><td nowrap>✅ up to date</td></tr>
 <tr><td><a href="https://aur.archlinux.org/pkgbase/whodb-bin">whodb-bin</a></td><td>0.138.0</td><td nowrap>github-release</td><td nowrap>2026-10-28</td><td nowrap>✅ up to date</td></tr>
 <tr><td><a href="https://aur.archlinux.org/pkgbase/whodb-cli-bin">whodb-cli-bin</a></td><td>0.138.0</td><td nowrap>github-release</td><td nowrap>2026-10-28</td><td nowrap>✅ up to date</td></tr>
 <tr><td><a href="https://aur.archlinux.org/pkgbase/wireguard-gui-bin">wireguard-gui-bin</a></td><td>0.1.13</td><td nowrap>github-release</td><td nowrap>2026-10-26</td><td nowrap>✅ up to date</td></tr>
