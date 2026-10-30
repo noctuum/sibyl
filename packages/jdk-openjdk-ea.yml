@@ -7,4 +7,5 @@ alerts:
   - when: major
     hold: true
     note: Raise makedepends java-environment to the lowest DEFAULT_ACCEPTABLE_BOOT_VERSIONS of the new tag
-current: 28+21
+current: 28+22
+last_updated: "2026-10-30"
