@@ -1,0 +1,9 @@
+name: mdbook-git
+strategy: git-latest
+upstream:
+  type: github
+  project: rust-lang/mdBook
+  describe: tags
+  tag_prefix: v
+current: 0.5.4.r134.g7fb5bc8
+last_updated: "2026-11-02"

@@ -1,0 +1,6 @@
+name: sngrep-bin
+strategy: webpage-scrape
+upstream:
+  url: https://packages.irontec.com/binaries/
+  pattern: 'sngrep-static-amd64-linux-gnu-([0-9.]+)"'
+current: 1.9.0

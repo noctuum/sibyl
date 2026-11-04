@@ -1,0 +1,7 @@
+name: wal2json
+strategy: github-release
+upstream:
+  project: eulerto/wal2json
+  tag_version_regex: '^wal2json_([0-9]+)_([0-9]+)$'
+  tag_version_replace: '\1.\2'
+current: "2.7"

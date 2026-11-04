@@ -1,0 +1,5 @@
+name: mdbook-toc
+strategy: crates
+upstream:
+  registry: mdbook-toc
+current: 0.15.4
