@@ -1,0 +1,6 @@
+name: sherpa-onnx-bin
+strategy: github-release
+upstream:
+  project: k2-fsa/sherpa-onnx
+current: "2.0.1"
+last_updated: "2026-10-26"

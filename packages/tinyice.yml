@@ -1,0 +1,5 @@
+name: tinyice
+strategy: github-release
+upstream:
+  project: DatanoiseTV/tinyice
+current: 2.12.3

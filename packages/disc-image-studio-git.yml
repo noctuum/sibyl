@@ -1,0 +1,7 @@
+name: disc-image-studio-git
+strategy: git-latest
+upstream:
+  type: github
+  project: JiaFeiMiao-K-Cat/DiscImageStudio
+current: r65.9edf061
+last_updated: "2026-11-04"

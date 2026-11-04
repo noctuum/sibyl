@@ -1,0 +1,7 @@
+name: mp4ff-git
+strategy: git-latest
+upstream:
+  type: github
+  project: Eyevinn/mp4ff
+current: r1326.fb2cd04
+last_updated: "2026-11-04"

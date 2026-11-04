@@ -1,0 +1,5 @@
+name: mcp-grafana-bin
+strategy: github-release
+upstream:
+  project: grafana/mcp-grafana
+current: 2.2.0

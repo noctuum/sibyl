@@ -1,0 +1,7 @@
+name: mcp-toolbox-git
+strategy: git-latest
+upstream:
+  type: github
+  project: googleapis/mcp-toolbox
+current: r2370.3e536bb
+last_updated: "2026-11-04"

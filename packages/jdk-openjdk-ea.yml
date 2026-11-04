@@ -1,0 +1,13 @@
+name: jdk-openjdk-ea
+strategy: github-tag
+upstream:
+  project: openjdk/jdk
+  tag_version_regex: '^jdk-([0-9]+\+[0-9]+)$'
+alerts:
+  - when: major
+    hold: true
+    note: Raise makedepends java-environment to the lowest DEFAULT_ACCEPTABLE_BOOT_VERSIONS of the new tag
+  - when: major
+    note: Create the package for the old major
+current: 28+22
+last_updated: "2026-10-30"

@@ -1,0 +1,5 @@
+name: versitygw-bin
+strategy: github-release
+upstream:
+  project: versity/versitygw
+current: 1.10.0

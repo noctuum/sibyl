@@ -1,0 +1,5 @@
+name: pg-schema-diff
+strategy: github-release
+upstream:
+  project: stripe/pg-schema-diff
+current: 1.0.9

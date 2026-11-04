@@ -1,0 +1,5 @@
+name: webtorrent-mpv-hook
+strategy: npm
+upstream:
+  registry: webtorrent-mpv-hook
+current: 1.4.7

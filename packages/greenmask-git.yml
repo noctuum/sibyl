@@ -1,0 +1,7 @@
+name: greenmask-git
+strategy: git-latest
+upstream:
+  type: github
+  project: GreenmaskIO/greenmask
+current: r613.a29edd8
+last_updated: "2026-10-29"

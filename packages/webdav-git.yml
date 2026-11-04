@@ -1,0 +1,7 @@
+name: webdav-git
+strategy: git-latest
+upstream:
+  type: github
+  project: hacdias/webdav
+current: r316.2b742d0
+last_updated: "2026-10-31"

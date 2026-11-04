@@ -1,0 +1,6 @@
+name: memos-bin
+strategy: github-release
+upstream:
+  project: usememos/memos
+current: 26.11.0
+last_updated: "2026-09-19"

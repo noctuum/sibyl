@@ -1,0 +1,5 @@
+name: disc-image-studio
+strategy: github-release
+upstream:
+  project: JiaFeiMiao-K-Cat/DiscImageStudio
+current: 1.3.6

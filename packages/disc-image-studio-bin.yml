@@ -1,0 +1,8 @@
+name: disc-image-studio-bin
+strategy: github-release
+upstream:
+  project: JiaFeiMiao-K-Cat/DiscImageStudio
+  asset_regex: '^(DiscImageStudio-CLI)-v[0-9.]+-linux-x64\.tar\.gz$'
+  asset_var: _asset
+current: 1.3.6
+current_asset: DiscImageStudio-CLI

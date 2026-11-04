@@ -1,0 +1,5 @@
+name: neo4j-mcp
+strategy: github-release
+upstream:
+  project: neo4j/mcp
+current: 2.1.0

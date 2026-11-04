@@ -1,0 +1,6 @@
+name: plasma-drop
+strategy: github-release
+upstream:
+  project: SkeLLLa/plasma-drop
+current: 1.17.5
+last_updated: "2026-11-04"

@@ -1,0 +1,7 @@
+name: pocket-tts-git
+strategy: git-latest
+upstream:
+  type: github
+  project: kyutai-labs/pocket-tts
+current: r212.2e117a1
+last_updated: "2026-11-04"

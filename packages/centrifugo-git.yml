@@ -1,0 +1,7 @@
+name: centrifugo-git
+strategy: git-latest
+upstream:
+  type: github
+  project: centrifugal/centrifugo
+current: r2016.e21aeb5
+last_updated: "2026-11-03"
