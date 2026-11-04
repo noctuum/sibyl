@@ -1,10 +1,12 @@
-# AUR packages
-
-This is a repository for AUR packages. Each package has a config in `packages/`, and [aurtomator](https://github.com/staticwire/aurtomator) checks it for new upstream versions on a schedule and pushes the updates to the AUR.
+# sibyl
 
 <!-- BADGES:START -->
 [![Validate packages](https://github.com/noctuum/sibyl/actions/workflows/validate.yml/badge.svg)](https://github.com/noctuum/sibyl/actions/workflows/validate.yml) [![Check AUR Package Updates](https://github.com/noctuum/sibyl/actions/workflows/check-updates.yml/badge.svg)](https://github.com/noctuum/sibyl/actions/workflows/check-updates.yml) [![maintained with aurtomator](https://img.shields.io/badge/maintained%20with-aurtomator-orange)](https://github.com/staticwire/aurtomator)
 <!-- BADGES:END -->
+
+This is a repository for AUR packages. Each package has a config in `packages/`, and [aurtomator](https://github.com/staticwire/aurtomator) checks it for new upstream versions on a schedule and pushes the updates to the AUR.
+
+![sibyl](https://github.com/user-attachments/assets/2586a683-e9d6-4a34-839f-8585838207c3)
 
 ## Packages
 
