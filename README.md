@@ -19,9 +19,9 @@ This is a repository for AUR packages. Each package has a config in `packages/`,
 <tr><td><a href="https://aur.archlinux.org/pkgbase/centrifugo-git">centrifugo-git</a></td><td>r2016.e21aeb5</td><td nowrap>git-latest</td><td nowrap>2026-11-03</td><td nowrap>✅ up to date</td></tr>
 <tr><td><a href="https://aur.archlinux.org/pkgbase/centrifugo">centrifugo</a></td><td>6.10.2</td><td nowrap>github-release</td><td nowrap>-</td><td nowrap>✅ up to date</td></tr>
 <tr><td><a href="https://aur.archlinux.org/pkgbase/dbhub-mcp-server">dbhub-mcp-server</a></td><td>1.5.1</td><td nowrap>npm</td><td nowrap>2026-11-03</td><td nowrap>✅ up to date</td></tr>
-<tr><td><a href="https://aur.archlinux.org/pkgbase/disc-image-studio-bin">disc-image-studio-bin</a></td><td>1.4.0</td><td nowrap>github-release</td><td nowrap>2026-11-04</td><td nowrap>📦 updated to 1.4.0</td></tr>
-<tr><td><a href="https://aur.archlinux.org/pkgbase/disc-image-studio-git">disc-image-studio-git</a></td><td>r72.3a5cde6</td><td nowrap>git-latest</td><td nowrap>2026-11-04</td><td nowrap>📦 updated to r72.3a5cde6</td></tr>
-<tr><td><a href="https://aur.archlinux.org/pkgbase/disc-image-studio">disc-image-studio</a></td><td>1.4.0</td><td nowrap>github-release</td><td nowrap>2026-11-04</td><td nowrap>📦 updated to 1.4.0</td></tr>
+<tr><td><a href="https://aur.archlinux.org/pkgbase/disc-image-studio-bin">disc-image-studio-bin</a></td><td>1.4.0</td><td nowrap>github-release</td><td nowrap>2026-11-04</td><td nowrap>✅ up to date</td></tr>
+<tr><td><a href="https://aur.archlinux.org/pkgbase/disc-image-studio-git">disc-image-studio-git</a></td><td>r72.3a5cde6</td><td nowrap>git-latest</td><td nowrap>2026-11-04</td><td nowrap>✅ up to date</td></tr>
+<tr><td><a href="https://aur.archlinux.org/pkgbase/disc-image-studio">disc-image-studio</a></td><td>1.4.0</td><td nowrap>github-release</td><td nowrap>2026-11-04</td><td nowrap>✅ up to date</td></tr>
 <tr><td><a href="https://aur.archlinux.org/pkgbase/ghostunnel-bin">ghostunnel-bin</a></td><td>1.11.5</td><td nowrap>github-release</td><td nowrap>-</td><td nowrap>✅ up to date</td></tr>
 <tr><td><a href="https://aur.archlinux.org/pkgbase/ghostunnel">ghostunnel</a></td><td>1.11.5</td><td nowrap>github-release</td><td nowrap>-</td><td nowrap>✅ up to date</td></tr>
 <tr><td><a href="https://aur.archlinux.org/pkgbase/greenmask-bin">greenmask-bin</a></td><td>0.2.26</td><td nowrap>github-release</td><td nowrap>-</td><td nowrap>✅ up to date</td></tr>
@@ -39,7 +39,7 @@ This is a repository for AUR packages. Each package has a config in `packages/`,
 <tr><td><a href="https://aur.archlinux.org/pkgbase/mcp-grafana-bin">mcp-grafana-bin</a></td><td>2.2.0</td><td nowrap>github-release</td><td nowrap>-</td><td nowrap>✅ up to date</td></tr>
 <tr><td><a href="https://aur.archlinux.org/pkgbase/mcp-grafana">mcp-grafana</a></td><td>2.2.0</td><td nowrap>github-release</td><td nowrap>-</td><td nowrap>✅ up to date</td></tr>
 <tr><td><a href="https://aur.archlinux.org/pkgbase/mcp-toolbox-bin">mcp-toolbox-bin</a></td><td>1.15.0</td><td nowrap>github-release</td><td nowrap>-</td><td nowrap>✅ up to date</td></tr>
-<tr><td><a href="https://aur.archlinux.org/pkgbase/mcp-toolbox-git">mcp-toolbox-git</a></td><td>r2371.9612d48</td><td nowrap>git-latest</td><td nowrap>2026-11-04</td><td nowrap>📦 updated to r2371.9612d48</td></tr>
+<tr><td><a href="https://aur.archlinux.org/pkgbase/mcp-toolbox-git">mcp-toolbox-git</a></td><td>r2372.73dfddb</td><td nowrap>git-latest</td><td nowrap>2026-11-04</td><td nowrap>📦 updated to r2372.73dfddb</td></tr>
 <tr><td><a href="https://aur.archlinux.org/pkgbase/mcp-toolbox">mcp-toolbox</a></td><td>1.15.0</td><td nowrap>github-release</td><td nowrap>-</td><td nowrap>✅ up to date</td></tr>
 <tr><td><a href="https://aur.archlinux.org/pkgbase/mdbook-git">mdbook-git</a></td><td>0.5.4.r134.g7fb5bc8</td><td nowrap>git-latest</td><td nowrap>2026-11-02</td><td nowrap>✅ up to date</td></tr>
 <tr><td><a href="https://aur.archlinux.org/pkgbase/mdbook-toc">mdbook-toc</a></td><td>0.15.4</td><td nowrap>crates</td><td nowrap>-</td><td nowrap>✅ up to date</td></tr>
@@ -88,5 +88,5 @@ This is a repository for AUR packages. Each package has a config in `packages/`,
 <tr><td><a href="https://aur.archlinux.org/pkgbase/ydiskarc">ydiskarc</a></td><td>1.1.0</td><td nowrap>pypi</td><td nowrap>-</td><td nowrap>✅ up to date</td></tr>
 </table>
 
-aurtomator 0.8.1
+aurtomator 0.8.1 ([0.8.2 available](https://github.com/staticwire/aurtomator/releases/tag/v0.8.2))
 <!-- PACKAGES:END -->
