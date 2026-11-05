@@ -1,0 +1,4 @@
+name: ryl-bin
+strategy: github-release
+upstream:
+  project: owenlamont/ryl
