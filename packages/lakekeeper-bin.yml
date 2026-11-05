@@ -1,0 +1,4 @@
+name: lakekeeper-bin
+strategy: github-release
+upstream:
+  project: lakekeeper/lakekeeper
