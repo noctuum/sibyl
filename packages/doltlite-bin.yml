@@ -2,4 +2,5 @@ name: doltlite-bin
 strategy: github-release
 upstream:
   project: dolthub/doltlite
-current: 0.51.8
+current: 0.51.9
+last_updated: "2026-11-05"

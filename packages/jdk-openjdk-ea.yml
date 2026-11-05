@@ -9,5 +9,5 @@ alerts:
     note: Raise makedepends java-environment to the lowest DEFAULT_ACCEPTABLE_BOOT_VERSIONS of the new tag
   - when: major
     note: Create the package for the old major
-current: 28+22
-last_updated: "2026-10-30"
+current: 28+23
+last_updated: "2026-11-05"

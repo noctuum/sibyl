@@ -3,5 +3,5 @@ strategy: git-latest
 upstream:
   type: github
   project: JiaFeiMiao-K-Cat/DiscImageStudio
-current: r85.26eaca9
+current: r88.b86404f
 last_updated: "2026-11-05"
