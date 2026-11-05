@@ -2,3 +2,4 @@ name: krakend
 strategy: github-release
 upstream:
   project: krakend/krakend-ce
+current: 3.0.3
