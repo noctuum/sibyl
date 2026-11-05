@@ -1,0 +1,4 @@
+name: doltlite-bin
+strategy: github-release
+upstream:
+  project: dolthub/doltlite
