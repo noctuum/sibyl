@@ -2,3 +2,4 @@ name: lakekeeper-bin
 strategy: github-release
 upstream:
   project: lakekeeper/lakekeeper
+current: 0.14.2
