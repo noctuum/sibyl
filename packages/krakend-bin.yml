@@ -1,0 +1,4 @@
+name: krakend-bin
+strategy: github-release
+upstream:
+  project: krakend/krakend-ce
