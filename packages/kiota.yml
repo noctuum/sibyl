@@ -1,0 +1,4 @@
+name: kiota
+strategy: github-release
+upstream:
+  project: microsoft/kiota
