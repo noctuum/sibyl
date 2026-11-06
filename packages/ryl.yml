@@ -2,4 +2,5 @@ name: ryl
 strategy: github-release
 upstream:
   project: owenlamont/ryl
-current: 0.28.0
+current: 0.29.0
+last_updated: "2026-11-06"
