@@ -1,7 +1,7 @@
 # sibyl
 
 <!-- BADGES:START -->
-[![Validate packages](https://github.com/noctuum/sibyl/actions/workflows/validate.yml/badge.svg)](https://github.com/noctuum/sibyl/actions/workflows/validate.yml) [![Check AUR Package Updates](https://github.com/noctuum/sibyl/actions/workflows/check-updates.yml/badge.svg)](https://github.com/noctuum/sibyl/actions/workflows/check-updates.yml) [![maintained with aurtomator](https://img.shields.io/badge/maintained%20with-aurtomator-orange)](https://github.com/staticwire/aurtomator)
+[![Validate packages](https://github.com/noctuum/sibyl/actions/workflows/validate.yml/badge.svg)](https://github.com/noctuum/sibyl/actions/workflows/validate.yml) [![Check AUR Package Updates](https://github.com/noctuum/sibyl/actions/workflows/check-updates.yml/badge.svg)](https://github.com/noctuum/sibyl/actions/workflows/check-updates.yml) [![maintained with aurtomator](https://img.shields.io/badge/maintained%20with-aurtomator-1793d1?logo=archlinux&logoColor=white)](https://github.com/staticwire/aurtomator)
 <!-- BADGES:END -->
 
 This is a repository for AUR packages. Each package has a config in `packages/`, and [aurtomator](https://github.com/staticwire/aurtomator) checks it for new upstream versions on a schedule and pushes the updates to the AUR.
@@ -11,7 +11,12 @@ This is a repository for AUR packages. Each package has a config in `packages/`,
 ## Packages
 
 <!-- PACKAGES:START -->
-![packages](https://img.shields.io/badge/packages-80%2F81-red)
+<a href="stats/events.csv">
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="stats/card-dark.svg">
+  <img width="100%" alt="Packages updated, pushes to AUR, new packages and failed checks over 7, 30 and 365 days" src="stats/card.svg">
+</picture>
+</a>
 
 <table>
 <tr><th>Package</th><th>Version</th><th>Strategy</th><th>Updated</th><th>Status</th></tr>
@@ -27,7 +32,7 @@ This is a repository for AUR packages. Each package has a config in `packages/`,
 <tr><td><a href="https://aur.archlinux.org/pkgbase/ghostunnel-bin">ghostunnel-bin</a></td><td>1.11.5</td><td nowrap>github-release</td><td nowrap>-</td><td nowrap>✅ up to date</td></tr>
 <tr><td><a href="https://aur.archlinux.org/pkgbase/ghostunnel">ghostunnel</a></td><td>1.11.5</td><td nowrap>github-release</td><td nowrap>-</td><td nowrap>✅ up to date</td></tr>
 <tr><td><a href="https://aur.archlinux.org/pkgbase/greenmask-bin">greenmask-bin</a></td><td>0.2.26</td><td nowrap>github-release</td><td nowrap>-</td><td nowrap>✅ up to date</td></tr>
-<tr><td><a href="https://aur.archlinux.org/pkgbase/greenmask-git">greenmask-git</a></td><td>r614.eec5bd5</td><td nowrap>git-latest</td><td nowrap>2026-11-06</td><td nowrap>📦 updated to r614.eec5bd5</td></tr>
+<tr><td><a href="https://aur.archlinux.org/pkgbase/greenmask-git">greenmask-git</a></td><td>r614.eec5bd5</td><td nowrap>git-latest</td><td nowrap>2026-11-06</td><td nowrap>✅ up to date</td></tr>
 <tr><td><a href="https://aur.archlinux.org/pkgbase/greenmask">greenmask</a></td><td>0.2.26</td><td nowrap>github-release</td><td nowrap>-</td><td nowrap>✅ up to date</td></tr>
 <tr><td><a href="https://aur.archlinux.org/pkgbase/jdk-openjdk-ea">jdk-openjdk-ea</a></td><td>28+23</td><td nowrap>github-tag</td><td nowrap>2026-11-05</td><td nowrap>✅ up to date</td></tr>
 <tr><td><a href="https://aur.archlinux.org/pkgbase/jdk-temurin-ea-bin">jdk-temurin-ea-bin</a></td><td>28+22</td><td nowrap>webpage-scrape</td><td nowrap>2026-11-01</td><td nowrap>❌ failed</td></tr>
@@ -47,9 +52,9 @@ This is a repository for AUR packages. Each package has a config in `packages/`,
 <tr><td><a href="https://aur.archlinux.org/pkgbase/mcp-grafana-bin">mcp-grafana-bin</a></td><td>2.2.0</td><td nowrap>github-release</td><td nowrap>-</td><td nowrap>✅ up to date</td></tr>
 <tr><td><a href="https://aur.archlinux.org/pkgbase/mcp-grafana">mcp-grafana</a></td><td>2.2.0</td><td nowrap>github-release</td><td nowrap>-</td><td nowrap>✅ up to date</td></tr>
 <tr><td><a href="https://aur.archlinux.org/pkgbase/mcp-toolbox-bin">mcp-toolbox-bin</a></td><td>1.16.0</td><td nowrap>github-release</td><td nowrap>2026-11-06</td><td nowrap>✅ up to date</td></tr>
-<tr><td><a href="https://aur.archlinux.org/pkgbase/mcp-toolbox-git">mcp-toolbox-git</a></td><td>r2380.d373dc1</td><td nowrap>git-latest</td><td nowrap>2026-11-06</td><td nowrap>📦 updated to r2380.d373dc1</td></tr>
+<tr><td><a href="https://aur.archlinux.org/pkgbase/mcp-toolbox-git">mcp-toolbox-git</a></td><td>r2380.d373dc1</td><td nowrap>git-latest</td><td nowrap>2026-11-06</td><td nowrap>✅ up to date</td></tr>
 <tr><td><a href="https://aur.archlinux.org/pkgbase/mcp-toolbox">mcp-toolbox</a></td><td>1.16.0</td><td nowrap>github-release</td><td nowrap>2026-11-05</td><td nowrap>✅ up to date</td></tr>
-<tr><td><a href="https://aur.archlinux.org/pkgbase/mdbook-git">mdbook-git</a></td><td>0.5.4.r138.g0accb8a</td><td nowrap>git-latest</td><td nowrap>2026-11-06</td><td nowrap>📦 updated to 0.5.4.r138.g0accb8a</td></tr>
+<tr><td><a href="https://aur.archlinux.org/pkgbase/mdbook-git">mdbook-git</a></td><td>0.5.4.r138.g0accb8a</td><td nowrap>git-latest</td><td nowrap>2026-11-06</td><td nowrap>✅ up to date</td></tr>
 <tr><td><a href="https://aur.archlinux.org/pkgbase/mdbook-toc">mdbook-toc</a></td><td>0.15.4</td><td nowrap>crates</td><td nowrap>-</td><td nowrap>✅ up to date</td></tr>
 <tr><td><a href="https://aur.archlinux.org/pkgbase/memos-bin">memos-bin</a></td><td>26.11.0</td><td nowrap>github-release</td><td nowrap>2026-09-19</td><td nowrap>✅ up to date</td></tr>
 <tr><td><a href="https://aur.archlinux.org/pkgbase/merman-bin">merman-bin</a></td><td>0.9.3</td><td nowrap>github-release</td><td nowrap>2026-10-30</td><td nowrap>✅ up to date</td></tr>
@@ -60,7 +65,7 @@ This is a repository for AUR packages. Each package has a config in `packages/`,
 <tr><td><a href="https://aur.archlinux.org/pkgbase/mp4ff">mp4ff</a></td><td>0.62.0</td><td nowrap>github-release</td><td nowrap>2026-11-04</td><td nowrap>✅ up to date</td></tr>
 <tr><td><a href="https://aur.archlinux.org/pkgbase/neo4j-mcp-bin">neo4j-mcp-bin</a></td><td>2.1.0</td><td nowrap>github-release</td><td nowrap>-</td><td nowrap>✅ up to date</td></tr>
 <tr><td><a href="https://aur.archlinux.org/pkgbase/neo4j-mcp">neo4j-mcp</a></td><td>2.1.0</td><td nowrap>github-release</td><td nowrap>-</td><td nowrap>✅ up to date</td></tr>
-<tr><td><a href="https://aur.archlinux.org/pkgbase/neovim-nightly-bin">neovim-nightly-bin</a></td><td>0.13.0+dev+2040+g67854d5c5b</td><td nowrap>github-nightly</td><td nowrap>2026-11-06</td><td nowrap>📦 updated to 0.13.0+dev+2040+g67854d5c5b</td></tr>
+<tr><td><a href="https://aur.archlinux.org/pkgbase/neovim-nightly-bin">neovim-nightly-bin</a></td><td>0.13.0+dev+2040+g67854d5c5b</td><td nowrap>github-nightly</td><td nowrap>2026-11-06</td><td nowrap>✅ up to date</td></tr>
 <tr><td><a href="https://aur.archlinux.org/pkgbase/oasdiff-bin">oasdiff-bin</a></td><td>1.35.0</td><td nowrap>github-release</td><td nowrap>2026-10-28</td><td nowrap>✅ up to date</td></tr>
 <tr><td><a href="https://aur.archlinux.org/pkgbase/oasdiff">oasdiff</a></td><td>1.35.0</td><td nowrap>github-release</td><td nowrap>2026-10-28</td><td nowrap>✅ up to date</td></tr>
 <tr><td><a href="https://aur.archlinux.org/pkgbase/pg-schema-diff">pg-schema-diff</a></td><td>1.0.9</td><td nowrap>github-release</td><td nowrap>-</td><td nowrap>✅ up to date</td></tr>
@@ -85,8 +90,8 @@ This is a repository for AUR packages. Each package has a config in `packages/`,
 <tr><td><a href="https://aur.archlinux.org/pkgbase/tinyice-bin">tinyice-bin</a></td><td>2.12.3</td><td nowrap>github-release</td><td nowrap>-</td><td nowrap>✅ up to date</td></tr>
 <tr><td><a href="https://aur.archlinux.org/pkgbase/tinyice">tinyice</a></td><td>2.12.3</td><td nowrap>github-release</td><td nowrap>-</td><td nowrap>✅ up to date</td></tr>
 <tr><td><a href="https://aur.archlinux.org/pkgbase/transfuse">transfuse</a></td><td>0.6.0</td><td nowrap>gitlab-tag</td><td nowrap>-</td><td nowrap>✅ up to date</td></tr>
-<tr><td><a href="https://aur.archlinux.org/pkgbase/versitygw-bin">versitygw-bin</a></td><td>1.11.0</td><td nowrap>github-release</td><td nowrap>2026-11-06</td><td nowrap>📦 updated to 1.11.0</td></tr>
-<tr><td><a href="https://aur.archlinux.org/pkgbase/versitygw">versitygw</a></td><td>1.11.0</td><td nowrap>github-release</td><td nowrap>2026-11-06</td><td nowrap>📦 updated to 1.11.0</td></tr>
+<tr><td><a href="https://aur.archlinux.org/pkgbase/versitygw-bin">versitygw-bin</a></td><td>1.11.0</td><td nowrap>github-release</td><td nowrap>2026-11-06</td><td nowrap>✅ up to date</td></tr>
+<tr><td><a href="https://aur.archlinux.org/pkgbase/versitygw">versitygw</a></td><td>1.11.0</td><td nowrap>github-release</td><td nowrap>2026-11-06</td><td nowrap>✅ up to date</td></tr>
 <tr><td><a href="https://aur.archlinux.org/pkgbase/wal2json">wal2json</a></td><td>2.7</td><td nowrap>github-release</td><td nowrap>-</td><td nowrap>✅ up to date</td></tr>
 <tr><td><a href="https://aur.archlinux.org/pkgbase/webdav-bin">webdav-bin</a></td><td>5.17.3</td><td nowrap>github-release</td><td nowrap>2026-10-30</td><td nowrap>✅ up to date</td></tr>
 <tr><td><a href="https://aur.archlinux.org/pkgbase/webdav-git">webdav-git</a></td><td>r316.2b742d0</td><td nowrap>git-latest</td><td nowrap>2026-10-31</td><td nowrap>✅ up to date</td></tr>
@@ -98,5 +103,5 @@ This is a repository for AUR packages. Each package has a config in `packages/`,
 <tr><td><a href="https://aur.archlinux.org/pkgbase/ydiskarc">ydiskarc</a></td><td>1.1.0</td><td nowrap>pypi</td><td nowrap>-</td><td nowrap>✅ up to date</td></tr>
 </table>
 
-aurtomator 0.10.0 ([0.11.0 available](https://github.com/staticwire/aurtomator/releases/tag/v0.11.0))
+aurtomator 0.11.0
 <!-- PACKAGES:END -->
