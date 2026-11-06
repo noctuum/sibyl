@@ -2,4 +2,5 @@ name: versitygw-bin
 strategy: github-release
 upstream:
   project: versity/versitygw
-current: 1.10.0
+current: 1.11.0
+last_updated: "2026-11-06"
