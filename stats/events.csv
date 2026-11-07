@@ -81,3 +81,5 @@ time,package,event,version,previous,run
 2026-11-06T23:25:41Z,whodb-cli-bin,tracked,0.138.0,,42311423507
 2026-11-06T23:25:41Z,wireguard-gui-bin,tracked,0.1.13,,42311423507
 2026-11-06T23:25:41Z,ydiskarc,tracked,1.1.0,,42311423507
+2026-11-07T02:52:25Z,disc-image-studio,updated,1.5.0,1.4.2,42331003116
+2026-11-07T02:52:25Z,disc-image-studio-bin,updated,1.5.0,1.4.2,42331003116
