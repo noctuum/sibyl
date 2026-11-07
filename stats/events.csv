@@ -87,3 +87,5 @@ time,package,event,version,previous,run
 2026-11-07T10:14:26Z,neovim-nightly-bin,updated,0.13.0+dev+2042+g74f3ce7970,0.13.0+dev+2040+g67854d5c5b,42362792142
 2026-11-07T16:31:05Z,oasdiff,updated,1.36.0,1.35.0,42391317452
 2026-11-07T16:31:05Z,oasdiff-bin,updated,1.36.0,1.35.0,42391317452
+2026-11-07T20:57:10Z,lakekeeper,downgrade_skipped,0.14.3,,42413208503
+2026-11-07T20:57:10Z,lakekeeper-bin,downgrade_skipped,0.14.3,,42413208503
