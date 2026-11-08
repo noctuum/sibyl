@@ -96,3 +96,5 @@ time,package,event,version,previous,run
 2026-11-08T19:47:22Z,doltlite-bin,updated,0.51.10,0.51.9,42516357244
 2026-11-08T19:47:22Z,oasdiff,updated,1.37.0,1.36.0,42516357244
 2026-11-08T19:47:22Z,oasdiff-bin,updated,1.37.0,1.36.0,42516357244
+2026-11-08T23:47:44Z,centrifugo,updated,6.10.3,6.10.2,42536521052
+2026-11-08T23:47:44Z,centrifugo-bin,updated,6.10.3,6.10.2,42536521052
