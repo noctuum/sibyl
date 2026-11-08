@@ -91,3 +91,4 @@ time,package,event,version,previous,run
 2026-11-07T20:57:10Z,lakekeeper-bin,downgrade_skipped,0.14.3,,42413208503
 2026-11-08T00:40:46Z,pgstream,updated,1.6.0,1.5.0,42430541434
 2026-11-08T00:40:46Z,pgstream-bin,update_failed,1.5.0,,42430541434
+2026-11-08T07:25:19Z,neovim-nightly-bin,updated,0.13.0+dev+2052+gc868e1ab3d,0.13.0+dev+2042+g74f3ce7970,42458450926
