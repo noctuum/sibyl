@@ -92,3 +92,7 @@ time,package,event,version,previous,run
 2026-11-08T00:40:46Z,pgstream,updated,1.6.0,1.5.0,42430541434
 2026-11-08T00:40:46Z,pgstream-bin,update_failed,1.5.0,,42430541434
 2026-11-08T07:25:19Z,neovim-nightly-bin,updated,0.13.0+dev+2052+gc868e1ab3d,0.13.0+dev+2042+g74f3ce7970,42458450926
+2026-11-08T19:47:22Z,doltlite,updated,0.51.10,0.51.9,42516357244
+2026-11-08T19:47:22Z,doltlite-bin,updated,0.51.10,0.51.9,42516357244
+2026-11-08T19:47:22Z,oasdiff,updated,1.37.0,1.36.0,42516357244
+2026-11-08T19:47:22Z,oasdiff-bin,updated,1.37.0,1.36.0,42516357244
