@@ -89,3 +89,5 @@ time,package,event,version,previous,run
 2026-11-07T16:31:05Z,oasdiff-bin,updated,1.36.0,1.35.0,42391317452
 2026-11-07T20:57:10Z,lakekeeper,downgrade_skipped,0.14.3,,42413208503
 2026-11-07T20:57:10Z,lakekeeper-bin,downgrade_skipped,0.14.3,,42413208503
+2026-11-08T00:40:46Z,pgstream,updated,1.6.0,1.5.0,42430541434
+2026-11-08T00:40:46Z,pgstream-bin,update_failed,1.5.0,,42430541434

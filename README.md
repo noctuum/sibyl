@@ -70,8 +70,8 @@ This is a repository for AUR packages. Each package has a config in `packages/`,
 <tr><td><a href="https://aur.archlinux.org/pkgbase/oasdiff">oasdiff</a></td><td>1.36.0</td><td nowrap>github-release</td><td nowrap>2026-11-07</td><td nowrap>✅ up to date</td></tr>
 <tr><td><a href="https://aur.archlinux.org/pkgbase/pg-schema-diff">pg-schema-diff</a></td><td>1.0.9</td><td nowrap>github-release</td><td nowrap>-</td><td nowrap>✅ up to date</td></tr>
 <tr><td><a href="https://aur.archlinux.org/pkgbase/pgconsole">pgconsole</a></td><td>1.3.0</td><td nowrap>npm</td><td nowrap>-</td><td nowrap>✅ up to date</td></tr>
-<tr><td><a href="https://aur.archlinux.org/pkgbase/pgstream-bin">pgstream-bin</a></td><td>1.5.0</td><td nowrap>github-release</td><td nowrap>-</td><td nowrap>✅ up to date</td></tr>
-<tr><td><a href="https://aur.archlinux.org/pkgbase/pgstream">pgstream</a></td><td>1.5.0</td><td nowrap>github-release</td><td nowrap>-</td><td nowrap>✅ up to date</td></tr>
+<tr><td><a href="https://aur.archlinux.org/pkgbase/pgstream-bin">pgstream-bin</a></td><td>1.5.0</td><td nowrap>github-release</td><td nowrap>-</td><td nowrap>❌ failed</td></tr>
+<tr><td><a href="https://aur.archlinux.org/pkgbase/pgstream">pgstream</a></td><td>1.6.0</td><td nowrap>github-release</td><td nowrap>2026-11-08</td><td nowrap>📦 updated to 1.6.0</td></tr>
 <tr><td><a href="https://aur.archlinux.org/pkgbase/pgtui-bin">pgtui-bin</a></td><td>0.3.0</td><td nowrap>github-release</td><td nowrap>-</td><td nowrap>✅ up to date</td></tr>
 <tr><td><a href="https://aur.archlinux.org/pkgbase/pgtui">pgtui</a></td><td>0.3.0</td><td nowrap>github-release</td><td nowrap>-</td><td nowrap>✅ up to date</td></tr>
 <tr><td><a href="https://aur.archlinux.org/pkgbase/plasma-drop">plasma-drop</a></td><td>1.17.8</td><td nowrap>github-release</td><td nowrap>2026-11-06</td><td nowrap>✅ up to date</td></tr>
