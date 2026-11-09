@@ -4,7 +4,7 @@
 <text x="54" y="35" font-size="18" font-weight="600" fill="#f0f6fc">sibyl</text>
 <text x="656" y="35" font-size="14" text-anchor="end" fill="#9198a1"><tspan font-weight="600" fill="#f0f6fc">81</tspan> packages <tspan fill="#f85149">· 2 failing</tspan></text>
 <text x="54" y="54" font-size="12" fill="#9198a1">AUR packages maintained with aurtomator</text>
-<text x="656" y="54" font-size="12" text-anchor="end" fill="#9198a1">updated Nov 8, 2026</text>
+<text x="656" y="54" font-size="12" text-anchor="end" fill="#9198a1">updated Nov 9, 2026</text>
 <text x="436" y="90" font-size="12" text-anchor="end" fill="#9198a1">since Nov 6</text>
 <text x="546" y="90" font-size="12" text-anchor="end" fill="#9198a1">since Nov 6</text>
 <text x="656" y="90" font-size="12" text-anchor="end" fill="#9198a1">since Nov 6</text>
@@ -410,6 +410,7 @@
 </g>
 <g fill="#151b23">
 <rect x="621" y="299" width="9" height="9" rx="2"/>
+<rect x="632" y="255" width="9" height="9" rx="2"/>
 </g>
 <g fill="#62bdf0">
 <rect x="621" y="310" width="9" height="9" rx="2"/>
