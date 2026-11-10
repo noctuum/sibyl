@@ -109,3 +109,4 @@ time,package,event,version,previous,run
 2026-11-10T17:56:12Z,mcp-grafana-bin,updated,2.3.0,2.2.0,42869084029
 2026-11-10T17:56:12Z,mp4ff,updated,0.62.1,0.62.0,42869084029
 2026-11-10T17:56:12Z,mp4ff-bin,updated,0.62.1,0.62.0,42869084029
+2026-11-10T23:26:33Z,neovim-nightly-bin,updated,0.13.0+dev+2076+g7e394dbb89,0.13.0+dev+2069+g0c4b90023d,42922820310
