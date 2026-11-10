@@ -2,4 +2,5 @@ name: mcp-grafana
 strategy: github-release
 upstream:
   project: grafana/mcp-grafana
-current: 2.2.0
+current: 2.3.0
+last_updated: "2026-11-10"

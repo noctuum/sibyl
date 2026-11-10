@@ -103,3 +103,9 @@ time,package,event,version,previous,run
 2026-11-10T09:55:23Z,lakekeeper,downgrade_skipped,0.13.9,,42794139598
 2026-11-10T09:55:23Z,lakekeeper-bin,downgrade_skipped,0.13.9,,42794139598
 2026-11-10T09:55:23Z,neovim-nightly-bin,updated,0.13.0+dev+2069+g0c4b90023d,0.13.0+dev+2052+gc868e1ab3d,42794139598
+2026-11-10T17:56:12Z,lakekeeper,up_to_date,0.15.0,,42869084029
+2026-11-10T17:56:12Z,lakekeeper-bin,up_to_date,0.15.0,,42869084029
+2026-11-10T17:56:12Z,mcp-grafana,updated,2.3.0,2.2.0,42869084029
+2026-11-10T17:56:12Z,mcp-grafana-bin,updated,2.3.0,2.2.0,42869084029
+2026-11-10T17:56:12Z,mp4ff,updated,0.62.1,0.62.0,42869084029
+2026-11-10T17:56:12Z,mp4ff-bin,updated,0.62.1,0.62.0,42869084029
