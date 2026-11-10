@@ -100,3 +100,6 @@ time,package,event,version,previous,run
 2026-11-08T23:47:44Z,centrifugo-bin,updated,6.10.3,6.10.2,42536521052
 2026-11-09T13:38:31Z,pgstream-bin,updated,1.6.0,1.5.0,42626618400
 2026-11-10T01:36:04Z,centrifugo-git,updated,r2017.4b6d86e,r2016.e21aeb5,42736450635
+2026-11-10T09:55:23Z,lakekeeper,downgrade_skipped,0.13.9,,42794139598
+2026-11-10T09:55:23Z,lakekeeper-bin,downgrade_skipped,0.13.9,,42794139598
+2026-11-10T09:55:23Z,neovim-nightly-bin,updated,0.13.0+dev+2069+g0c4b90023d,0.13.0+dev+2052+gc868e1ab3d,42794139598
