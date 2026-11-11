@@ -8,3 +8,6 @@ alerts:
     note: Create the package for the old major
 current: 28+22
 last_updated: "2026-11-01"
+arch_wait:
+  version: 28+23
+  since: "2026-11-11T22:05:07Z"

@@ -17,12 +17,47 @@
 
 set -euo pipefail
 
+if ! command -v yq >/dev/null; then
+  echo "$0 needs yq: https://github.com/mikefarah/yq" >&2
+  exit 1
+fi
+# extra/yq of Arch is a jq wrapper and reads jq expressions
+yq_version=$(yq --version 2>&1 || true)
+if [[ "$yq_version" != *mikefarah/yq* ]]; then
+  echo "$0 needs mikefarah/yq, go-yq on Arch, and this yq prints: ${yq_version%%$'\n'*}" >&2
+  exit 1
+fi
 root="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 workflow=.github/workflows/check-updates.yml
 if [[ ! -f "$root/$workflow" ]]; then
   echo "No $workflow in $root" >&2
   exit 1
 fi
+# yq takes the last of two equal keys, lets a merge key override a key and
+# reads every document, so it can read a pin the uses: line does not show
+check_shape() {
+  local file="$root/$1" out count
+  if ! out=$(yq -N 'document_index' "$file" 2>&1); then
+    echo "yq cannot read $1:" >&2
+    printf '  %s\n' "${out//$'\n'/$'\n  '}" >&2
+    exit 1
+  fi
+  if [[ $(wc -l <<<"$out") -gt 1 ]]; then
+    echo "$1 holds more than one YAML document" >&2
+    exit 1
+  fi
+  count=$(yq -N '[.. | select(tag == "!!map") | keys | .[] | select(tag == "!!merge")] | length' "$file")
+  if [[ "$count" != 0 ]]; then
+    echo "$1 holds a merge key (<<)" >&2
+    exit 1
+  fi
+  count=$(yq -N '[.. | select(tag == "!!map") | select((keys | length) != (keys | unique | length))] | length' "$file")
+  if [[ "$count" != 0 ]]; then
+    echo "$1 holds a key twice in one mapping" >&2
+    exit 1
+  fi
+}
+check_shape "$workflow"
 # The repository and the commit come from one uses: line, never a comment
 uses='^[[:space:]]*uses:[[:space:]]+([[:alnum:]_.-]+/[[:alnum:]_.-]+)/\.github/workflows/check-updates\.yml@([0-9a-f]{40})([[:space:]]|$)'
 mapfile -t pins < <(grep -E "$uses" "$root/$workflow" || true)
@@ -37,6 +72,15 @@ fi
 [[ "${pins[0]}" =~ $uses ]]
 repo="${BASH_REMATCH[1]}"
 sha="${BASH_REMATCH[2]}"
+# GitHub reads YAML, where a pin in quotes counts and a line in a text does
+# not, so yq has to read the same one pin
+read_out=$(yq -r 'explode(.) | .jobs[].uses | select(. != null) | select(test("/[.]github/workflows/check-updates[.]yml@"))' "$root/$workflow")
+mapfile -t read_pins <<<"$read_out"
+if [[ ${#read_pins[@]} -ne 1 || "${read_pins[0]}" != "$repo/.github/workflows/check-updates.yml@$sha" ]]; then
+  echo "Write the pin of check-updates.yml in $workflow on one uses: line without quotes. GitHub reads:" >&2
+  printf '  %s\n' "${read_pins[@]:-none}" >&2
+  exit 1
+fi
 
 if [[ "${1:-}" == pin ]]; then
   if [[ $# -ne 2 || ! "$2" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
@@ -49,7 +93,25 @@ if [[ "${1:-}" == pin ]]; then
     echo "No tag $2 in $repo" >&2
     exit 1
   fi
+  if [[ ! "$new" =~ ^[0-9a-f]{40}$ ]]; then
+    echo "Tag $2 of $repo names no commit SHA" >&2
+    exit 1
+  fi
   cd "$root"
+  # sed moves a pin on a uses: line alone, so every pin GitHub reads in the
+  # two files has to be on one before any file changes
+  for file in "$workflow" .github/workflows/validate.yml; do
+    [[ -f "$file" ]] || continue
+    check_shape "$file"
+    mapfile -t on_lines < <(sed -nE "s|^[[:space:]]*uses:[[:space:]]+($repo/\.github/workflows/[a-z-]+\.yml@[0-9a-f]{40})([[:space:]].*)?$|\1|p" "$file" | sort)
+    read_out=$(yq -r 'explode(.) | .jobs[].uses | select(. != null)' "$file")
+    mapfile -t read_pins < <(grep -E "^$repo/\.github/workflows/[a-z-]+\.yml@[0-9a-f]{40}\$" <<<"$read_out" | sort)
+    if [[ "${on_lines[*]}" != "${read_pins[*]}" ]]; then
+      echo "Write each pin of $repo in $file on one uses: line without quotes. GitHub reads:" >&2
+      printf '  %s\n' "${read_pins[@]:-none}" >&2
+      exit 1
+    fi
+  done
   for file in "$workflow" .github/workflows/validate.yml; do
     [[ -f "$file" ]] || continue
     sed -i -E "s|^([[:space:]]*uses:[[:space:]]+$repo/\.github/workflows/[a-z-]+\.yml@)[0-9a-f]{40}([[:space:]].*)?$|\1$new # $2|" "$file"
