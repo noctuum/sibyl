@@ -1,0 +1,4 @@
+name: all-smi
+strategy: github-release
+upstream:
+  project: lablup/all-smi
