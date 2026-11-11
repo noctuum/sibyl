@@ -1,0 +1,4 @@
+name: terratag-bin
+strategy: github-release
+upstream:
+  project: env0/terratag
