@@ -147,3 +147,11 @@ time,package,event,version,previous,run
 2026-11-11T21:54:12Z,gator-bin,up_to_date,3.23.1,,43106360741
 2026-11-11T21:54:12Z,sherpa-onnx-bin,up_to_date,2.0.1,,43106360741
 2026-11-11T22:07:14Z,jdk-temurin-ea-bin,pending,28+23,,43108556032
+2026-11-11T23:47:11Z,c2patool,added,,,43121835156
+2026-11-11T23:47:11Z,c2patool,up_to_date,0.28.6,,43121835156
+2026-11-11T23:47:11Z,c2patool-bin,added,,,43121835156
+2026-11-11T23:47:11Z,c2patool-bin,up_to_date,0.28.6,,43121835156
+2026-11-11T23:47:11Z,fallow,added,,,43121835156
+2026-11-11T23:47:11Z,fallow,up_to_date,3.42.0,,43121835156
+2026-11-11T23:47:11Z,fallow-bin,added,,,43121835156
+2026-11-11T23:47:11Z,fallow-bin,up_to_date,3.42.0,,43121835156
