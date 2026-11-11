@@ -1,0 +1,4 @@
+name: keep-sorted
+strategy: github-release
+upstream:
+  project: google/keep-sorted
