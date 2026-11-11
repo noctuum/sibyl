@@ -1,0 +1,4 @@
+name: kubecm
+strategy: github-release
+upstream:
+  project: sunny0826/kubecm
