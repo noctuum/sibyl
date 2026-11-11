@@ -1,0 +1,4 @@
+name: fallow
+strategy: github-release
+upstream:
+  project: fallow-rs/fallow
