@@ -1,0 +1,4 @@
+name: evernote2md-bin
+strategy: github-release
+upstream:
+  project: wormi4ok/evernote2md
