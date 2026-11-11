@@ -1,0 +1,4 @@
+name: c2patool
+strategy: github-release
+upstream:
+  project: contentauth/c2patool
