@@ -137,3 +137,12 @@ time,package,event,version,previous,run
 2026-11-11T15:19:42Z,terratag-bin,added,,,43046048251
 2026-11-11T15:19:42Z,terratag-bin,up_to_date,0.8.3,,43046048251
 2026-11-11T15:19:42Z,webdav-git,updated,r317.b6c41e4,r316.2b742d0,43046048251
+2026-11-11T21:54:12Z,deja-vu,added,,,43106360741
+2026-11-11T21:54:12Z,deja-vu,up_to_date,0.24.1,,43106360741
+2026-11-11T21:54:12Z,deja-vu-bin,added,,,43106360741
+2026-11-11T21:54:12Z,deja-vu-bin,up_to_date,0.24.1,,43106360741
+2026-11-11T21:54:12Z,gator,added,,,43106360741
+2026-11-11T21:54:12Z,gator,up_to_date,3.23.1,,43106360741
+2026-11-11T21:54:12Z,gator-bin,added,,,43106360741
+2026-11-11T21:54:12Z,gator-bin,up_to_date,3.23.1,,43106360741
+2026-11-11T21:54:12Z,sherpa-onnx-bin,up_to_date,2.0.1,,43106360741

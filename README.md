@@ -26,6 +26,8 @@ This is a repository for AUR packages. Each package has a config in `packages/`,
 <tr><td><a href="https://aur.archlinux.org/pkgbase/centrifugo-git">centrifugo-git</a></td><td>r2017.4b6d86e</td><td nowrap>git-latest</td><td nowrap>2026-11-10</td><td nowrap>✅ up to date</td></tr>
 <tr><td><a href="https://aur.archlinux.org/pkgbase/centrifugo">centrifugo</a></td><td>6.10.3</td><td nowrap>github-release</td><td nowrap>2026-11-08</td><td nowrap>✅ up to date</td></tr>
 <tr><td><a href="https://aur.archlinux.org/pkgbase/dbhub-mcp-server">dbhub-mcp-server</a></td><td>1.6.1</td><td nowrap>npm</td><td nowrap>2026-11-11</td><td nowrap>✅ up to date</td></tr>
+<tr><td><a href="https://aur.archlinux.org/pkgbase/deja-vu-bin">deja-vu-bin</a></td><td>0.24.1</td><td nowrap>github-release</td><td nowrap>-</td><td nowrap>✅ up to date</td></tr>
+<tr><td><a href="https://aur.archlinux.org/pkgbase/deja-vu">deja-vu</a></td><td>0.24.1</td><td nowrap>github-release</td><td nowrap>-</td><td nowrap>✅ up to date</td></tr>
 <tr><td><a href="https://aur.archlinux.org/pkgbase/disc-image-studio-bin">disc-image-studio-bin</a></td><td>1.5.0</td><td nowrap>github-release</td><td nowrap>2026-11-07</td><td nowrap>✅ up to date</td></tr>
 <tr><td><a href="https://aur.archlinux.org/pkgbase/disc-image-studio-git">disc-image-studio-git</a></td><td>r91.c720fd4</td><td nowrap>git-latest</td><td nowrap>2026-11-06</td><td nowrap>💤 next update 2026-11-13</td></tr>
 <tr><td><a href="https://aur.archlinux.org/pkgbase/disc-image-studio">disc-image-studio</a></td><td>1.5.0</td><td nowrap>github-release</td><td nowrap>2026-11-07</td><td nowrap>✅ up to date</td></tr>
@@ -33,6 +35,8 @@ This is a repository for AUR packages. Each package has a config in `packages/`,
 <tr><td><a href="https://aur.archlinux.org/pkgbase/doltlite">doltlite</a></td><td>0.51.10</td><td nowrap>github-release</td><td nowrap>2026-11-08</td><td nowrap>✅ up to date</td></tr>
 <tr><td><a href="https://aur.archlinux.org/pkgbase/evernote2md-bin">evernote2md-bin</a></td><td>0.23.0</td><td nowrap>github-release</td><td nowrap>-</td><td nowrap>✅ up to date</td></tr>
 <tr><td><a href="https://aur.archlinux.org/pkgbase/evernote2md">evernote2md</a></td><td>0.23.0</td><td nowrap>github-release</td><td nowrap>-</td><td nowrap>✅ up to date</td></tr>
+<tr><td><a href="https://aur.archlinux.org/pkgbase/gator-bin">gator-bin</a></td><td>3.23.1</td><td nowrap>github-release</td><td nowrap>-</td><td nowrap>✅ up to date</td></tr>
+<tr><td><a href="https://aur.archlinux.org/pkgbase/gator">gator</a></td><td>3.23.1</td><td nowrap>github-release</td><td nowrap>-</td><td nowrap>✅ up to date</td></tr>
 <tr><td><a href="https://aur.archlinux.org/pkgbase/ghostunnel-bin">ghostunnel-bin</a></td><td>1.11.5</td><td nowrap>github-release</td><td nowrap>-</td><td nowrap>✅ up to date</td></tr>
 <tr><td><a href="https://aur.archlinux.org/pkgbase/ghostunnel">ghostunnel</a></td><td>1.11.5</td><td nowrap>github-release</td><td nowrap>-</td><td nowrap>✅ up to date</td></tr>
 <tr><td><a href="https://aur.archlinux.org/pkgbase/greenmask-bin">greenmask-bin</a></td><td>0.2.26</td><td nowrap>github-release</td><td nowrap>-</td><td nowrap>✅ up to date</td></tr>
@@ -71,8 +75,8 @@ This is a repository for AUR packages. Each package has a config in `packages/`,
 <tr><td><a href="https://aur.archlinux.org/pkgbase/mp4ff-bin">mp4ff-bin</a></td><td>0.62.1</td><td nowrap>github-release</td><td nowrap>2026-11-10</td><td nowrap>✅ up to date</td></tr>
 <tr><td><a href="https://aur.archlinux.org/pkgbase/mp4ff-git">mp4ff-git</a></td><td>r1328.8a0670f</td><td nowrap>git-latest</td><td nowrap>2026-11-11</td><td nowrap>✅ up to date</td></tr>
 <tr><td><a href="https://aur.archlinux.org/pkgbase/mp4ff">mp4ff</a></td><td>0.62.1</td><td nowrap>github-release</td><td nowrap>2026-11-10</td><td nowrap>✅ up to date</td></tr>
-<tr><td><a href="https://aur.archlinux.org/pkgbase/neo4j-mcp-bin">neo4j-mcp-bin</a></td><td>2.1.1</td><td nowrap>github-release</td><td nowrap>2026-11-11</td><td nowrap>📦 updated to 2.1.1</td></tr>
-<tr><td><a href="https://aur.archlinux.org/pkgbase/neo4j-mcp">neo4j-mcp</a></td><td>2.1.1</td><td nowrap>github-release</td><td nowrap>2026-11-11</td><td nowrap>📦 updated to 2.1.1</td></tr>
+<tr><td><a href="https://aur.archlinux.org/pkgbase/neo4j-mcp-bin">neo4j-mcp-bin</a></td><td>2.1.1</td><td nowrap>github-release</td><td nowrap>2026-11-11</td><td nowrap>✅ up to date</td></tr>
+<tr><td><a href="https://aur.archlinux.org/pkgbase/neo4j-mcp">neo4j-mcp</a></td><td>2.1.1</td><td nowrap>github-release</td><td nowrap>2026-11-11</td><td nowrap>✅ up to date</td></tr>
 <tr><td><a href="https://aur.archlinux.org/pkgbase/neovim-nightly-bin">neovim-nightly-bin</a></td><td>0.13.0+dev+2081+g5a53f3bb9e</td><td nowrap>github-nightly</td><td nowrap>2026-11-11</td><td nowrap>✅ up to date</td></tr>
 <tr><td><a href="https://aur.archlinux.org/pkgbase/oasdiff-bin">oasdiff-bin</a></td><td>1.37.0</td><td nowrap>github-release</td><td nowrap>2026-11-08</td><td nowrap>✅ up to date</td></tr>
 <tr><td><a href="https://aur.archlinux.org/pkgbase/oasdiff">oasdiff</a></td><td>1.37.0</td><td nowrap>github-release</td><td nowrap>2026-11-08</td><td nowrap>✅ up to date</td></tr>
@@ -90,7 +94,7 @@ This is a repository for AUR packages. Each package has a config in `packages/`,
 <tr><td><a href="https://aur.archlinux.org/pkgbase/rsql">rsql</a></td><td>0.21.0</td><td nowrap>github-release</td><td nowrap>-</td><td nowrap>✅ up to date</td></tr>
 <tr><td><a href="https://aur.archlinux.org/pkgbase/ryl-bin">ryl-bin</a></td><td>0.29.0</td><td nowrap>github-release</td><td nowrap>2026-11-06</td><td nowrap>✅ up to date</td></tr>
 <tr><td><a href="https://aur.archlinux.org/pkgbase/ryl">ryl</a></td><td>0.29.0</td><td nowrap>github-release</td><td nowrap>2026-11-06</td><td nowrap>✅ up to date</td></tr>
-<tr><td><a href="https://aur.archlinux.org/pkgbase/sherpa-onnx-bin">sherpa-onnx-bin</a></td><td>2.0.1</td><td nowrap>github-release</td><td nowrap>2026-10-26</td><td nowrap>❌ failed</td></tr>
+<tr><td><a href="https://aur.archlinux.org/pkgbase/sherpa-onnx-bin">sherpa-onnx-bin</a></td><td>2.0.1</td><td nowrap>github-release</td><td nowrap>2026-10-26</td><td nowrap>✅ up to date</td></tr>
 <tr><td><a href="https://aur.archlinux.org/pkgbase/sherpa-onnx-piper-voice-ru-denis">sherpa-onnx-piper-voice-ru-denis</a></td><td>20251202</td><td nowrap>github-asset</td><td nowrap>-</td><td nowrap>✅ up to date</td></tr>
 <tr><td><a href="https://aur.archlinux.org/pkgbase/sherpa-onnx-piper-voice-ru-dmitri">sherpa-onnx-piper-voice-ru-dmitri</a></td><td>20251202</td><td nowrap>github-asset</td><td nowrap>-</td><td nowrap>✅ up to date</td></tr>
 <tr><td><a href="https://aur.archlinux.org/pkgbase/sherpa-onnx-piper-voice-ru-ruslan">sherpa-onnx-piper-voice-ru-ruslan</a></td><td>20251202</td><td nowrap>github-asset</td><td nowrap>-</td><td nowrap>✅ up to date</td></tr>
@@ -104,7 +108,7 @@ This is a repository for AUR packages. Each package has a config in `packages/`,
 <tr><td><a href="https://aur.archlinux.org/pkgbase/versitygw">versitygw</a></td><td>1.11.0</td><td nowrap>github-release</td><td nowrap>2026-11-06</td><td nowrap>✅ up to date</td></tr>
 <tr><td><a href="https://aur.archlinux.org/pkgbase/wal2json">wal2json</a></td><td>2.7</td><td nowrap>github-release</td><td nowrap>-</td><td nowrap>✅ up to date</td></tr>
 <tr><td><a href="https://aur.archlinux.org/pkgbase/webdav-bin">webdav-bin</a></td><td>5.17.3</td><td nowrap>github-release</td><td nowrap>2026-10-30</td><td nowrap>✅ up to date</td></tr>
-<tr><td><a href="https://aur.archlinux.org/pkgbase/webdav-git">webdav-git</a></td><td>r317.b6c41e4</td><td nowrap>git-latest</td><td nowrap>2026-11-11</td><td nowrap>📦 updated to r317.b6c41e4</td></tr>
+<tr><td><a href="https://aur.archlinux.org/pkgbase/webdav-git">webdav-git</a></td><td>r317.b6c41e4</td><td nowrap>git-latest</td><td nowrap>2026-11-11</td><td nowrap>✅ up to date</td></tr>
 <tr><td><a href="https://aur.archlinux.org/pkgbase/webdav">webdav</a></td><td>5.17.3</td><td nowrap>github-release</td><td nowrap>2026-10-30</td><td nowrap>✅ up to date</td></tr>
 <tr><td><a href="https://aur.archlinux.org/pkgbase/webtorrent-mpv-hook">webtorrent-mpv-hook</a></td><td>1.4.7</td><td nowrap>npm</td><td nowrap>-</td><td nowrap>✅ up to date</td></tr>
 <tr><td><a href="https://aur.archlinux.org/pkgbase/whodb-bin">whodb-bin</a></td><td>0.138.0</td><td nowrap>github-release</td><td nowrap>2026-10-28</td><td nowrap>✅ up to date</td></tr>
@@ -113,5 +117,5 @@ This is a repository for AUR packages. Each package has a config in `packages/`,
 <tr><td><a href="https://aur.archlinux.org/pkgbase/ydiskarc">ydiskarc</a></td><td>1.1.0</td><td nowrap>pypi</td><td nowrap>-</td><td nowrap>✅ up to date</td></tr>
 </table>
 
-aurtomator 0.11.0
+aurtomator 0.11.0 ([0.12.0 available](https://github.com/staticwire/aurtomator/releases/tag/v0.12.0))
 <!-- PACKAGES:END -->
