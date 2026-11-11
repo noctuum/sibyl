@@ -1,0 +1,4 @@
+name: deja-vu
+strategy: github-release
+upstream:
+  project: vshulcz/deja-vu
