@@ -2,3 +2,4 @@ name: keep-sorted
 strategy: github-release
 upstream:
   project: google/keep-sorted
+current: 0.10.0

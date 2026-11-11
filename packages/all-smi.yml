@@ -2,3 +2,4 @@ name: all-smi
 strategy: github-release
 upstream:
   project: lablup/all-smi
+current: 0.28.1

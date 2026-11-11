@@ -2,3 +2,4 @@ name: kubecm
 strategy: github-release
 upstream:
   project: sunny0826/kubecm
+current: 0.36.0
