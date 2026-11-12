@@ -1,0 +1,4 @@
+name: pixtuoid-bin
+strategy: github-release
+upstream:
+  project: pixtuoid/pixtuoid

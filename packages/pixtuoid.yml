@@ -1,0 +1,4 @@
+name: pixtuoid
+strategy: github-release
+upstream:
+  project: pixtuoid/pixtuoid
