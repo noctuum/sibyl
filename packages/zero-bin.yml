@@ -1,0 +1,4 @@
+name: zero-bin
+strategy: github-release
+upstream:
+  project: Twigpine/zero
