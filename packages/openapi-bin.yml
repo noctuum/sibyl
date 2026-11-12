@@ -2,3 +2,4 @@ name: openapi-bin
 strategy: github-release
 upstream:
   project: speakeasy-api/openapi
+current: 1.26.3

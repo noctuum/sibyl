@@ -5,3 +5,5 @@ upstream:
   asset_regex: '^elp-linux-x86_64-unknown-linux-gnu-(otp-29[.0-9]*)\.tar\.gz$'
   asset_var: _otp
 pkgver_dash: '.'
+current: 2026.10.14
+current_asset: otp-29.1

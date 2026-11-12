@@ -2,3 +2,4 @@ name: roughenough
 strategy: github-release
 upstream:
   project: int08h/roughenough
+current: 2.2.0

@@ -2,3 +2,4 @@ name: mesheryctl-bin
 strategy: github-release
 upstream:
   project: meshery/meshery
+current: 1.0.76
