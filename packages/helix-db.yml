@@ -2,3 +2,4 @@ name: helix-db
 strategy: github-release
 upstream:
   project: HelixDB/helix-db
+current: 3.7.0

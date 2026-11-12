@@ -2,3 +2,4 @@ name: chainloop-cli-bin
 strategy: github-release
 upstream:
   project: chainloop-dev/chainloop
+current: 1.135.1

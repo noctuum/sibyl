@@ -2,3 +2,4 @@ name: zero-bin
 strategy: github-release
 upstream:
   project: Twigpine/zero
+current: 0.13.0
