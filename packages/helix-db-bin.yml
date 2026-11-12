@@ -1,0 +1,4 @@
+name: helix-db-bin
+strategy: github-release
+upstream:
+  project: HelixDB/helix-db
