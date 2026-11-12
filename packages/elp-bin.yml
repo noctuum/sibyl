@@ -1,0 +1,7 @@
+name: elp-bin
+strategy: github-release
+upstream:
+  project: WhatsApp/erlang-language-platform
+  asset_regex: '^elp-linux-x86_64-unknown-linux-gnu-(otp-29[.0-9]*)\.tar\.gz$'
+  asset_var: _otp
+pkgver_dash: '.'
