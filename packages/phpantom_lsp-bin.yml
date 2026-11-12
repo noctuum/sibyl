@@ -1,0 +1,4 @@
+name: phpantom_lsp-bin
+strategy: github-release
+upstream:
+  project: PHPantom-dev/phpantom_lsp
