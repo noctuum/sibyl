@@ -1,0 +1,4 @@
+name: mesheryctl-bin
+strategy: github-release
+upstream:
+  project: meshery/meshery
