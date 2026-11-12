@@ -30,8 +30,8 @@ This is a repository for AUR packages. Each package has a config in `packages/`,
 <tr><td><a href="https://aur.archlinux.org/pkgbase/chainloop-cli-bin">chainloop-cli-bin</a></td><td>1.135.1</td><td nowrap>github-release</td><td nowrap>-</td><td nowrap>✅ up to date</td></tr>
 <tr><td><a href="https://aur.archlinux.org/pkgbase/chainloop-cli">chainloop-cli</a></td><td>1.135.1</td><td nowrap>github-release</td><td nowrap>-</td><td nowrap>✅ up to date</td></tr>
 <tr><td><a href="https://aur.archlinux.org/pkgbase/dbhub-mcp-server">dbhub-mcp-server</a></td><td>1.6.1</td><td nowrap>npm</td><td nowrap>2026-11-11</td><td nowrap>✅ up to date</td></tr>
-<tr><td><a href="https://aur.archlinux.org/pkgbase/deja-vu-bin">deja-vu-bin</a></td><td>0.24.1</td><td nowrap>github-release</td><td nowrap>-</td><td nowrap>✅ up to date</td></tr>
-<tr><td><a href="https://aur.archlinux.org/pkgbase/deja-vu">deja-vu</a></td><td>0.24.1</td><td nowrap>github-release</td><td nowrap>-</td><td nowrap>✅ up to date</td></tr>
+<tr><td><a href="https://aur.archlinux.org/pkgbase/deja-vu-bin">deja-vu-bin</a></td><td>0.24.2</td><td nowrap>github-release</td><td nowrap>2026-11-12</td><td nowrap>📦 updated to 0.24.2</td></tr>
+<tr><td><a href="https://aur.archlinux.org/pkgbase/deja-vu">deja-vu</a></td><td>0.24.2</td><td nowrap>github-release</td><td nowrap>2026-11-12</td><td nowrap>📦 updated to 0.24.2</td></tr>
 <tr><td><a href="https://aur.archlinux.org/pkgbase/disc-image-studio-bin">disc-image-studio-bin</a></td><td>1.5.0</td><td nowrap>github-release</td><td nowrap>2026-11-07</td><td nowrap>✅ up to date</td></tr>
 <tr><td><a href="https://aur.archlinux.org/pkgbase/disc-image-studio-git">disc-image-studio-git</a></td><td>r91.c720fd4</td><td nowrap>git-latest</td><td nowrap>2026-11-06</td><td nowrap>💤 next update 2026-11-13</td></tr>
 <tr><td><a href="https://aur.archlinux.org/pkgbase/disc-image-studio">disc-image-studio</a></td><td>1.5.0</td><td nowrap>github-release</td><td nowrap>2026-11-07</td><td nowrap>✅ up to date</td></tr>
@@ -46,12 +46,12 @@ This is a repository for AUR packages. Each package has a config in `packages/`,
 <tr><td><a href="https://aur.archlinux.org/pkgbase/gator">gator</a></td><td>3.23.1</td><td nowrap>github-release</td><td nowrap>-</td><td nowrap>✅ up to date</td></tr>
 <tr><td><a href="https://aur.archlinux.org/pkgbase/ghostunnel-bin">ghostunnel-bin</a></td><td>1.11.5</td><td nowrap>github-release</td><td nowrap>-</td><td nowrap>✅ up to date</td></tr>
 <tr><td><a href="https://aur.archlinux.org/pkgbase/ghostunnel">ghostunnel</a></td><td>1.11.5</td><td nowrap>github-release</td><td nowrap>-</td><td nowrap>✅ up to date</td></tr>
-<tr><td><a href="https://aur.archlinux.org/pkgbase/greenmask-bin">greenmask-bin</a></td><td>0.2.26</td><td nowrap>github-release</td><td nowrap>-</td><td nowrap>✅ up to date</td></tr>
+<tr><td><a href="https://aur.archlinux.org/pkgbase/greenmask-bin">greenmask-bin</a></td><td>0.2.27</td><td nowrap>github-release</td><td nowrap>2026-11-12</td><td nowrap>📦 updated to 0.2.27</td></tr>
 <tr><td><a href="https://aur.archlinux.org/pkgbase/greenmask-git">greenmask-git</a></td><td>r614.eec5bd5</td><td nowrap>git-latest</td><td nowrap>2026-11-06</td><td nowrap>💤 next update 2026-11-13</td></tr>
-<tr><td><a href="https://aur.archlinux.org/pkgbase/greenmask">greenmask</a></td><td>0.2.26</td><td nowrap>github-release</td><td nowrap>-</td><td nowrap>✅ up to date</td></tr>
+<tr><td><a href="https://aur.archlinux.org/pkgbase/greenmask">greenmask</a></td><td>0.2.27</td><td nowrap>github-release</td><td nowrap>2026-11-12</td><td nowrap>📦 updated to 0.2.27</td></tr>
 <tr><td><a href="https://aur.archlinux.org/pkgbase/helix-db-bin">helix-db-bin</a></td><td>3.7.0</td><td nowrap>github-release</td><td nowrap>-</td><td nowrap>✅ up to date</td></tr>
 <tr><td><a href="https://aur.archlinux.org/pkgbase/helix-db">helix-db</a></td><td>3.7.0</td><td nowrap>github-release</td><td nowrap>-</td><td nowrap>✅ up to date</td></tr>
-<tr><td><a href="https://aur.archlinux.org/pkgbase/jdk-openjdk-ea">jdk-openjdk-ea</a></td><td>28+23</td><td nowrap>github-tag</td><td nowrap>2026-11-05</td><td nowrap>✅ up to date</td></tr>
+<tr><td><a href="https://aur.archlinux.org/pkgbase/jdk-openjdk-ea">jdk-openjdk-ea</a></td><td>28+24</td><td nowrap>github-tag</td><td nowrap>2026-11-12</td><td nowrap>📦 updated to 28+24</td></tr>
 <tr><td><a href="https://aur.archlinux.org/pkgbase/jdk-temurin-ea-bin">jdk-temurin-ea-bin</a></td><td>28+22</td><td nowrap>webpage-scrape</td><td nowrap>2026-11-01</td><td nowrap>⏳ 28+23 pending</td></tr>
 <tr><td><a href="https://aur.archlinux.org/pkgbase/keep-sorted-bin">keep-sorted-bin</a></td><td>0.10.0</td><td nowrap>github-release</td><td nowrap>-</td><td nowrap>✅ up to date</td></tr>
 <tr><td><a href="https://aur.archlinux.org/pkgbase/keep-sorted">keep-sorted</a></td><td>0.10.0</td><td nowrap>github-release</td><td nowrap>-</td><td nowrap>✅ up to date</td></tr>
@@ -60,8 +60,8 @@ This is a repository for AUR packages. Each package has a config in `packages/`,
 <tr><td><a href="https://aur.archlinux.org/pkgbase/kiota-bin">kiota-bin</a></td><td>1.38.0</td><td nowrap>github-release</td><td nowrap>-</td><td nowrap>✅ up to date</td></tr>
 <tr><td><a href="https://aur.archlinux.org/pkgbase/kiota">kiota</a></td><td>1.38.0</td><td nowrap>github-release</td><td nowrap>-</td><td nowrap>✅ up to date</td></tr>
 <tr><td><a href="https://aur.archlinux.org/pkgbase/kqalc-bin">kqalc-bin</a></td><td>0.2.3</td><td nowrap>github-release</td><td nowrap>-</td><td nowrap>✅ up to date</td></tr>
-<tr><td><a href="https://aur.archlinux.org/pkgbase/krakend-bin">krakend-bin</a></td><td>3.0.3</td><td nowrap>github-release</td><td nowrap>-</td><td nowrap>✅ up to date</td></tr>
-<tr><td><a href="https://aur.archlinux.org/pkgbase/krakend">krakend</a></td><td>3.0.3</td><td nowrap>github-release</td><td nowrap>-</td><td nowrap>✅ up to date</td></tr>
+<tr><td><a href="https://aur.archlinux.org/pkgbase/krakend-bin">krakend-bin</a></td><td>3.0.4</td><td nowrap>github-release</td><td nowrap>2026-11-12</td><td nowrap>📦 updated to 3.0.4</td></tr>
+<tr><td><a href="https://aur.archlinux.org/pkgbase/krakend">krakend</a></td><td>3.0.4</td><td nowrap>github-release</td><td nowrap>2026-11-12</td><td nowrap>📦 updated to 3.0.4</td></tr>
 <tr><td><a href="https://aur.archlinux.org/pkgbase/kubecm-bin">kubecm-bin</a></td><td>0.36.0</td><td nowrap>github-release</td><td nowrap>-</td><td nowrap>✅ up to date</td></tr>
 <tr><td><a href="https://aur.archlinux.org/pkgbase/kubecm">kubecm</a></td><td>0.36.0</td><td nowrap>github-release</td><td nowrap>-</td><td nowrap>✅ up to date</td></tr>
 <tr><td><a href="https://aur.archlinux.org/pkgbase/kubernetes-mcp-server-bin">kubernetes-mcp-server-bin</a></td><td>0.1.2</td><td nowrap>github-release</td><td nowrap>-</td><td nowrap>✅ up to date</td></tr>
@@ -85,7 +85,7 @@ This is a repository for AUR packages. Each package has a config in `packages/`,
 <tr><td><a href="https://aur.archlinux.org/pkgbase/mesheryctl-bin">mesheryctl-bin</a></td><td>1.0.76</td><td nowrap>github-release</td><td nowrap>-</td><td nowrap>✅ up to date</td></tr>
 <tr><td><a href="https://aur.archlinux.org/pkgbase/miniflux-bin">miniflux-bin</a></td><td>2.3.5</td><td nowrap>github-release</td><td nowrap>2026-11-02</td><td nowrap>✅ up to date</td></tr>
 <tr><td><a href="https://aur.archlinux.org/pkgbase/mp4ff-bin">mp4ff-bin</a></td><td>0.62.1</td><td nowrap>github-release</td><td nowrap>2026-11-10</td><td nowrap>✅ up to date</td></tr>
-<tr><td><a href="https://aur.archlinux.org/pkgbase/mp4ff-git">mp4ff-git</a></td><td>r1328.8a0670f</td><td nowrap>git-latest</td><td nowrap>2026-11-11</td><td nowrap>✅ up to date</td></tr>
+<tr><td><a href="https://aur.archlinux.org/pkgbase/mp4ff-git">mp4ff-git</a></td><td>r1328.8a0670f</td><td nowrap>git-latest</td><td nowrap>2026-11-11</td><td nowrap>💤 next update 2026-11-18</td></tr>
 <tr><td><a href="https://aur.archlinux.org/pkgbase/mp4ff">mp4ff</a></td><td>0.62.1</td><td nowrap>github-release</td><td nowrap>2026-11-10</td><td nowrap>✅ up to date</td></tr>
 <tr><td><a href="https://aur.archlinux.org/pkgbase/neo4j-mcp-bin">neo4j-mcp-bin</a></td><td>2.1.1</td><td nowrap>github-release</td><td nowrap>2026-11-11</td><td nowrap>✅ up to date</td></tr>
 <tr><td><a href="https://aur.archlinux.org/pkgbase/neo4j-mcp">neo4j-mcp</a></td><td>2.1.1</td><td nowrap>github-release</td><td nowrap>2026-11-11</td><td nowrap>✅ up to date</td></tr>

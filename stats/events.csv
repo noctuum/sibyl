@@ -198,3 +198,10 @@ time,package,event,version,previous,run
 2026-11-12T05:55:07Z,roughenough,up_to_date,2.2.0,,43163748397
 2026-11-12T05:55:07Z,roughenough-bin,added,,,43163748397
 2026-11-12T05:55:07Z,roughenough-bin,up_to_date,2.2.0,,43163748397
+2026-11-12T19:03:48Z,deja-vu,updated,0.24.2,0.24.1,43284986499
+2026-11-12T19:03:48Z,deja-vu-bin,updated,0.24.2,0.24.1,43284986499
+2026-11-12T19:03:48Z,greenmask,updated,0.2.27,0.2.26,43284986499
+2026-11-12T19:03:48Z,greenmask-bin,updated,0.2.27,0.2.26,43284986499
+2026-11-12T19:03:48Z,jdk-openjdk-ea,updated,28+24,28+23,43284986499
+2026-11-12T19:03:48Z,krakend,updated,3.0.4,3.0.3,43284986499
+2026-11-12T19:03:48Z,krakend-bin,updated,3.0.4,3.0.3,43284986499

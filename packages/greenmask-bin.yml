@@ -2,4 +2,5 @@ name: greenmask-bin
 strategy: github-release
 upstream:
   project: GreenmaskIO/greenmask
-current: 0.2.26
+current: 0.2.27
+last_updated: "2026-11-12"
