@@ -1,0 +1,4 @@
+name: openapi
+strategy: github-release
+upstream:
+  project: speakeasy-api/openapi
