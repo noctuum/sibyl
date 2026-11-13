@@ -1,0 +1,5 @@
+name: memos-git
+strategy: git-latest
+upstream:
+  type: github
+  project: usememos/memos
