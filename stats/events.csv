@@ -219,3 +219,10 @@ time,package,event,version,previous,run
 2026-11-13T08:04:20Z,mesheryctl-bin,update_failed,1.0.78,,43389643497
 2026-11-13T08:04:20Z,pixtuoid,updated,0.23.0,0.22.0,43389643497
 2026-11-13T08:04:20Z,pixtuoid-bin,update_failed,0.22.0,,43389643497
+2026-11-13T16:31:52Z,chainloop-cli,updated,1.135.2,1.135.1,43462435985
+2026-11-13T16:31:52Z,chainloop-cli-bin,updated,1.135.2,1.135.1,43462435985
+2026-11-13T16:31:52Z,jdk-temurin-ea-bin,updated,28+24,28+23,43462435985
+2026-11-13T16:31:52Z,mesheryctl-bin,updated,1.0.79,1.0.78,43462435985
+2026-11-13T16:31:52Z,mp4ff,updated,0.63.0,0.62.1,43462435985
+2026-11-13T16:31:52Z,mp4ff-bin,updated,0.63.0,0.62.1,43462435985
+2026-11-13T16:31:52Z,plasma-drop,updated,1.17.9,1.17.8,43462435985

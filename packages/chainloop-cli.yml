@@ -2,4 +2,5 @@ name: chainloop-cli
 strategy: github-release
 upstream:
   project: chainloop-dev/chainloop
-current: 1.135.1
+current: 1.135.2
+last_updated: "2026-11-13"
