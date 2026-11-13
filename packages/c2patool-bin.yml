@@ -2,4 +2,5 @@ name: c2patool-bin
 strategy: github-release
 upstream:
   project: contentauth/c2patool
-current: 0.28.6
+current: 0.29.0
+last_updated: "2026-11-13"

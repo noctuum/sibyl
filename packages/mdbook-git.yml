@@ -5,5 +5,5 @@ upstream:
   project: rust-lang/mdBook
   describe: tags
   tag_prefix: v
-current: 0.5.4.r138.g0accb8a
-last_updated: "2026-11-06"
+current: 0.5.4.r144.g2afa6b2
+last_updated: "2026-11-13"

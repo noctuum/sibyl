@@ -4,19 +4,19 @@
 <text x="54" y="35" font-size="18" font-weight="600" fill="#1f2328">sibyl</text>
 <text x="656" y="35" font-size="14" text-anchor="end" fill="#59636e"><tspan font-weight="600" fill="#1f2328">118</tspan> packages <tspan fill="#1a7f37">· 0 failing</tspan></text>
 <text x="54" y="54" font-size="12" fill="#59636e">AUR packages maintained with aurtomator</text>
-<text x="656" y="54" font-size="12" text-anchor="end" fill="#59636e">updated Nov 12, 2026</text>
+<text x="656" y="54" font-size="12" text-anchor="end" fill="#59636e">updated Nov 13, 2026</text>
 <text x="436" y="90" font-size="12" text-anchor="end" fill="#59636e">7 days</text>
 <text x="546" y="90" font-size="12" text-anchor="end" fill="#59636e">since Nov 6</text>
 <text x="656" y="90" font-size="12" text-anchor="end" fill="#59636e">since Nov 6</text>
 <text x="24" y="120" font-size="14" fill="#1f2328">Packages updated</text>
-<text x="436" y="120" font-size="16" font-weight="600" text-anchor="end" fill="#1f2328">31</text>
-<text x="546" y="120" font-size="16" font-weight="600" text-anchor="end" fill="#1f2328">31</text>
-<text x="656" y="120" font-size="16" font-weight="600" text-anchor="end" fill="#1f2328">31</text>
+<text x="436" y="120" font-size="16" font-weight="600" text-anchor="end" fill="#1f2328">40</text>
+<text x="546" y="120" font-size="16" font-weight="600" text-anchor="end" fill="#1f2328">40</text>
+<text x="656" y="120" font-size="16" font-weight="600" text-anchor="end" fill="#1f2328">40</text>
 <line x1="24" x2="656" y1="130" y2="130" stroke="#d0d7de" stroke-width="0.5"/>
 <text x="24" y="148" font-size="14" fill="#1f2328">Pushes to AUR</text>
-<text x="436" y="148" font-size="16" font-weight="600" text-anchor="end" fill="#1f2328">40</text>
-<text x="546" y="148" font-size="16" font-weight="600" text-anchor="end" fill="#1f2328">40</text>
-<text x="656" y="148" font-size="16" font-weight="600" text-anchor="end" fill="#1f2328">40</text>
+<text x="436" y="148" font-size="16" font-weight="600" text-anchor="end" fill="#1f2328">49</text>
+<text x="546" y="148" font-size="16" font-weight="600" text-anchor="end" fill="#1f2328">49</text>
+<text x="656" y="148" font-size="16" font-weight="600" text-anchor="end" fill="#1f2328">49</text>
 <line x1="24" x2="656" y1="158" y2="158" stroke="#d0d7de" stroke-width="0.5"/>
 <text x="24" y="176" font-size="14" fill="#1f2328">New packages</text>
 <text x="436" y="176" font-size="16" font-weight="600" text-anchor="end" fill="#1a7f37">37</text>
@@ -24,7 +24,7 @@
 <text x="656" y="176" font-size="16" font-weight="600" text-anchor="end" fill="#1a7f37">37</text>
 <line x1="24" x2="656" y1="186" y2="186" stroke="#d0d7de" stroke-width="0.5"/>
 <text x="24" y="204" font-size="14" fill="#1f2328">Failed checks</text>
-<text x="436" y="204" font-size="16" font-weight="600" text-anchor="end" fill="#cf222e">3</text>
+<text x="436" y="204" font-size="16" font-weight="600" text-anchor="end" fill="#cf222e">2</text>
 <text x="546" y="204" font-size="16" font-weight="600" text-anchor="end" fill="#cf222e">3</text>
 <text x="656" y="204" font-size="16" font-weight="600" text-anchor="end" fill="#cf222e">3</text>
 <line x1="24" x2="656" y1="214" y2="214" stroke="#d0d7de" stroke-width="0.5"/>
@@ -420,8 +420,9 @@
 <rect x="632" y="266" width="9" height="9" rx="2"/>
 <rect x="632" y="277" width="9" height="9" rx="2"/>
 <rect x="632" y="288" width="9" height="9" rx="2"/>
+<rect x="632" y="299" width="9" height="9" rx="2"/>
 </g>
-<text x="24" y="342" font-size="12" fill="#59636e"><tspan font-weight="600" fill="#1f2328">40</tspan> pushes in the last year</text>
+<text x="24" y="342" font-size="12" fill="#59636e"><tspan font-weight="600" fill="#1f2328">49</tspan> pushes in the last year</text>
 <text x="561" y="342" font-size="11" text-anchor="end" fill="#818b98">Less</text>
 <rect x="567" y="333" width="9" height="9" rx="2" fill="#eff2f5"/>
 <rect x="578" y="333" width="9" height="9" rx="2" fill="#c4e3f5"/>

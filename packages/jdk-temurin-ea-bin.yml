@@ -6,8 +6,7 @@ upstream:
 alerts:
   - when: major
     note: Create the package for the old major
-current: 28+22
-last_updated: "2026-11-01"
-arch_wait:
-  version: 28+23
-  since: "2026-11-11T22:05:07Z"
+current: 28+23
+last_updated: "2026-11-13"
+arch_out:
+  aarch64: 3a5f6f12a7c9176a4c87bb402f1a3e938ec04011
