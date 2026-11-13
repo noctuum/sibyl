@@ -2,4 +2,5 @@ name: fallow
 strategy: github-release
 upstream:
   project: fallow-rs/fallow
-current: 3.42.0
+current: 3.43.0
+last_updated: "2026-11-13"
