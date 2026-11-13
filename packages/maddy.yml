@@ -1,0 +1,4 @@
+name: maddy
+strategy: github-release
+upstream:
+  project: foxcpp/maddy
