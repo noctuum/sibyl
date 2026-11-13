@@ -1,5 +1,0 @@
-name: pixtuoid-bin
-strategy: github-release
-upstream:
-  project: pixtuoid/pixtuoid
-current: 0.22.0
