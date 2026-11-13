@@ -1,0 +1,4 @@
+name: wakapi-bin
+strategy: github-release
+upstream:
+  project: muety/wakapi
