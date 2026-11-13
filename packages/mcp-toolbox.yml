@@ -2,5 +2,5 @@ name: mcp-toolbox
 strategy: github-release
 upstream:
   project: googleapis/mcp-toolbox
-current: 1.16.0
-last_updated: "2026-11-05"
+current: 1.17.0
+last_updated: "2026-11-13"

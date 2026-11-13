@@ -214,3 +214,8 @@ time,package,event,version,previous,run
 2026-11-13T00:31:40Z,mcp-toolbox-git,updated,r2400.5111516,r2380.d373dc1,43336858534
 2026-11-13T00:31:40Z,mdbook-git,updated,0.5.4.r144.g2afa6b2,0.5.4.r138.g0accb8a,43336858534
 2026-11-13T00:31:40Z,mesheryctl-bin,updated,1.0.78,1.0.76,43336858534
+2026-11-13T08:04:20Z,mcp-toolbox,updated,1.17.0,1.16.0,43389643497
+2026-11-13T08:04:20Z,mcp-toolbox-bin,updated,1.17.0,1.16.0,43389643497
+2026-11-13T08:04:20Z,mesheryctl-bin,update_failed,1.0.78,,43389643497
+2026-11-13T08:04:20Z,pixtuoid,updated,0.23.0,0.22.0,43389643497
+2026-11-13T08:04:20Z,pixtuoid-bin,update_failed,0.22.0,,43389643497

@@ -2,4 +2,5 @@ name: pixtuoid
 strategy: github-release
 upstream:
   project: pixtuoid/pixtuoid
-current: 0.22.0
+current: 0.23.0
+last_updated: "2026-11-13"
