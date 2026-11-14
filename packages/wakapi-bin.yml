@@ -2,3 +2,4 @@ name: wakapi-bin
 strategy: github-release
 upstream:
   project: muety/wakapi
+current: 2.18.2

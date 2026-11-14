@@ -40,8 +40,8 @@ This is a repository for AUR packages. Each package has a config in `packages/`,
 <tr><td><a href="https://aur.archlinux.org/pkgbase/elp-bin">elp-bin</a></td><td>2026.10.14</td><td nowrap>github-release</td><td nowrap>-</td><td nowrap>✅ up to date</td></tr>
 <tr><td><a href="https://aur.archlinux.org/pkgbase/evernote2md-bin">evernote2md-bin</a></td><td>0.23.0</td><td nowrap>github-release</td><td nowrap>-</td><td nowrap>✅ up to date</td></tr>
 <tr><td><a href="https://aur.archlinux.org/pkgbase/evernote2md">evernote2md</a></td><td>0.23.0</td><td nowrap>github-release</td><td nowrap>-</td><td nowrap>✅ up to date</td></tr>
-<tr><td><a href="https://aur.archlinux.org/pkgbase/fallow-bin">fallow-bin</a></td><td>3.43.0</td><td nowrap>github-release</td><td nowrap>2026-11-13</td><td nowrap>📦 updated to 3.43.0</td></tr>
-<tr><td><a href="https://aur.archlinux.org/pkgbase/fallow">fallow</a></td><td>3.43.0</td><td nowrap>github-release</td><td nowrap>2026-11-13</td><td nowrap>📦 updated to 3.43.0</td></tr>
+<tr><td><a href="https://aur.archlinux.org/pkgbase/fallow-bin">fallow-bin</a></td><td>3.43.0</td><td nowrap>github-release</td><td nowrap>2026-11-13</td><td nowrap>✅ up to date</td></tr>
+<tr><td><a href="https://aur.archlinux.org/pkgbase/fallow">fallow</a></td><td>3.43.0</td><td nowrap>github-release</td><td nowrap>2026-11-13</td><td nowrap>✅ up to date</td></tr>
 <tr><td><a href="https://aur.archlinux.org/pkgbase/gator-bin">gator-bin</a></td><td>3.23.1</td><td nowrap>github-release</td><td nowrap>-</td><td nowrap>✅ up to date</td></tr>
 <tr><td><a href="https://aur.archlinux.org/pkgbase/gator">gator</a></td><td>3.23.1</td><td nowrap>github-release</td><td nowrap>-</td><td nowrap>✅ up to date</td></tr>
 <tr><td><a href="https://aur.archlinux.org/pkgbase/ghostunnel-bin">ghostunnel-bin</a></td><td>1.11.5</td><td nowrap>github-release</td><td nowrap>-</td><td nowrap>✅ up to date</td></tr>
@@ -64,8 +64,8 @@ This is a repository for AUR packages. Each package has a config in `packages/`,
 <tr><td><a href="https://aur.archlinux.org/pkgbase/krakend">krakend</a></td><td>3.0.4</td><td nowrap>github-release</td><td nowrap>2026-11-12</td><td nowrap>✅ up to date</td></tr>
 <tr><td><a href="https://aur.archlinux.org/pkgbase/kubecm-bin">kubecm-bin</a></td><td>0.36.0</td><td nowrap>github-release</td><td nowrap>-</td><td nowrap>✅ up to date</td></tr>
 <tr><td><a href="https://aur.archlinux.org/pkgbase/kubecm">kubecm</a></td><td>0.36.0</td><td nowrap>github-release</td><td nowrap>-</td><td nowrap>✅ up to date</td></tr>
-<tr><td><a href="https://aur.archlinux.org/pkgbase/kubernetes-mcp-server-bin">kubernetes-mcp-server-bin</a></td><td>0.1.3</td><td nowrap>github-release</td><td nowrap>2026-11-13</td><td nowrap>📦 updated to 0.1.3</td></tr>
-<tr><td><a href="https://aur.archlinux.org/pkgbase/kubernetes-mcp-server">kubernetes-mcp-server</a></td><td>0.1.3</td><td nowrap>github-release</td><td nowrap>2026-11-13</td><td nowrap>📦 updated to 0.1.3</td></tr>
+<tr><td><a href="https://aur.archlinux.org/pkgbase/kubernetes-mcp-server-bin">kubernetes-mcp-server-bin</a></td><td>0.1.3</td><td nowrap>github-release</td><td nowrap>2026-11-13</td><td nowrap>✅ up to date</td></tr>
+<tr><td><a href="https://aur.archlinux.org/pkgbase/kubernetes-mcp-server">kubernetes-mcp-server</a></td><td>0.1.3</td><td nowrap>github-release</td><td nowrap>2026-11-13</td><td nowrap>✅ up to date</td></tr>
 <tr><td><a href="https://aur.archlinux.org/pkgbase/lakekeeper-bin">lakekeeper-bin</a></td><td>0.15.0</td><td nowrap>github-release</td><td nowrap>2026-11-06</td><td nowrap>✅ up to date</td></tr>
 <tr><td><a href="https://aur.archlinux.org/pkgbase/lakekeeper">lakekeeper</a></td><td>0.15.0</td><td nowrap>github-release</td><td nowrap>2026-11-06</td><td nowrap>✅ up to date</td></tr>
 <tr><td><a href="https://aur.archlinux.org/pkgbase/liblinear">liblinear</a></td><td>2.50</td><td nowrap>webpage-scrape</td><td nowrap>-</td><td nowrap>✅ up to date</td></tr>
@@ -108,7 +108,7 @@ This is a repository for AUR packages. Each package has a config in `packages/`,
 <tr><td><a href="https://aur.archlinux.org/pkgbase/pgtui">pgtui</a></td><td>0.3.0</td><td nowrap>github-release</td><td nowrap>-</td><td nowrap>✅ up to date</td></tr>
 <tr><td><a href="https://aur.archlinux.org/pkgbase/phpantom_lsp-bin">phpantom_lsp-bin</a></td><td>0.11.1</td><td nowrap>github-release</td><td nowrap>-</td><td nowrap>✅ up to date</td></tr>
 <tr><td><a href="https://aur.archlinux.org/pkgbase/pixtuoid">pixtuoid</a></td><td>0.23.0</td><td nowrap>github-release</td><td nowrap>2026-11-13</td><td nowrap>✅ up to date</td></tr>
-<tr><td><a href="https://aur.archlinux.org/pkgbase/plasma-drop">plasma-drop</a></td><td>1.18.0</td><td nowrap>github-release</td><td nowrap>2026-11-13</td><td nowrap>📦 updated to 1.18.0</td></tr>
+<tr><td><a href="https://aur.archlinux.org/pkgbase/plasma-drop">plasma-drop</a></td><td>1.18.0</td><td nowrap>github-release</td><td nowrap>2026-11-13</td><td nowrap>✅ up to date</td></tr>
 <tr><td><a href="https://aur.archlinux.org/pkgbase/pocket-tts-bin">pocket-tts-bin</a></td><td>4.0.1</td><td nowrap>github-release</td><td nowrap>-</td><td nowrap>✅ up to date</td></tr>
 <tr><td><a href="https://aur.archlinux.org/pkgbase/pocket-tts-git">pocket-tts-git</a></td><td>r217.306918e</td><td nowrap>git-latest</td><td nowrap>2026-11-12</td><td nowrap>💤 next update 2026-11-19</td></tr>
 <tr><td><a href="https://aur.archlinux.org/pkgbase/pocket-tts">pocket-tts</a></td><td>4.0.1</td><td nowrap>github-release</td><td nowrap>-</td><td nowrap>✅ up to date</td></tr>
@@ -130,6 +130,7 @@ This is a repository for AUR packages. Each package has a config in `packages/`,
 <tr><td><a href="https://aur.archlinux.org/pkgbase/transfuse">transfuse</a></td><td>0.6.0</td><td nowrap>gitlab-tag</td><td nowrap>-</td><td nowrap>✅ up to date</td></tr>
 <tr><td><a href="https://aur.archlinux.org/pkgbase/versitygw-bin">versitygw-bin</a></td><td>1.11.0</td><td nowrap>github-release</td><td nowrap>2026-11-06</td><td nowrap>✅ up to date</td></tr>
 <tr><td><a href="https://aur.archlinux.org/pkgbase/versitygw">versitygw</a></td><td>1.11.0</td><td nowrap>github-release</td><td nowrap>2026-11-06</td><td nowrap>✅ up to date</td></tr>
+<tr><td><a href="https://aur.archlinux.org/pkgbase/wakapi-bin">wakapi-bin</a></td><td>2.18.2</td><td nowrap>github-release</td><td nowrap>-</td><td nowrap>✅ up to date</td></tr>
 <tr><td><a href="https://aur.archlinux.org/pkgbase/wal2json">wal2json</a></td><td>2.7</td><td nowrap>github-release</td><td nowrap>-</td><td nowrap>✅ up to date</td></tr>
 <tr><td><a href="https://aur.archlinux.org/pkgbase/webdav-bin">webdav-bin</a></td><td>5.17.3</td><td nowrap>github-release</td><td nowrap>2026-10-30</td><td nowrap>✅ up to date</td></tr>
 <tr><td><a href="https://aur.archlinux.org/pkgbase/webdav-git">webdav-git</a></td><td>r317.b6c41e4</td><td nowrap>git-latest</td><td nowrap>2026-11-11</td><td nowrap>✅ up to date</td></tr>
@@ -143,5 +144,5 @@ This is a repository for AUR packages. Each package has a config in `packages/`,
 <tr><td><a href="https://aur.archlinux.org/pkgbase/zero">zero</a></td><td>0.13.0</td><td nowrap>github-release</td><td nowrap>-</td><td nowrap>✅ up to date</td></tr>
 </table>
 
-aurtomator 0.12.1
+aurtomator 0.12.1 ([0.12.3 available](https://github.com/staticwire/aurtomator/releases/tag/v0.12.3))
 <!-- PACKAGES:END -->
