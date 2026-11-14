@@ -245,3 +245,5 @@ time,package,event,version,previous,run
 2026-11-14T03:21:04Z,keep-sorted,updated,0.11.0,0.10.0,43550702402
 2026-11-14T03:21:04Z,keep-sorted-bin,updated,0.11.0,0.10.0,43550702402
 2026-11-14T07:40:12Z,memos-git,updated,r4947.063fafb,r4946.d0c6e2a,43571809416
+2026-11-14T17:13:58Z,oasdiff,updated,1.38.0,1.37.0,43619476444
+2026-11-14T17:13:58Z,oasdiff-bin,updated,1.38.0,1.37.0,43619476444

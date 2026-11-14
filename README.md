@@ -80,7 +80,7 @@
 <tr><td><a href="https://aur.archlinux.org/pkgbase/mdbook-git">mdbook-git</a></td><td>0.5.4.r144.g2afa6b2</td><td nowrap>git-latest</td><td nowrap>2026-11-13</td><td nowrap>💤 next update 2026-11-20</td></tr>
 <tr><td><a href="https://aur.archlinux.org/pkgbase/mdbook-toc">mdbook-toc</a></td><td>0.15.4</td><td nowrap>crates</td><td nowrap>-</td><td nowrap>✅ up to date</td></tr>
 <tr><td><a href="https://aur.archlinux.org/pkgbase/memos-bin">memos-bin</a></td><td>26.11.0</td><td nowrap>github-release</td><td nowrap>2026-09-19</td><td nowrap>✅ up to date</td></tr>
-<tr><td><a href="https://aur.archlinux.org/pkgbase/memos-git">memos-git</a></td><td>r4947.063fafb</td><td nowrap>git-latest</td><td nowrap>2026-11-14</td><td nowrap>✅ up to date</td></tr>
+<tr><td><a href="https://aur.archlinux.org/pkgbase/memos-git">memos-git</a></td><td>r4947.063fafb</td><td nowrap>git-latest</td><td nowrap>2026-11-14</td><td nowrap>💤 next update 2026-11-21</td></tr>
 <tr><td><a href="https://aur.archlinux.org/pkgbase/memos">memos</a></td><td>26.11.0</td><td nowrap>github-release</td><td nowrap>-</td><td nowrap>✅ up to date</td></tr>
 <tr><td><a href="https://aur.archlinux.org/pkgbase/merman-bin">merman-bin</a></td><td>0.10.0</td><td nowrap>github-release</td><td nowrap>2026-11-12</td><td nowrap>✅ up to date</td></tr>
 <tr><td><a href="https://aur.archlinux.org/pkgbase/merman">merman</a></td><td>0.10.0</td><td nowrap>github-release</td><td nowrap>2026-11-12</td><td nowrap>✅ up to date</td></tr>
@@ -92,8 +92,8 @@
 <tr><td><a href="https://aur.archlinux.org/pkgbase/neo4j-mcp-bin">neo4j-mcp-bin</a></td><td>2.1.1</td><td nowrap>github-release</td><td nowrap>2026-11-11</td><td nowrap>✅ up to date</td></tr>
 <tr><td><a href="https://aur.archlinux.org/pkgbase/neo4j-mcp">neo4j-mcp</a></td><td>2.1.1</td><td nowrap>github-release</td><td nowrap>2026-11-11</td><td nowrap>✅ up to date</td></tr>
 <tr><td><a href="https://aur.archlinux.org/pkgbase/neovim-nightly-bin">neovim-nightly-bin</a></td><td>0.13.0+dev+2081+g5a53f3bb9e</td><td nowrap>github-nightly</td><td nowrap>2026-11-11</td><td nowrap>✅ up to date</td></tr>
-<tr><td><a href="https://aur.archlinux.org/pkgbase/oasdiff-bin">oasdiff-bin</a></td><td>1.37.0</td><td nowrap>github-release</td><td nowrap>2026-11-08</td><td nowrap>✅ up to date</td></tr>
-<tr><td><a href="https://aur.archlinux.org/pkgbase/oasdiff">oasdiff</a></td><td>1.37.0</td><td nowrap>github-release</td><td nowrap>2026-11-08</td><td nowrap>✅ up to date</td></tr>
+<tr><td><a href="https://aur.archlinux.org/pkgbase/oasdiff-bin">oasdiff-bin</a></td><td>1.38.0</td><td nowrap>github-release</td><td nowrap>2026-11-14</td><td nowrap>📦 updated to 1.38.0</td></tr>
+<tr><td><a href="https://aur.archlinux.org/pkgbase/oasdiff">oasdiff</a></td><td>1.38.0</td><td nowrap>github-release</td><td nowrap>2026-11-14</td><td nowrap>📦 updated to 1.38.0</td></tr>
 <tr><td><a href="https://aur.archlinux.org/pkgbase/openapi-bin">openapi-bin</a></td><td>1.26.3</td><td nowrap>github-release</td><td nowrap>-</td><td nowrap>✅ up to date</td></tr>
 <tr><td><a href="https://aur.archlinux.org/pkgbase/openapi">openapi</a></td><td>1.26.3</td><td nowrap>github-release</td><td nowrap>-</td><td nowrap>✅ up to date</td></tr>
 <tr><td><a href="https://aur.archlinux.org/pkgbase/opencrabs-bin">opencrabs-bin</a></td><td>0.5.15</td><td nowrap>github-release</td><td nowrap>-</td><td nowrap>✅ up to date</td></tr>
