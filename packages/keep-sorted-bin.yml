@@ -2,4 +2,5 @@ name: keep-sorted-bin
 strategy: github-release
 upstream:
   project: google/keep-sorted
-current: 0.10.0
+current: 0.11.0
+last_updated: "2026-11-14"
