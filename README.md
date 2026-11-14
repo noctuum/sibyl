@@ -80,7 +80,7 @@
 <tr><td><a href="https://aur.archlinux.org/pkgbase/mdbook-git">mdbook-git</a></td><td>0.5.4.r144.g2afa6b2</td><td nowrap>git-latest</td><td nowrap>2026-11-13</td><td nowrap>💤 next update 2026-11-20</td></tr>
 <tr><td><a href="https://aur.archlinux.org/pkgbase/mdbook-toc">mdbook-toc</a></td><td>0.15.4</td><td nowrap>crates</td><td nowrap>-</td><td nowrap>✅ up to date</td></tr>
 <tr><td><a href="https://aur.archlinux.org/pkgbase/memos-bin">memos-bin</a></td><td>26.11.0</td><td nowrap>github-release</td><td nowrap>2026-09-19</td><td nowrap>✅ up to date</td></tr>
-<tr><td><a href="https://aur.archlinux.org/pkgbase/memos-git">memos-git</a></td><td>r4947.063fafb</td><td nowrap>git-latest</td><td nowrap>2026-11-14</td><td nowrap>📦 updated to r4947.063fafb</td></tr>
+<tr><td><a href="https://aur.archlinux.org/pkgbase/memos-git">memos-git</a></td><td>r4947.063fafb</td><td nowrap>git-latest</td><td nowrap>2026-11-14</td><td nowrap>✅ up to date</td></tr>
 <tr><td><a href="https://aur.archlinux.org/pkgbase/memos">memos</a></td><td>26.11.0</td><td nowrap>github-release</td><td nowrap>-</td><td nowrap>✅ up to date</td></tr>
 <tr><td><a href="https://aur.archlinux.org/pkgbase/merman-bin">merman-bin</a></td><td>0.10.0</td><td nowrap>github-release</td><td nowrap>2026-11-12</td><td nowrap>✅ up to date</td></tr>
 <tr><td><a href="https://aur.archlinux.org/pkgbase/merman">merman</a></td><td>0.10.0</td><td nowrap>github-release</td><td nowrap>2026-11-12</td><td nowrap>✅ up to date</td></tr>
