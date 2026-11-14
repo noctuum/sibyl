@@ -144,5 +144,5 @@ This is a repository for AUR packages. Each package has a config in `packages/`,
 <tr><td><a href="https://aur.archlinux.org/pkgbase/zero">zero</a></td><td>0.13.0</td><td nowrap>github-release</td><td nowrap>-</td><td nowrap>✅ up to date</td></tr>
 </table>
 
-aurtomator 0.12.1 ([0.12.3 available](https://github.com/staticwire/aurtomator/releases/tag/v0.12.3))
+aurtomator 0.12.3
 <!-- PACKAGES:END -->
