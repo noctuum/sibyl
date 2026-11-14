@@ -3,4 +3,5 @@ strategy: git-latest
 upstream:
   type: github
   project: usememos/memos
-current: r4946.d0c6e2a
+current: r4947.063fafb
+last_updated: "2026-11-14"

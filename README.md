@@ -31,7 +31,7 @@
 <tr><td><a href="https://aur.archlinux.org/pkgbase/deja-vu-bin">deja-vu-bin</a></td><td>0.24.2</td><td nowrap>github-release</td><td nowrap>2026-11-12</td><td nowrap>✅ up to date</td></tr>
 <tr><td><a href="https://aur.archlinux.org/pkgbase/deja-vu">deja-vu</a></td><td>0.24.2</td><td nowrap>github-release</td><td nowrap>2026-11-12</td><td nowrap>✅ up to date</td></tr>
 <tr><td><a href="https://aur.archlinux.org/pkgbase/disc-image-studio-bin">disc-image-studio-bin</a></td><td>1.5.0</td><td nowrap>github-release</td><td nowrap>2026-11-07</td><td nowrap>✅ up to date</td></tr>
-<tr><td><a href="https://aur.archlinux.org/pkgbase/disc-image-studio-git">disc-image-studio-git</a></td><td>r111.619ec75</td><td nowrap>git-latest</td><td nowrap>2026-11-13</td><td nowrap>✅ up to date</td></tr>
+<tr><td><a href="https://aur.archlinux.org/pkgbase/disc-image-studio-git">disc-image-studio-git</a></td><td>r111.619ec75</td><td nowrap>git-latest</td><td nowrap>2026-11-13</td><td nowrap>💤 next update 2026-11-20</td></tr>
 <tr><td><a href="https://aur.archlinux.org/pkgbase/disc-image-studio">disc-image-studio</a></td><td>1.5.0</td><td nowrap>github-release</td><td nowrap>2026-11-07</td><td nowrap>✅ up to date</td></tr>
 <tr><td><a href="https://aur.archlinux.org/pkgbase/doltlite-bin">doltlite-bin</a></td><td>0.51.11</td><td nowrap>github-release</td><td nowrap>2026-11-12</td><td nowrap>✅ up to date</td></tr>
 <tr><td><a href="https://aur.archlinux.org/pkgbase/doltlite">doltlite</a></td><td>0.51.11</td><td nowrap>github-release</td><td nowrap>2026-11-12</td><td nowrap>✅ up to date</td></tr>
@@ -51,8 +51,8 @@
 <tr><td><a href="https://aur.archlinux.org/pkgbase/helix-db">helix-db</a></td><td>3.7.0</td><td nowrap>github-release</td><td nowrap>-</td><td nowrap>✅ up to date</td></tr>
 <tr><td><a href="https://aur.archlinux.org/pkgbase/jdk-openjdk-ea">jdk-openjdk-ea</a></td><td>28+24</td><td nowrap>github-tag</td><td nowrap>2026-11-12</td><td nowrap>✅ up to date</td></tr>
 <tr><td><a href="https://aur.archlinux.org/pkgbase/jdk-temurin-ea-bin">jdk-temurin-ea-bin</a></td><td>28+24</td><td nowrap>webpage-scrape</td><td nowrap>2026-11-13</td><td nowrap>✅ up to date</td></tr>
-<tr><td><a href="https://aur.archlinux.org/pkgbase/keep-sorted-bin">keep-sorted-bin</a></td><td>0.11.0</td><td nowrap>github-release</td><td nowrap>2026-11-14</td><td nowrap>📦 updated to 0.11.0</td></tr>
-<tr><td><a href="https://aur.archlinux.org/pkgbase/keep-sorted">keep-sorted</a></td><td>0.11.0</td><td nowrap>github-release</td><td nowrap>2026-11-14</td><td nowrap>📦 updated to 0.11.0</td></tr>
+<tr><td><a href="https://aur.archlinux.org/pkgbase/keep-sorted-bin">keep-sorted-bin</a></td><td>0.11.0</td><td nowrap>github-release</td><td nowrap>2026-11-14</td><td nowrap>✅ up to date</td></tr>
+<tr><td><a href="https://aur.archlinux.org/pkgbase/keep-sorted">keep-sorted</a></td><td>0.11.0</td><td nowrap>github-release</td><td nowrap>2026-11-14</td><td nowrap>✅ up to date</td></tr>
 <tr><td><a href="https://aur.archlinux.org/pkgbase/kio-s3-git">kio-s3-git</a></td><td>r528.efed4f3</td><td nowrap>git-latest</td><td nowrap>2026-11-13</td><td nowrap>💤 next update 2026-11-20</td></tr>
 <tr><td><a href="https://aur.archlinux.org/pkgbase/kio-s3">kio-s3</a></td><td>1.0.2</td><td nowrap>kde-tarball</td><td nowrap>2026-04-24</td><td nowrap>✅ up to date</td></tr>
 <tr><td><a href="https://aur.archlinux.org/pkgbase/kiota-bin">kiota-bin</a></td><td>1.38.0</td><td nowrap>github-release</td><td nowrap>-</td><td nowrap>✅ up to date</td></tr>
@@ -80,7 +80,7 @@
 <tr><td><a href="https://aur.archlinux.org/pkgbase/mdbook-git">mdbook-git</a></td><td>0.5.4.r144.g2afa6b2</td><td nowrap>git-latest</td><td nowrap>2026-11-13</td><td nowrap>💤 next update 2026-11-20</td></tr>
 <tr><td><a href="https://aur.archlinux.org/pkgbase/mdbook-toc">mdbook-toc</a></td><td>0.15.4</td><td nowrap>crates</td><td nowrap>-</td><td nowrap>✅ up to date</td></tr>
 <tr><td><a href="https://aur.archlinux.org/pkgbase/memos-bin">memos-bin</a></td><td>26.11.0</td><td nowrap>github-release</td><td nowrap>2026-09-19</td><td nowrap>✅ up to date</td></tr>
-<tr><td><a href="https://aur.archlinux.org/pkgbase/memos-git">memos-git</a></td><td>r4946.d0c6e2a</td><td nowrap>git-latest</td><td nowrap>-</td><td nowrap>✅ up to date</td></tr>
+<tr><td><a href="https://aur.archlinux.org/pkgbase/memos-git">memos-git</a></td><td>r4947.063fafb</td><td nowrap>git-latest</td><td nowrap>2026-11-14</td><td nowrap>📦 updated to r4947.063fafb</td></tr>
 <tr><td><a href="https://aur.archlinux.org/pkgbase/memos">memos</a></td><td>26.11.0</td><td nowrap>github-release</td><td nowrap>-</td><td nowrap>✅ up to date</td></tr>
 <tr><td><a href="https://aur.archlinux.org/pkgbase/merman-bin">merman-bin</a></td><td>0.10.0</td><td nowrap>github-release</td><td nowrap>2026-11-12</td><td nowrap>✅ up to date</td></tr>
 <tr><td><a href="https://aur.archlinux.org/pkgbase/merman">merman</a></td><td>0.10.0</td><td nowrap>github-release</td><td nowrap>2026-11-12</td><td nowrap>✅ up to date</td></tr>
@@ -142,5 +142,5 @@
 <tr><td><a href="https://aur.archlinux.org/pkgbase/zero">zero</a></td><td>0.13.0</td><td nowrap>github-release</td><td nowrap>-</td><td nowrap>✅ up to date</td></tr>
 </table>
 
-aurtomator 0.12.3
+aurtomator 0.12.4
 <!-- PACKAGES:END -->
