@@ -64,11 +64,11 @@
 <tr><td><a href="https://aur.archlinux.org/pkgbase/kubecm">kubecm</a></td><td>0.36.0</td><td nowrap>github-release</td><td nowrap>-</td><td nowrap>✅ up to date</td></tr>
 <tr><td><a href="https://aur.archlinux.org/pkgbase/kubernetes-mcp-server-bin">kubernetes-mcp-server-bin</a></td><td>0.1.3</td><td nowrap>github-release</td><td nowrap>2026-11-13</td><td nowrap>✅ up to date</td></tr>
 <tr><td><a href="https://aur.archlinux.org/pkgbase/kubernetes-mcp-server">kubernetes-mcp-server</a></td><td>0.1.3</td><td nowrap>github-release</td><td nowrap>2026-11-13</td><td nowrap>✅ up to date</td></tr>
-<tr><td><a href="https://aur.archlinux.org/pkgbase/lakekeeper-bin">lakekeeper-bin</a></td><td>0.15.1</td><td nowrap>github-release</td><td nowrap>2026-11-15</td><td nowrap>📦 updated to 0.15.1</td></tr>
+<tr><td><a href="https://aur.archlinux.org/pkgbase/lakekeeper-bin">lakekeeper-bin</a></td><td>0.15.1</td><td nowrap>github-release</td><td nowrap>2026-11-15</td><td nowrap>✅ up to date</td></tr>
 <tr><td><a href="https://aur.archlinux.org/pkgbase/lakekeeper">lakekeeper</a></td><td>0.15.1</td><td nowrap>github-release</td><td nowrap>2026-11-15</td><td nowrap>✅ up to date</td></tr>
 <tr><td><a href="https://aur.archlinux.org/pkgbase/liblinear">liblinear</a></td><td>2.50</td><td nowrap>webpage-scrape</td><td nowrap>-</td><td nowrap>✅ up to date</td></tr>
 <tr><td><a href="https://aur.archlinux.org/pkgbase/linux-exploit-suggester">linux-exploit-suggester</a></td><td>1.2</td><td nowrap>github-tag</td><td nowrap>-</td><td nowrap>✅ up to date</td></tr>
-<tr><td><a href="https://aur.archlinux.org/pkgbase/liquidsoap-bin">liquidsoap-bin</a></td><td>2.5.0rc2</td><td nowrap>github-tag</td><td nowrap>2026-11-15</td><td nowrap>📦 updated to 2.5.0rc2</td></tr>
+<tr><td><a href="https://aur.archlinux.org/pkgbase/liquidsoap-bin">liquidsoap-bin</a></td><td>2.5.0rc2</td><td nowrap>github-tag</td><td nowrap>2026-11-15</td><td nowrap>✅ up to date</td></tr>
 <tr><td><a href="https://aur.archlinux.org/pkgbase/lttng-tools">lttng-tools</a></td><td>2.16.0</td><td nowrap>github-tag</td><td nowrap>-</td><td nowrap>✅ up to date</td></tr>
 <tr><td><a href="https://aur.archlinux.org/pkgbase/maddy">maddy</a></td><td>0.9.7</td><td nowrap>github-release</td><td nowrap>-</td><td nowrap>✅ up to date</td></tr>
 <tr><td><a href="https://aur.archlinux.org/pkgbase/marp-cli-bin">marp-cli-bin</a></td><td>4.5.1</td><td nowrap>github-release</td><td nowrap>2026-09-06</td><td nowrap>✅ up to date</td></tr>
