@@ -38,14 +38,14 @@
 <tr><td><a href="https://aur.archlinux.org/pkgbase/elp-bin">elp-bin</a></td><td>2026.10.14</td><td nowrap>github-release</td><td nowrap>-</td><td nowrap>✅ up to date</td></tr>
 <tr><td><a href="https://aur.archlinux.org/pkgbase/evernote2md-bin">evernote2md-bin</a></td><td>0.23.0</td><td nowrap>github-release</td><td nowrap>-</td><td nowrap>✅ up to date</td></tr>
 <tr><td><a href="https://aur.archlinux.org/pkgbase/evernote2md">evernote2md</a></td><td>0.23.0</td><td nowrap>github-release</td><td nowrap>-</td><td nowrap>✅ up to date</td></tr>
-<tr><td><a href="https://aur.archlinux.org/pkgbase/fallow-bin">fallow-bin</a></td><td>3.43.1</td><td nowrap>github-release</td><td nowrap>2026-11-15</td><td nowrap>📦 updated to 3.43.1</td></tr>
-<tr><td><a href="https://aur.archlinux.org/pkgbase/fallow">fallow</a></td><td>3.43.1</td><td nowrap>github-release</td><td nowrap>2026-11-15</td><td nowrap>📦 updated to 3.43.1</td></tr>
+<tr><td><a href="https://aur.archlinux.org/pkgbase/fallow-bin">fallow-bin</a></td><td>3.43.1</td><td nowrap>github-release</td><td nowrap>2026-11-15</td><td nowrap>✅ up to date</td></tr>
+<tr><td><a href="https://aur.archlinux.org/pkgbase/fallow">fallow</a></td><td>3.43.1</td><td nowrap>github-release</td><td nowrap>2026-11-15</td><td nowrap>✅ up to date</td></tr>
 <tr><td><a href="https://aur.archlinux.org/pkgbase/gator-bin">gator-bin</a></td><td>3.23.1</td><td nowrap>github-release</td><td nowrap>-</td><td nowrap>✅ up to date</td></tr>
 <tr><td><a href="https://aur.archlinux.org/pkgbase/gator">gator</a></td><td>3.23.1</td><td nowrap>github-release</td><td nowrap>-</td><td nowrap>✅ up to date</td></tr>
 <tr><td><a href="https://aur.archlinux.org/pkgbase/ghostunnel-bin">ghostunnel-bin</a></td><td>1.11.5</td><td nowrap>github-release</td><td nowrap>-</td><td nowrap>✅ up to date</td></tr>
 <tr><td><a href="https://aur.archlinux.org/pkgbase/ghostunnel">ghostunnel</a></td><td>1.11.5</td><td nowrap>github-release</td><td nowrap>-</td><td nowrap>✅ up to date</td></tr>
 <tr><td><a href="https://aur.archlinux.org/pkgbase/greenmask-bin">greenmask-bin</a></td><td>0.2.27</td><td nowrap>github-release</td><td nowrap>2026-11-12</td><td nowrap>✅ up to date</td></tr>
-<tr><td><a href="https://aur.archlinux.org/pkgbase/greenmask-git">greenmask-git</a></td><td>r633.e14616f</td><td nowrap>git-latest</td><td nowrap>2026-11-13</td><td nowrap>✅ up to date</td></tr>
+<tr><td><a href="https://aur.archlinux.org/pkgbase/greenmask-git">greenmask-git</a></td><td>r633.e14616f</td><td nowrap>git-latest</td><td nowrap>2026-11-13</td><td nowrap>💤 next update 2026-11-20</td></tr>
 <tr><td><a href="https://aur.archlinux.org/pkgbase/greenmask">greenmask</a></td><td>0.2.27</td><td nowrap>github-release</td><td nowrap>2026-11-12</td><td nowrap>✅ up to date</td></tr>
 <tr><td><a href="https://aur.archlinux.org/pkgbase/helix-db-bin">helix-db-bin</a></td><td>3.7.0</td><td nowrap>github-release</td><td nowrap>-</td><td nowrap>✅ up to date</td></tr>
 <tr><td><a href="https://aur.archlinux.org/pkgbase/helix-db">helix-db</a></td><td>3.7.0</td><td nowrap>github-release</td><td nowrap>-</td><td nowrap>✅ up to date</td></tr>
@@ -91,7 +91,7 @@
 <tr><td><a href="https://aur.archlinux.org/pkgbase/mp4ff">mp4ff</a></td><td>0.63.0</td><td nowrap>github-release</td><td nowrap>2026-11-13</td><td nowrap>✅ up to date</td></tr>
 <tr><td><a href="https://aur.archlinux.org/pkgbase/neo4j-mcp-bin">neo4j-mcp-bin</a></td><td>2.1.1</td><td nowrap>github-release</td><td nowrap>2026-11-11</td><td nowrap>✅ up to date</td></tr>
 <tr><td><a href="https://aur.archlinux.org/pkgbase/neo4j-mcp">neo4j-mcp</a></td><td>2.1.1</td><td nowrap>github-release</td><td nowrap>2026-11-11</td><td nowrap>✅ up to date</td></tr>
-<tr><td><a href="https://aur.archlinux.org/pkgbase/neovim-nightly-bin">neovim-nightly-bin</a></td><td>0.13.0+dev+2081+g5a53f3bb9e</td><td nowrap>github-nightly</td><td nowrap>2026-11-11</td><td nowrap>✅ up to date</td></tr>
+<tr><td><a href="https://aur.archlinux.org/pkgbase/neovim-nightly-bin">neovim-nightly-bin</a></td><td>0.13.0+dev+2105+ge77714b475</td><td nowrap>github-nightly</td><td nowrap>2026-11-15</td><td nowrap>📦 updated to 0.13.0+dev+2105+ge77714b475</td></tr>
 <tr><td><a href="https://aur.archlinux.org/pkgbase/oasdiff-bin">oasdiff-bin</a></td><td>1.38.0</td><td nowrap>github-release</td><td nowrap>2026-11-14</td><td nowrap>✅ up to date</td></tr>
 <tr><td><a href="https://aur.archlinux.org/pkgbase/oasdiff">oasdiff</a></td><td>1.38.0</td><td nowrap>github-release</td><td nowrap>2026-11-14</td><td nowrap>✅ up to date</td></tr>
 <tr><td><a href="https://aur.archlinux.org/pkgbase/openapi-bin">openapi-bin</a></td><td>1.26.3</td><td nowrap>github-release</td><td nowrap>-</td><td nowrap>✅ up to date</td></tr>
