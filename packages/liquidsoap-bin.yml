@@ -10,5 +10,6 @@ alerts:
   - match: '^2\.6\.'
     hold: true
     note: New minor version; compare the NEEDED entries of the new deb with depends
-current: 2.5.0rc1
-current_asset: 2.5.0-debian-forky-ocaml5.5.1-1
+current: 2.5.0rc2
+current_asset: 2.5.0-debian-forky-ocaml5.5.2-1
+last_updated: "2026-11-15"

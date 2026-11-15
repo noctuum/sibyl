@@ -30,9 +30,9 @@
 <tr><td><a href="https://aur.archlinux.org/pkgbase/dbhub-mcp-server">dbhub-mcp-server</a></td><td>1.6.1</td><td nowrap>npm</td><td nowrap>2026-11-11</td><td nowrap>✅ up to date</td></tr>
 <tr><td><a href="https://aur.archlinux.org/pkgbase/deja-vu-bin">deja-vu-bin</a></td><td>0.24.2</td><td nowrap>github-release</td><td nowrap>2026-11-12</td><td nowrap>✅ up to date</td></tr>
 <tr><td><a href="https://aur.archlinux.org/pkgbase/deja-vu">deja-vu</a></td><td>0.24.2</td><td nowrap>github-release</td><td nowrap>2026-11-12</td><td nowrap>✅ up to date</td></tr>
-<tr><td><a href="https://aur.archlinux.org/pkgbase/disc-image-studio-bin">disc-image-studio-bin</a></td><td>1.6.0</td><td nowrap>github-release</td><td nowrap>2026-11-15</td><td nowrap>📦 updated to 1.6.0</td></tr>
+<tr><td><a href="https://aur.archlinux.org/pkgbase/disc-image-studio-bin">disc-image-studio-bin</a></td><td>1.6.0</td><td nowrap>github-release</td><td nowrap>2026-11-15</td><td nowrap>✅ up to date</td></tr>
 <tr><td><a href="https://aur.archlinux.org/pkgbase/disc-image-studio-git">disc-image-studio-git</a></td><td>r111.619ec75</td><td nowrap>git-latest</td><td nowrap>2026-11-13</td><td nowrap>💤 next update 2026-11-20</td></tr>
-<tr><td><a href="https://aur.archlinux.org/pkgbase/disc-image-studio">disc-image-studio</a></td><td>1.6.0</td><td nowrap>github-release</td><td nowrap>2026-11-15</td><td nowrap>📦 updated to 1.6.0</td></tr>
+<tr><td><a href="https://aur.archlinux.org/pkgbase/disc-image-studio">disc-image-studio</a></td><td>1.6.0</td><td nowrap>github-release</td><td nowrap>2026-11-15</td><td nowrap>✅ up to date</td></tr>
 <tr><td><a href="https://aur.archlinux.org/pkgbase/doltlite-bin">doltlite-bin</a></td><td>0.51.11</td><td nowrap>github-release</td><td nowrap>2026-11-12</td><td nowrap>✅ up to date</td></tr>
 <tr><td><a href="https://aur.archlinux.org/pkgbase/doltlite">doltlite</a></td><td>0.51.11</td><td nowrap>github-release</td><td nowrap>2026-11-12</td><td nowrap>✅ up to date</td></tr>
 <tr><td><a href="https://aur.archlinux.org/pkgbase/elp-bin">elp-bin</a></td><td>2026.10.14</td><td nowrap>github-release</td><td nowrap>-</td><td nowrap>✅ up to date</td></tr>
@@ -64,11 +64,11 @@
 <tr><td><a href="https://aur.archlinux.org/pkgbase/kubecm">kubecm</a></td><td>0.36.0</td><td nowrap>github-release</td><td nowrap>-</td><td nowrap>✅ up to date</td></tr>
 <tr><td><a href="https://aur.archlinux.org/pkgbase/kubernetes-mcp-server-bin">kubernetes-mcp-server-bin</a></td><td>0.1.3</td><td nowrap>github-release</td><td nowrap>2026-11-13</td><td nowrap>✅ up to date</td></tr>
 <tr><td><a href="https://aur.archlinux.org/pkgbase/kubernetes-mcp-server">kubernetes-mcp-server</a></td><td>0.1.3</td><td nowrap>github-release</td><td nowrap>2026-11-13</td><td nowrap>✅ up to date</td></tr>
-<tr><td><a href="https://aur.archlinux.org/pkgbase/lakekeeper-bin">lakekeeper-bin</a></td><td>0.15.0</td><td nowrap>github-release</td><td nowrap>2026-11-06</td><td nowrap>❌ failed</td></tr>
-<tr><td><a href="https://aur.archlinux.org/pkgbase/lakekeeper">lakekeeper</a></td><td>0.15.1</td><td nowrap>github-release</td><td nowrap>2026-11-15</td><td nowrap>📦 updated to 0.15.1</td></tr>
+<tr><td><a href="https://aur.archlinux.org/pkgbase/lakekeeper-bin">lakekeeper-bin</a></td><td>0.15.1</td><td nowrap>github-release</td><td nowrap>2026-11-15</td><td nowrap>📦 updated to 0.15.1</td></tr>
+<tr><td><a href="https://aur.archlinux.org/pkgbase/lakekeeper">lakekeeper</a></td><td>0.15.1</td><td nowrap>github-release</td><td nowrap>2026-11-15</td><td nowrap>✅ up to date</td></tr>
 <tr><td><a href="https://aur.archlinux.org/pkgbase/liblinear">liblinear</a></td><td>2.50</td><td nowrap>webpage-scrape</td><td nowrap>-</td><td nowrap>✅ up to date</td></tr>
 <tr><td><a href="https://aur.archlinux.org/pkgbase/linux-exploit-suggester">linux-exploit-suggester</a></td><td>1.2</td><td nowrap>github-tag</td><td nowrap>-</td><td nowrap>✅ up to date</td></tr>
-<tr><td><a href="https://aur.archlinux.org/pkgbase/liquidsoap-bin">liquidsoap-bin</a></td><td>2.5.0rc1</td><td nowrap>github-tag</td><td nowrap>-</td><td nowrap>⏳ 2.5.0rc2 pending</td></tr>
+<tr><td><a href="https://aur.archlinux.org/pkgbase/liquidsoap-bin">liquidsoap-bin</a></td><td>2.5.0rc2</td><td nowrap>github-tag</td><td nowrap>2026-11-15</td><td nowrap>📦 updated to 2.5.0rc2</td></tr>
 <tr><td><a href="https://aur.archlinux.org/pkgbase/lttng-tools">lttng-tools</a></td><td>2.16.0</td><td nowrap>github-tag</td><td nowrap>-</td><td nowrap>✅ up to date</td></tr>
 <tr><td><a href="https://aur.archlinux.org/pkgbase/maddy">maddy</a></td><td>0.9.7</td><td nowrap>github-release</td><td nowrap>-</td><td nowrap>✅ up to date</td></tr>
 <tr><td><a href="https://aur.archlinux.org/pkgbase/marp-cli-bin">marp-cli-bin</a></td><td>4.5.1</td><td nowrap>github-release</td><td nowrap>2026-09-06</td><td nowrap>✅ up to date</td></tr>
@@ -106,7 +106,7 @@
 <tr><td><a href="https://aur.archlinux.org/pkgbase/pgtui">pgtui</a></td><td>0.3.0</td><td nowrap>github-release</td><td nowrap>-</td><td nowrap>✅ up to date</td></tr>
 <tr><td><a href="https://aur.archlinux.org/pkgbase/phpantom_lsp-bin">phpantom_lsp-bin</a></td><td>0.11.1</td><td nowrap>github-release</td><td nowrap>-</td><td nowrap>✅ up to date</td></tr>
 <tr><td><a href="https://aur.archlinux.org/pkgbase/pixtuoid">pixtuoid</a></td><td>0.23.0</td><td nowrap>github-release</td><td nowrap>2026-11-13</td><td nowrap>✅ up to date</td></tr>
-<tr><td><a href="https://aur.archlinux.org/pkgbase/plasma-drop">plasma-drop</a></td><td>1.18.1</td><td nowrap>github-release</td><td nowrap>2026-11-15</td><td nowrap>📦 updated to 1.18.1</td></tr>
+<tr><td><a href="https://aur.archlinux.org/pkgbase/plasma-drop">plasma-drop</a></td><td>1.18.1</td><td nowrap>github-release</td><td nowrap>2026-11-15</td><td nowrap>✅ up to date</td></tr>
 <tr><td><a href="https://aur.archlinux.org/pkgbase/pocket-tts-bin">pocket-tts-bin</a></td><td>4.0.1</td><td nowrap>github-release</td><td nowrap>-</td><td nowrap>✅ up to date</td></tr>
 <tr><td><a href="https://aur.archlinux.org/pkgbase/pocket-tts-git">pocket-tts-git</a></td><td>r217.306918e</td><td nowrap>git-latest</td><td nowrap>2026-11-12</td><td nowrap>💤 next update 2026-11-19</td></tr>
 <tr><td><a href="https://aur.archlinux.org/pkgbase/pocket-tts">pocket-tts</a></td><td>4.0.1</td><td nowrap>github-release</td><td nowrap>-</td><td nowrap>✅ up to date</td></tr>
@@ -142,5 +142,5 @@
 <tr><td><a href="https://aur.archlinux.org/pkgbase/zero">zero</a></td><td>0.13.0</td><td nowrap>github-release</td><td nowrap>-</td><td nowrap>✅ up to date</td></tr>
 </table>
 
-aurtomator 0.12.4
+aurtomator 0.12.5
 <!-- PACKAGES:END -->
