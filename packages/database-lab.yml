@@ -1,0 +1,5 @@
+name: database-lab
+strategy: gitlab-tag
+upstream:
+  host: gitlab.com
+  project: postgres-ai/database-lab
