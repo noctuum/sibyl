@@ -1,0 +1,4 @@
+name: npq
+strategy: github-release
+upstream:
+  project: lirantal/npq
