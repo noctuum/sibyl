@@ -3,3 +3,5 @@ strategy: gitlab-tag
 upstream:
   host: gitlab.com
   project: postgres-ai/database-lab
+last_updated: "2026-11-16"
+current: 4.2.2

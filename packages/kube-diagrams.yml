@@ -2,3 +2,5 @@ name: kube-diagrams
 strategy: github-release
 upstream:
   project: philippemerle/KubeDiagrams
+last_updated: "2026-11-16"
+current: 0.9.0

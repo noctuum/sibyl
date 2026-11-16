@@ -2,3 +2,5 @@ name: graphviz2drawio
 strategy: pypi
 upstream:
   registry: graphviz2drawio
+last_updated: "2026-11-16"
+current: 1.2.0

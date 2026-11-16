@@ -2,3 +2,5 @@ name: openkermit
 strategy: github-release
 upstream:
   project: OpenKermit/ckermit
+last_updated: "2026-11-16"
+current: 11.1.518
