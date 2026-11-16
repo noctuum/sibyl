@@ -288,3 +288,4 @@ time,package,event,version,previous,run
 2026-11-16T18:16:35Z,openkermit-git,up_to_date,r795.99174cf,,43925895824
 2026-11-16T18:16:35Z,paranoia-bin,added,,,43925895824
 2026-11-16T18:16:35Z,paranoia-bin,up_to_date,0.9.0,,43925895824
+2026-11-16T20:35:07Z,dbhub-mcp-server,updated,1.7.0,1.6.1,43950375641
