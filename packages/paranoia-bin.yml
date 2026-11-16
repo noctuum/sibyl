@@ -1,0 +1,4 @@
+name: paranoia-bin
+strategy: github-release
+upstream:
+  project: Altumptic/paranoia
