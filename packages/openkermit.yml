@@ -1,0 +1,4 @@
+name: openkermit
+strategy: github-release
+upstream:
+  project: OpenKermit/ckermit

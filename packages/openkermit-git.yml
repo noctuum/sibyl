@@ -1,0 +1,5 @@
+name: openkermit-git
+strategy: git-latest
+upstream:
+  type: github
+  project: OpenKermit/ckermit
