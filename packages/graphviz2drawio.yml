@@ -1,0 +1,4 @@
+name: graphviz2drawio
+strategy: pypi
+upstream:
+  registry: graphviz2drawio
