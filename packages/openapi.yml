@@ -2,5 +2,5 @@ name: openapi
 strategy: github-release
 upstream:
   project: speakeasy-api/openapi
-current: 1.26.4
-last_updated: "2026-11-16"
+current: 1.26.5
+last_updated: "2026-11-17"

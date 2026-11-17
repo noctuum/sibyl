@@ -3,5 +3,5 @@ strategy: git-latest
 upstream:
   type: github
   project: centrifugal/centrifugo
-current: r2017.4b6d86e
-last_updated: "2026-11-10"
+current: r2020.4236fd8
+last_updated: "2026-11-17"
