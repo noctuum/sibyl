@@ -308,3 +308,5 @@ time,package,event,version,previous,run
 2026-11-17T11:51:30Z,ryl-bin,updated,0.30.0,0.29.0,44076446339
 2026-11-17T11:51:30Z,zero,updated,0.14.0,0.13.0,44076446339
 2026-11-17T11:51:30Z,zero-bin,updated,0.14.0,0.13.0,44076446339
+2026-11-17T13:34:32Z,chainloop-cli,updated,1.135.4,1.135.3,44092903880
+2026-11-17T13:34:32Z,chainloop-cli-bin,updated,1.135.4,1.135.3,44092903880
