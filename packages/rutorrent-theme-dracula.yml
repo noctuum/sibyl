@@ -1,0 +1,4 @@
+name: rutorrent-theme-dracula
+strategy: github-release
+upstream:
+  project: dracula/rutorrent
