@@ -314,3 +314,6 @@ time,package,event,version,previous,run
 2026-11-17T22:32:52Z,oasdiff-bin,updated,1.39.0,1.38.0,44189863373
 2026-11-17T22:32:52Z,whodb-bin,updated,0.139.0,0.138.0,44189863373
 2026-11-17T22:32:52Z,whodb-cli-bin,updated,0.139.0,0.138.0,44189863373
+2026-11-18T03:20:56Z,mp4ff-git,updated,r1350.5446070,r1328.8a0670f,44228977191
+2026-11-18T03:20:56Z,rutorrent-theme-dracula,added,,,44228977191
+2026-11-18T03:20:56Z,rutorrent-theme-dracula,up_to_date,0.3.4,,44228977191

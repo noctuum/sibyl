@@ -3,5 +3,5 @@ strategy: git-latest
 upstream:
   type: github
   project: Eyevinn/mp4ff
-current: r1328.8a0670f
-last_updated: "2026-11-11"
+current: r1350.5446070
+last_updated: "2026-11-18"
