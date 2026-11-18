@@ -318,3 +318,6 @@ time,package,event,version,previous,run
 2026-11-18T03:20:56Z,rutorrent-theme-dracula,added,,,44228977191
 2026-11-18T03:20:56Z,rutorrent-theme-dracula,up_to_date,0.3.4,,44228977191
 2026-11-18T14:07:33Z,mesheryctl-bin,updated,1.0.82,1.0.81,44319291900
+2026-11-18T22:04:30Z,dbhub-mcp-server,updated,2.0.0,1.7.1,44406689317
+2026-11-18T22:04:30Z,openapi,updated,1.28.0,1.27.0,44406689317
+2026-11-18T22:04:30Z,openapi-bin,updated,1.28.0,1.27.0,44406689317
