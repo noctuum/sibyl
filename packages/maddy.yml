@@ -2,4 +2,5 @@ name: maddy
 strategy: github-release
 upstream:
   project: foxcpp/maddy
-current: 0.9.7
+current: 0.9.8
+last_updated: "2026-11-19"
