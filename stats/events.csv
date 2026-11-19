@@ -321,3 +321,6 @@ time,package,event,version,previous,run
 2026-11-18T22:04:30Z,dbhub-mcp-server,updated,2.0.0,1.7.1,44406689317
 2026-11-18T22:04:30Z,openapi,updated,1.28.0,1.27.0,44406689317
 2026-11-18T22:04:30Z,openapi-bin,updated,1.28.0,1.27.0,44406689317
+2026-11-19T03:02:08Z,pocket-tts-git,updated,r226.a4a6054,r217.306918e,44447693272
+2026-11-19T03:02:08Z,scorecard,added,,,44447693272
+2026-11-19T03:02:08Z,scorecard,up_to_date,5.6.0,,44447693272

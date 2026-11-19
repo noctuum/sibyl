@@ -29,7 +29,7 @@
 <tr><td><a href="https://aur.archlinux.org/pkgbase/chainloop-cli">chainloop-cli</a></td><td>1.135.4</td><td nowrap>github-release</td><td nowrap>2026-11-17</td><td nowrap>✅ up to date</td></tr>
 <tr><td><a href="https://aur.archlinux.org/pkgbase/database-lab-git">database-lab-git</a></td><td>r1957.5511f3f</td><td nowrap>git-latest</td><td nowrap>2026-11-16</td><td nowrap>✅ up to date</td></tr>
 <tr><td><a href="https://aur.archlinux.org/pkgbase/database-lab">database-lab</a></td><td>4.2.2</td><td nowrap>gitlab-tag</td><td nowrap>2026-11-16</td><td nowrap>✅ up to date</td></tr>
-<tr><td><a href="https://aur.archlinux.org/pkgbase/dbhub-mcp-server">dbhub-mcp-server</a></td><td>2.0.0</td><td nowrap>npm</td><td nowrap>2026-11-18</td><td nowrap>📦 updated to 2.0.0</td></tr>
+<tr><td><a href="https://aur.archlinux.org/pkgbase/dbhub-mcp-server">dbhub-mcp-server</a></td><td>2.0.0</td><td nowrap>npm</td><td nowrap>2026-11-18</td><td nowrap>✅ up to date</td></tr>
 <tr><td><a href="https://aur.archlinux.org/pkgbase/deja-vu-bin">deja-vu-bin</a></td><td>0.24.2</td><td nowrap>github-release</td><td nowrap>2026-11-12</td><td nowrap>✅ up to date</td></tr>
 <tr><td><a href="https://aur.archlinux.org/pkgbase/deja-vu">deja-vu</a></td><td>0.24.2</td><td nowrap>github-release</td><td nowrap>2026-11-12</td><td nowrap>✅ up to date</td></tr>
 <tr><td><a href="https://aur.archlinux.org/pkgbase/disc-image-studio-bin">disc-image-studio-bin</a></td><td>1.6.0</td><td nowrap>github-release</td><td nowrap>2026-11-15</td><td nowrap>✅ up to date</td></tr>
@@ -101,8 +101,8 @@
 <tr><td><a href="https://aur.archlinux.org/pkgbase/npq">npq</a></td><td>3.27.4</td><td nowrap>github-release</td><td nowrap>2026-11-16</td><td nowrap>✅ up to date</td></tr>
 <tr><td><a href="https://aur.archlinux.org/pkgbase/oasdiff-bin">oasdiff-bin</a></td><td>1.39.0</td><td nowrap>github-release</td><td nowrap>2026-11-17</td><td nowrap>✅ up to date</td></tr>
 <tr><td><a href="https://aur.archlinux.org/pkgbase/oasdiff">oasdiff</a></td><td>1.39.0</td><td nowrap>github-release</td><td nowrap>2026-11-17</td><td nowrap>✅ up to date</td></tr>
-<tr><td><a href="https://aur.archlinux.org/pkgbase/openapi-bin">openapi-bin</a></td><td>1.28.0</td><td nowrap>github-release</td><td nowrap>2026-11-18</td><td nowrap>📦 updated to 1.28.0</td></tr>
-<tr><td><a href="https://aur.archlinux.org/pkgbase/openapi">openapi</a></td><td>1.28.0</td><td nowrap>github-release</td><td nowrap>2026-11-18</td><td nowrap>📦 updated to 1.28.0</td></tr>
+<tr><td><a href="https://aur.archlinux.org/pkgbase/openapi-bin">openapi-bin</a></td><td>1.28.0</td><td nowrap>github-release</td><td nowrap>2026-11-18</td><td nowrap>✅ up to date</td></tr>
+<tr><td><a href="https://aur.archlinux.org/pkgbase/openapi">openapi</a></td><td>1.28.0</td><td nowrap>github-release</td><td nowrap>2026-11-18</td><td nowrap>✅ up to date</td></tr>
 <tr><td><a href="https://aur.archlinux.org/pkgbase/opencrabs-bin">opencrabs-bin</a></td><td>0.6.0</td><td nowrap>github-release</td><td nowrap>2026-11-14</td><td nowrap>✅ up to date</td></tr>
 <tr><td><a href="https://aur.archlinux.org/pkgbase/opencrabs">opencrabs</a></td><td>0.6.0</td><td nowrap>github-release</td><td nowrap>2026-11-14</td><td nowrap>✅ up to date</td></tr>
 <tr><td><a href="https://aur.archlinux.org/pkgbase/openkermit-git">openkermit-git</a></td><td>r795.99174cf</td><td nowrap>git-latest</td><td nowrap>2026-11-16</td><td nowrap>✅ up to date</td></tr>
@@ -118,7 +118,7 @@
 <tr><td><a href="https://aur.archlinux.org/pkgbase/pixtuoid">pixtuoid</a></td><td>0.23.0</td><td nowrap>github-release</td><td nowrap>2026-11-13</td><td nowrap>✅ up to date</td></tr>
 <tr><td><a href="https://aur.archlinux.org/pkgbase/plasma-drop">plasma-drop</a></td><td>1.18.1</td><td nowrap>github-release</td><td nowrap>2026-11-15</td><td nowrap>✅ up to date</td></tr>
 <tr><td><a href="https://aur.archlinux.org/pkgbase/pocket-tts-bin">pocket-tts-bin</a></td><td>4.0.1</td><td nowrap>github-release</td><td nowrap>-</td><td nowrap>✅ up to date</td></tr>
-<tr><td><a href="https://aur.archlinux.org/pkgbase/pocket-tts-git">pocket-tts-git</a></td><td>r217.306918e</td><td nowrap>git-latest</td><td nowrap>2026-11-12</td><td nowrap>💤 next update 2026-11-19</td></tr>
+<tr><td><a href="https://aur.archlinux.org/pkgbase/pocket-tts-git">pocket-tts-git</a></td><td>r226.a4a6054</td><td nowrap>git-latest</td><td nowrap>2026-11-19</td><td nowrap>📦 updated to r226.a4a6054</td></tr>
 <tr><td><a href="https://aur.archlinux.org/pkgbase/pocket-tts">pocket-tts</a></td><td>4.0.1</td><td nowrap>github-release</td><td nowrap>-</td><td nowrap>✅ up to date</td></tr>
 <tr><td><a href="https://aur.archlinux.org/pkgbase/roughenough-bin">roughenough-bin</a></td><td>2.2.0</td><td nowrap>github-release</td><td nowrap>-</td><td nowrap>✅ up to date</td></tr>
 <tr><td><a href="https://aur.archlinux.org/pkgbase/roughenough">roughenough</a></td><td>2.2.0</td><td nowrap>github-release</td><td nowrap>-</td><td nowrap>✅ up to date</td></tr>
@@ -127,6 +127,7 @@
 <tr><td><a href="https://aur.archlinux.org/pkgbase/rutorrent-theme-dracula">rutorrent-theme-dracula</a></td><td>0.3.4</td><td nowrap>github-release</td><td nowrap>2026-11-18</td><td nowrap>✅ up to date</td></tr>
 <tr><td><a href="https://aur.archlinux.org/pkgbase/ryl-bin">ryl-bin</a></td><td>0.30.0</td><td nowrap>github-release</td><td nowrap>2026-11-17</td><td nowrap>✅ up to date</td></tr>
 <tr><td><a href="https://aur.archlinux.org/pkgbase/ryl">ryl</a></td><td>0.30.0</td><td nowrap>github-release</td><td nowrap>2026-11-17</td><td nowrap>✅ up to date</td></tr>
+<tr><td><a href="https://aur.archlinux.org/pkgbase/scorecard">scorecard</a></td><td>5.6.0</td><td nowrap>github-release</td><td nowrap>2026-11-19</td><td nowrap>✅ up to date</td></tr>
 <tr><td><a href="https://aur.archlinux.org/pkgbase/sherpa-onnx-bin">sherpa-onnx-bin</a></td><td>2.0.1</td><td nowrap>github-release</td><td nowrap>2026-10-26</td><td nowrap>✅ up to date</td></tr>
 <tr><td><a href="https://aur.archlinux.org/pkgbase/sherpa-onnx-piper-voice-ru-denis">sherpa-onnx-piper-voice-ru-denis</a></td><td>20251202</td><td nowrap>github-asset</td><td nowrap>-</td><td nowrap>✅ up to date</td></tr>
 <tr><td><a href="https://aur.archlinux.org/pkgbase/sherpa-onnx-piper-voice-ru-dmitri">sherpa-onnx-piper-voice-ru-dmitri</a></td><td>20251202</td><td nowrap>github-asset</td><td nowrap>-</td><td nowrap>✅ up to date</td></tr>
