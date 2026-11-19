@@ -324,3 +324,4 @@ time,package,event,version,previous,run
 2026-11-19T03:02:08Z,pocket-tts-git,updated,r226.a4a6054,r217.306918e,44447693272
 2026-11-19T03:02:08Z,scorecard,added,,,44447693272
 2026-11-19T03:02:08Z,scorecard,up_to_date,5.6.0,,44447693272
+2026-11-19T03:34:19Z,scorecard,updated,5.7.0,5.6.0,44451632632
