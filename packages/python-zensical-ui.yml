@@ -3,3 +3,5 @@ strategy: webpage-scrape
 upstream:
   url: https://pypi.org/pypi/zensical/json
   pattern: '"requires_dist":\["cl[^"]*","ji[^"]*","ma[^"]*","pa[^"]*","pyg[^"]*","pym[^"]*","pyy[^"]*","to[^"]*","zensical-ui==([0-9.]+)"\]'
+last_updated: "2026-11-20"
+current: 0.0.43

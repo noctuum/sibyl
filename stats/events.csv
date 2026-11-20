@@ -354,3 +354,7 @@ time,package,event,version,previous,run
 2026-11-20T11:59:23Z,fallow-bin,updated,3.45.0,3.44.0,44730973000
 2026-11-20T11:59:23Z,jdk-temurin-ea-bin,updated,28+25,28+24,44730973000
 2026-11-20T11:59:23Z,neovim-nightly-bin,updated,0.13.0+dev+2148+g2843068c7a,0.13.0+dev+2146+g158f7d603e,44730973000
+2026-11-20T20:30:16Z,dbhub-mcp-server,updated,2.0.1,2.0.0,44810555896
+2026-11-20T20:30:16Z,elp-bin,updated,2026.11.20,2026.11.19,44810555896
+2026-11-20T20:30:16Z,python-zensical-ui,added,,,44810555896
+2026-11-20T20:30:16Z,python-zensical-ui,up_to_date,0.0.43,,44810555896
