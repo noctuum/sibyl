@@ -3,5 +3,5 @@ strategy: git-latest
 upstream:
   type: github
   project: GreenmaskIO/greenmask
-current: r633.e14616f
-last_updated: "2026-11-13"
+current: r634.6d609ec
+last_updated: "2026-11-20"

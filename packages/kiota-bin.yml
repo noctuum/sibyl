@@ -2,4 +2,5 @@ name: kiota-bin
 strategy: github-release
 upstream:
   project: microsoft/kiota
-current: 1.38.0
+current: 1.39.0
+last_updated: "2026-11-20"
