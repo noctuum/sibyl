@@ -1,0 +1,5 @@
+name: python-zensical-ui
+strategy: webpage-scrape
+upstream:
+  url: https://pypi.org/pypi/zensical/json
+  pattern: '"requires_dist":\["cl[^"]*","ji[^"]*","ma[^"]*","pa[^"]*","pyg[^"]*","pym[^"]*","pyy[^"]*","to[^"]*","zensical-ui==([0-9.]+)"\]'
