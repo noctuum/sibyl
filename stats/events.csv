@@ -358,3 +358,7 @@ time,package,event,version,previous,run
 2026-11-20T20:30:16Z,elp-bin,updated,2026.11.20,2026.11.19,44810555896
 2026-11-20T20:30:16Z,python-zensical-ui,added,,,44810555896
 2026-11-20T20:30:16Z,python-zensical-ui,up_to_date,0.0.43,,44810555896
+2026-11-21T02:23:18Z,mcp-toolbox,updated,1.18.0,1.17.0,44854870689
+2026-11-21T02:23:18Z,mcp-toolbox-bin,updated,1.18.0,1.17.0,44854870689
+2026-11-21T02:23:18Z,memos-git,updated,r4981.7e4cbb7,r4947.063fafb,44854870689
+2026-11-21T02:23:18Z,openkermit,updated,11.1.519,11.1.518,44854870689
