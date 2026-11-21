@@ -80,13 +80,13 @@
 <tr><td><a href="https://aur.archlinux.org/pkgbase/marp-cli-bin">marp-cli-bin</a></td><td>4.5.1</td><td nowrap>github-release</td><td nowrap>2026-09-06</td><td nowrap>✅ up to date</td></tr>
 <tr><td><a href="https://aur.archlinux.org/pkgbase/mcp-grafana-bin">mcp-grafana-bin</a></td><td>2.3.0</td><td nowrap>github-release</td><td nowrap>2026-11-10</td><td nowrap>✅ up to date</td></tr>
 <tr><td><a href="https://aur.archlinux.org/pkgbase/mcp-grafana">mcp-grafana</a></td><td>2.3.0</td><td nowrap>github-release</td><td nowrap>2026-11-10</td><td nowrap>✅ up to date</td></tr>
-<tr><td><a href="https://aur.archlinux.org/pkgbase/mcp-toolbox-bin">mcp-toolbox-bin</a></td><td>1.18.0</td><td nowrap>github-release</td><td nowrap>2026-11-21</td><td nowrap>📦 updated to 1.18.0</td></tr>
+<tr><td><a href="https://aur.archlinux.org/pkgbase/mcp-toolbox-bin">mcp-toolbox-bin</a></td><td>1.18.0</td><td nowrap>github-release</td><td nowrap>2026-11-21</td><td nowrap>✅ up to date</td></tr>
 <tr><td><a href="https://aur.archlinux.org/pkgbase/mcp-toolbox-git">mcp-toolbox-git</a></td><td>r2446.a5dc5d4</td><td nowrap>git-latest</td><td nowrap>2026-11-20</td><td nowrap>💤 next update 2026-11-27</td></tr>
-<tr><td><a href="https://aur.archlinux.org/pkgbase/mcp-toolbox">mcp-toolbox</a></td><td>1.18.0</td><td nowrap>github-release</td><td nowrap>2026-11-21</td><td nowrap>📦 updated to 1.18.0</td></tr>
+<tr><td><a href="https://aur.archlinux.org/pkgbase/mcp-toolbox">mcp-toolbox</a></td><td>1.18.0</td><td nowrap>github-release</td><td nowrap>2026-11-21</td><td nowrap>✅ up to date</td></tr>
 <tr><td><a href="https://aur.archlinux.org/pkgbase/mdbook-git">mdbook-git</a></td><td>0.5.4.r164.g7f307f5</td><td nowrap>git-latest</td><td nowrap>2026-11-20</td><td nowrap>✅ up to date</td></tr>
 <tr><td><a href="https://aur.archlinux.org/pkgbase/mdbook-toc">mdbook-toc</a></td><td>0.15.4</td><td nowrap>crates</td><td nowrap>-</td><td nowrap>✅ up to date</td></tr>
 <tr><td><a href="https://aur.archlinux.org/pkgbase/memos-bin">memos-bin</a></td><td>26.11.1</td><td nowrap>github-release</td><td nowrap>2026-11-16</td><td nowrap>✅ up to date</td></tr>
-<tr><td><a href="https://aur.archlinux.org/pkgbase/memos-git">memos-git</a></td><td>r4981.7e4cbb7</td><td nowrap>git-latest</td><td nowrap>2026-11-21</td><td nowrap>📦 updated to r4981.7e4cbb7</td></tr>
+<tr><td><a href="https://aur.archlinux.org/pkgbase/memos-git">memos-git</a></td><td>r4981.7e4cbb7</td><td nowrap>git-latest</td><td nowrap>2026-11-21</td><td nowrap>✅ up to date</td></tr>
 <tr><td><a href="https://aur.archlinux.org/pkgbase/memos">memos</a></td><td>26.11.1</td><td nowrap>github-release</td><td nowrap>2026-11-16</td><td nowrap>✅ up to date</td></tr>
 <tr><td><a href="https://aur.archlinux.org/pkgbase/merman-bin">merman-bin</a></td><td>0.10.0</td><td nowrap>github-release</td><td nowrap>2026-11-12</td><td nowrap>✅ up to date</td></tr>
 <tr><td><a href="https://aur.archlinux.org/pkgbase/merman">merman</a></td><td>0.10.0</td><td nowrap>github-release</td><td nowrap>2026-11-12</td><td nowrap>✅ up to date</td></tr>
@@ -97,7 +97,7 @@
 <tr><td><a href="https://aur.archlinux.org/pkgbase/mp4ff">mp4ff</a></td><td>0.63.0</td><td nowrap>github-release</td><td nowrap>2026-11-13</td><td nowrap>✅ up to date</td></tr>
 <tr><td><a href="https://aur.archlinux.org/pkgbase/neo4j-mcp-bin">neo4j-mcp-bin</a></td><td>2.1.1</td><td nowrap>github-release</td><td nowrap>2026-11-11</td><td nowrap>✅ up to date</td></tr>
 <tr><td><a href="https://aur.archlinux.org/pkgbase/neo4j-mcp">neo4j-mcp</a></td><td>2.1.1</td><td nowrap>github-release</td><td nowrap>2026-11-11</td><td nowrap>✅ up to date</td></tr>
-<tr><td><a href="https://aur.archlinux.org/pkgbase/neovim-nightly-bin">neovim-nightly-bin</a></td><td>0.13.0+dev+2148+g2843068c7a</td><td nowrap>github-nightly</td><td nowrap>2026-11-20</td><td nowrap>✅ up to date</td></tr>
+<tr><td><a href="https://aur.archlinux.org/pkgbase/neovim-nightly-bin">neovim-nightly-bin</a></td><td>0.13.0+dev+2152+gf2f87f5fc5</td><td nowrap>github-nightly</td><td nowrap>2026-11-21</td><td nowrap>📦 updated to 0.13.0+dev+2152+gf2f87f5fc5</td></tr>
 <tr><td><a href="https://aur.archlinux.org/pkgbase/npq">npq</a></td><td>3.27.4</td><td nowrap>github-release</td><td nowrap>2026-11-16</td><td nowrap>✅ up to date</td></tr>
 <tr><td><a href="https://aur.archlinux.org/pkgbase/oasdiff-bin">oasdiff-bin</a></td><td>1.39.0</td><td nowrap>github-release</td><td nowrap>2026-11-17</td><td nowrap>✅ up to date</td></tr>
 <tr><td><a href="https://aur.archlinux.org/pkgbase/oasdiff">oasdiff</a></td><td>1.39.0</td><td nowrap>github-release</td><td nowrap>2026-11-17</td><td nowrap>✅ up to date</td></tr>
@@ -106,7 +106,7 @@
 <tr><td><a href="https://aur.archlinux.org/pkgbase/opencrabs-bin">opencrabs-bin</a></td><td>0.6.0</td><td nowrap>github-release</td><td nowrap>2026-11-14</td><td nowrap>✅ up to date</td></tr>
 <tr><td><a href="https://aur.archlinux.org/pkgbase/opencrabs">opencrabs</a></td><td>0.6.0</td><td nowrap>github-release</td><td nowrap>2026-11-14</td><td nowrap>✅ up to date</td></tr>
 <tr><td><a href="https://aur.archlinux.org/pkgbase/openkermit-git">openkermit-git</a></td><td>r795.99174cf</td><td nowrap>git-latest</td><td nowrap>2026-11-16</td><td nowrap>💤 next update 2026-11-23</td></tr>
-<tr><td><a href="https://aur.archlinux.org/pkgbase/openkermit">openkermit</a></td><td>11.1.519</td><td nowrap>github-release</td><td nowrap>2026-11-21</td><td nowrap>📦 updated to 11.1.519</td></tr>
+<tr><td><a href="https://aur.archlinux.org/pkgbase/openkermit">openkermit</a></td><td>11.1.519</td><td nowrap>github-release</td><td nowrap>2026-11-21</td><td nowrap>✅ up to date</td></tr>
 <tr><td><a href="https://aur.archlinux.org/pkgbase/paranoia-bin">paranoia-bin</a></td><td>0.9.0</td><td nowrap>github-release</td><td nowrap>2026-11-16</td><td nowrap>✅ up to date</td></tr>
 <tr><td><a href="https://aur.archlinux.org/pkgbase/pg-schema-diff">pg-schema-diff</a></td><td>1.0.9</td><td nowrap>github-release</td><td nowrap>-</td><td nowrap>✅ up to date</td></tr>
 <tr><td><a href="https://aur.archlinux.org/pkgbase/pgconsole">pgconsole</a></td><td>1.3.0</td><td nowrap>npm</td><td nowrap>-</td><td nowrap>✅ up to date</td></tr>
