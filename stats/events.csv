@@ -372,3 +372,4 @@ time,package,event,version,previous,run
 2026-11-21T23:25:15Z,fallow-bin,updated,3.46.0,3.45.0,44960994742
 2026-11-21T23:25:15Z,merman,updated,0.11.0,0.10.0,44960994742
 2026-11-21T23:25:15Z,merman-bin,updated,0.11.0,0.10.0,44960994742
+2026-11-22T03:23:05Z,mesheryctl-bin,updated,1.0.83,1.0.82,44979894024
