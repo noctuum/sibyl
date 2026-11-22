@@ -2,5 +2,5 @@ name: kirocrew-bin
 strategy: github-release
 upstream:
   project: kirodotdev/KiroCrew
-last_updated: "2026-11-19"
-current: 0.13.0
+last_updated: "2026-11-22"
+current: 0.13.1

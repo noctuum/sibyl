@@ -373,3 +373,9 @@ time,package,event,version,previous,run
 2026-11-21T23:25:15Z,merman,updated,0.11.0,0.10.0,44960994742
 2026-11-21T23:25:15Z,merman-bin,updated,0.11.0,0.10.0,44960994742
 2026-11-22T03:23:05Z,mesheryctl-bin,updated,1.0.83,1.0.82,44979894024
+2026-11-22T11:49:14Z,kirocrew-bin,updated,0.13.1,0.13.0,45018361992
+2026-11-22T11:49:14Z,liblinear,check_failed,2.50,,45018361992
+2026-11-22T11:49:14Z,memos,updated,26.11.2,26.11.1,45018361992
+2026-11-22T11:49:14Z,memos-bin,updated,26.11.2,26.11.1,45018361992
+2026-11-22T11:49:14Z,neovim-nightly-bin,updated,0.13.0+dev+2162+gbd54353246,0.13.0+dev+2152+gf2f87f5fc5,45018361992
+2026-11-22T11:49:14Z,sherpa-onnx-bin,update_failed,2.0.2,,45018361992
