@@ -2,10 +2,11 @@ name: liquidsoap
 strategy: github-tag
 upstream:
   project: savonet/liquidsoap
-  tag_version_regex: '^v([0-9.]+)$'
+  tag_version_regex: '^v([0-9.]+(-rc[0-9]+)?)$'
+pkgver_dash: ''
 alerts:
-  - match: '^2\.5\.'
+  - match: '^2\.6\.'
     hold: true
-    note: New minor version; check the opam dependencies, camomile-embedded replaces the camomile data
+    note: New minor version; check the OCaml version, the opam dependencies and the bindings in src/modules/synced
 last_updated: "2026-11-22"
 current: 2.4.6
