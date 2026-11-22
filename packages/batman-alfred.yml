@@ -1,0 +1,4 @@
+name: batman-alfred
+strategy: github-tag
+upstream:
+  project: open-mesh-mirror/alfred
