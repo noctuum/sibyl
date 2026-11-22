@@ -2,3 +2,5 @@ name: batman-alfred
 strategy: github-tag
 upstream:
   project: open-mesh-mirror/alfred
+last_updated: "2026-11-22"
+current: "2026.4"
