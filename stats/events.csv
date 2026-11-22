@@ -387,3 +387,5 @@ time,package,event,version,previous,run
 2026-11-22T19:48:57Z,sherpa-onnx-bin,updated,2.0.3,2.0.2,45062074870
 2026-11-22T21:42:59Z,liquidsoap,added,,,45072908876
 2026-11-22T21:42:59Z,liquidsoap,up_to_date,2.4.6,,45072908876
+2026-11-22T23:16:11Z,liquidsoap,updated,2.5.0rc2,2.4.6,45081584920
+2026-11-22T23:16:11Z,plasma-drop,updated,1.18.2,1.18.1,45081584920

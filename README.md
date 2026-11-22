@@ -76,7 +76,7 @@
 <tr><td><a href="https://aur.archlinux.org/pkgbase/liblinear">liblinear</a></td><td>2.50</td><td nowrap>webpage-scrape</td><td nowrap>-</td><td nowrap>❌ failed</td></tr>
 <tr><td><a href="https://aur.archlinux.org/pkgbase/linux-exploit-suggester">linux-exploit-suggester</a></td><td>1.2</td><td nowrap>github-tag</td><td nowrap>-</td><td nowrap>✅ up to date</td></tr>
 <tr><td><a href="https://aur.archlinux.org/pkgbase/liquidsoap-bin">liquidsoap-bin</a></td><td>2.5.0rc2</td><td nowrap>github-tag</td><td nowrap>2026-11-15</td><td nowrap>✅ up to date</td></tr>
-<tr><td><a href="https://aur.archlinux.org/pkgbase/liquidsoap">liquidsoap</a></td><td>2.4.6</td><td nowrap>github-tag</td><td nowrap>2026-11-22</td><td nowrap>✅ up to date</td></tr>
+<tr><td><a href="https://aur.archlinux.org/pkgbase/liquidsoap">liquidsoap</a></td><td>2.5.0rc2</td><td nowrap>github-tag</td><td nowrap>2026-11-22</td><td nowrap>✅ up to date</td></tr>
 <tr><td><a href="https://aur.archlinux.org/pkgbase/lttng-tools">lttng-tools</a></td><td>2.16.0</td><td nowrap>github-tag</td><td nowrap>-</td><td nowrap>✅ up to date</td></tr>
 <tr><td><a href="https://aur.archlinux.org/pkgbase/maddy">maddy</a></td><td>0.9.8</td><td nowrap>github-release</td><td nowrap>2026-11-19</td><td nowrap>✅ up to date</td></tr>
 <tr><td><a href="https://aur.archlinux.org/pkgbase/marp-cli-bin">marp-cli-bin</a></td><td>4.5.1</td><td nowrap>github-release</td><td nowrap>2026-09-06</td><td nowrap>✅ up to date</td></tr>
@@ -118,7 +118,7 @@
 <tr><td><a href="https://aur.archlinux.org/pkgbase/pgtui">pgtui</a></td><td>0.3.0</td><td nowrap>github-release</td><td nowrap>-</td><td nowrap>✅ up to date</td></tr>
 <tr><td><a href="https://aur.archlinux.org/pkgbase/phpantom_lsp-bin">phpantom_lsp-bin</a></td><td>0.11.1</td><td nowrap>github-release</td><td nowrap>-</td><td nowrap>✅ up to date</td></tr>
 <tr><td><a href="https://aur.archlinux.org/pkgbase/pixtuoid">pixtuoid</a></td><td>0.23.0</td><td nowrap>github-release</td><td nowrap>2026-11-13</td><td nowrap>✅ up to date</td></tr>
-<tr><td><a href="https://aur.archlinux.org/pkgbase/plasma-drop">plasma-drop</a></td><td>1.18.1</td><td nowrap>github-release</td><td nowrap>2026-11-15</td><td nowrap>✅ up to date</td></tr>
+<tr><td><a href="https://aur.archlinux.org/pkgbase/plasma-drop">plasma-drop</a></td><td>1.18.2</td><td nowrap>github-release</td><td nowrap>2026-11-22</td><td nowrap>📦 updated to 1.18.2</td></tr>
 <tr><td><a href="https://aur.archlinux.org/pkgbase/pocket-tts-bin">pocket-tts-bin</a></td><td>4.0.1</td><td nowrap>github-release</td><td nowrap>-</td><td nowrap>✅ up to date</td></tr>
 <tr><td><a href="https://aur.archlinux.org/pkgbase/pocket-tts-git">pocket-tts-git</a></td><td>r226.a4a6054</td><td nowrap>git-latest</td><td nowrap>2026-11-19</td><td nowrap>✅ up to date</td></tr>
 <tr><td><a href="https://aur.archlinux.org/pkgbase/pocket-tts">pocket-tts</a></td><td>4.0.1</td><td nowrap>github-release</td><td nowrap>-</td><td nowrap>✅ up to date</td></tr>

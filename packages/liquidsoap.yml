@@ -9,4 +9,4 @@ alerts:
     hold: true
     note: New minor version; check the OCaml version, the opam dependencies and the bindings in src/modules/synced
 last_updated: "2026-11-22"
-current: 2.4.6
+current: 2.5.0rc2
