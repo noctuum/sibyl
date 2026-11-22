@@ -7,3 +7,5 @@ alerts:
   - match: '^2\.5\.'
     hold: true
     note: New minor version; check the opam dependencies, camomile-embedded replaces the camomile data
+last_updated: "2026-11-22"
+current: 2.4.6

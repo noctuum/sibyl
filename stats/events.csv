@@ -385,3 +385,5 @@ time,package,event,version,previous,run
 2026-11-22T19:48:57Z,chainloop-cli-bin,updated,1.137.0,1.136.1,45062074870
 2026-11-22T19:48:57Z,openkermit,updated,11.1.520,11.1.519,45062074870
 2026-11-22T19:48:57Z,sherpa-onnx-bin,updated,2.0.3,2.0.2,45062074870
+2026-11-22T21:42:59Z,liquidsoap,added,,,45072908876
+2026-11-22T21:42:59Z,liquidsoap,up_to_date,2.4.6,,45072908876
