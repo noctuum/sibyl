@@ -2,5 +2,5 @@ name: neo4j-mcp
 strategy: github-release
 upstream:
   project: neo4j/mcp
-current: 2.1.1
-last_updated: "2026-11-11"
+current: 2.1.2
+last_updated: "2026-11-23"

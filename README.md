@@ -18,8 +18,8 @@
 
 <table>
 <tr><th>Package</th><th>Version</th><th>Strategy</th><th>Updated</th><th>Status</th></tr>
-<tr><td><a href="https://aur.archlinux.org/pkgbase/all-smi-bin">all-smi-bin</a></td><td>0.28.1</td><td nowrap>github-release</td><td nowrap>-</td><td nowrap>✅ up to date</td></tr>
-<tr><td><a href="https://aur.archlinux.org/pkgbase/all-smi">all-smi</a></td><td>0.28.1</td><td nowrap>github-release</td><td nowrap>-</td><td nowrap>✅ up to date</td></tr>
+<tr><td><a href="https://aur.archlinux.org/pkgbase/all-smi-bin">all-smi-bin</a></td><td>0.29.1</td><td nowrap>github-release</td><td nowrap>2026-11-23</td><td nowrap>📦 updated to 0.29.1</td></tr>
+<tr><td><a href="https://aur.archlinux.org/pkgbase/all-smi">all-smi</a></td><td>0.29.1</td><td nowrap>github-release</td><td nowrap>2026-11-23</td><td nowrap>📦 updated to 0.29.1</td></tr>
 <tr><td><a href="https://aur.archlinux.org/pkgbase/batman-alfred">batman-alfred</a></td><td>2026.4</td><td nowrap>github-tag</td><td nowrap>2026-11-22</td><td nowrap>✅ up to date</td></tr>
 <tr><td><a href="https://aur.archlinux.org/pkgbase/c2patool-bin">c2patool-bin</a></td><td>0.29.0</td><td nowrap>github-release</td><td nowrap>2026-11-13</td><td nowrap>✅ up to date</td></tr>
 <tr><td><a href="https://aur.archlinux.org/pkgbase/c2patool">c2patool</a></td><td>0.29.0</td><td nowrap>github-release</td><td nowrap>2026-11-13</td><td nowrap>✅ up to date</td></tr>
@@ -41,8 +41,8 @@
 <tr><td><a href="https://aur.archlinux.org/pkgbase/elp-bin">elp-bin</a></td><td>2026.11.20</td><td nowrap>github-release</td><td nowrap>2026-11-20</td><td nowrap>✅ up to date</td></tr>
 <tr><td><a href="https://aur.archlinux.org/pkgbase/evernote2md-bin">evernote2md-bin</a></td><td>0.23.0</td><td nowrap>github-release</td><td nowrap>-</td><td nowrap>✅ up to date</td></tr>
 <tr><td><a href="https://aur.archlinux.org/pkgbase/evernote2md">evernote2md</a></td><td>0.23.0</td><td nowrap>github-release</td><td nowrap>-</td><td nowrap>✅ up to date</td></tr>
-<tr><td><a href="https://aur.archlinux.org/pkgbase/fallow-bin">fallow-bin</a></td><td>3.46.0</td><td nowrap>github-release</td><td nowrap>2026-11-21</td><td nowrap>✅ up to date</td></tr>
-<tr><td><a href="https://aur.archlinux.org/pkgbase/fallow">fallow</a></td><td>3.46.0</td><td nowrap>github-release</td><td nowrap>2026-11-21</td><td nowrap>✅ up to date</td></tr>
+<tr><td><a href="https://aur.archlinux.org/pkgbase/fallow-bin">fallow-bin</a></td><td>3.47.0</td><td nowrap>github-release</td><td nowrap>2026-11-23</td><td nowrap>📦 updated to 3.47.0</td></tr>
+<tr><td><a href="https://aur.archlinux.org/pkgbase/fallow">fallow</a></td><td>3.47.0</td><td nowrap>github-release</td><td nowrap>2026-11-23</td><td nowrap>📦 updated to 3.47.0</td></tr>
 <tr><td><a href="https://aur.archlinux.org/pkgbase/gator-bin">gator-bin</a></td><td>3.23.1</td><td nowrap>github-release</td><td nowrap>-</td><td nowrap>✅ up to date</td></tr>
 <tr><td><a href="https://aur.archlinux.org/pkgbase/gator">gator</a></td><td>3.23.1</td><td nowrap>github-release</td><td nowrap>-</td><td nowrap>✅ up to date</td></tr>
 <tr><td><a href="https://aur.archlinux.org/pkgbase/ghostunnel-bin">ghostunnel-bin</a></td><td>1.11.5</td><td nowrap>github-release</td><td nowrap>-</td><td nowrap>✅ up to date</td></tr>
@@ -97,8 +97,8 @@
 <tr><td><a href="https://aur.archlinux.org/pkgbase/mp4ff-bin">mp4ff-bin</a></td><td>0.63.0</td><td nowrap>github-release</td><td nowrap>2026-11-13</td><td nowrap>✅ up to date</td></tr>
 <tr><td><a href="https://aur.archlinux.org/pkgbase/mp4ff-git">mp4ff-git</a></td><td>r1350.5446070</td><td nowrap>git-latest</td><td nowrap>2026-11-18</td><td nowrap>💤 next update 2026-11-25</td></tr>
 <tr><td><a href="https://aur.archlinux.org/pkgbase/mp4ff">mp4ff</a></td><td>0.63.0</td><td nowrap>github-release</td><td nowrap>2026-11-13</td><td nowrap>✅ up to date</td></tr>
-<tr><td><a href="https://aur.archlinux.org/pkgbase/neo4j-mcp-bin">neo4j-mcp-bin</a></td><td>2.1.1</td><td nowrap>github-release</td><td nowrap>2026-11-11</td><td nowrap>✅ up to date</td></tr>
-<tr><td><a href="https://aur.archlinux.org/pkgbase/neo4j-mcp">neo4j-mcp</a></td><td>2.1.1</td><td nowrap>github-release</td><td nowrap>2026-11-11</td><td nowrap>✅ up to date</td></tr>
+<tr><td><a href="https://aur.archlinux.org/pkgbase/neo4j-mcp-bin">neo4j-mcp-bin</a></td><td>2.1.2</td><td nowrap>github-release</td><td nowrap>2026-11-23</td><td nowrap>📦 updated to 2.1.2</td></tr>
+<tr><td><a href="https://aur.archlinux.org/pkgbase/neo4j-mcp">neo4j-mcp</a></td><td>2.1.2</td><td nowrap>github-release</td><td nowrap>2026-11-23</td><td nowrap>📦 updated to 2.1.2</td></tr>
 <tr><td><a href="https://aur.archlinux.org/pkgbase/neovim-nightly-bin">neovim-nightly-bin</a></td><td>0.13.0+dev+2173+gb091c9b0a0</td><td nowrap>github-nightly</td><td nowrap>2026-11-23</td><td nowrap>✅ up to date</td></tr>
 <tr><td><a href="https://aur.archlinux.org/pkgbase/npq">npq</a></td><td>3.27.4</td><td nowrap>github-release</td><td nowrap>2026-11-16</td><td nowrap>✅ up to date</td></tr>
 <tr><td><a href="https://aur.archlinux.org/pkgbase/oasdiff-bin">oasdiff-bin</a></td><td>1.39.0</td><td nowrap>github-release</td><td nowrap>2026-11-17</td><td nowrap>✅ up to date</td></tr>
@@ -116,11 +116,11 @@
 <tr><td><a href="https://aur.archlinux.org/pkgbase/pgstream">pgstream</a></td><td>1.6.0</td><td nowrap>github-release</td><td nowrap>2026-11-08</td><td nowrap>✅ up to date</td></tr>
 <tr><td><a href="https://aur.archlinux.org/pkgbase/pgtui-bin">pgtui-bin</a></td><td>0.3.0</td><td nowrap>github-release</td><td nowrap>-</td><td nowrap>✅ up to date</td></tr>
 <tr><td><a href="https://aur.archlinux.org/pkgbase/pgtui">pgtui</a></td><td>0.3.0</td><td nowrap>github-release</td><td nowrap>-</td><td nowrap>✅ up to date</td></tr>
-<tr><td><a href="https://aur.archlinux.org/pkgbase/phpantom_lsp-bin">phpantom_lsp-bin</a></td><td>0.11.1</td><td nowrap>github-release</td><td nowrap>-</td><td nowrap>✅ up to date</td></tr>
+<tr><td><a href="https://aur.archlinux.org/pkgbase/phpantom_lsp-bin">phpantom_lsp-bin</a></td><td>1.0.0</td><td nowrap>github-release</td><td nowrap>2026-11-23</td><td nowrap>📦 updated to 1.0.0</td></tr>
 <tr><td><a href="https://aur.archlinux.org/pkgbase/pixtuoid">pixtuoid</a></td><td>0.23.0</td><td nowrap>github-release</td><td nowrap>2026-11-13</td><td nowrap>✅ up to date</td></tr>
 <tr><td><a href="https://aur.archlinux.org/pkgbase/plasma-drop">plasma-drop</a></td><td>1.18.2</td><td nowrap>github-release</td><td nowrap>2026-11-22</td><td nowrap>✅ up to date</td></tr>
 <tr><td><a href="https://aur.archlinux.org/pkgbase/pocket-tts-bin">pocket-tts-bin</a></td><td>4.0.1</td><td nowrap>github-release</td><td nowrap>-</td><td nowrap>✅ up to date</td></tr>
-<tr><td><a href="https://aur.archlinux.org/pkgbase/pocket-tts-git">pocket-tts-git</a></td><td>r226.a4a6054</td><td nowrap>git-latest</td><td nowrap>2026-11-19</td><td nowrap>✅ up to date</td></tr>
+<tr><td><a href="https://aur.archlinux.org/pkgbase/pocket-tts-git">pocket-tts-git</a></td><td>r226.a4a6054</td><td nowrap>git-latest</td><td nowrap>2026-11-19</td><td nowrap>💤 next update 2026-11-26</td></tr>
 <tr><td><a href="https://aur.archlinux.org/pkgbase/pocket-tts">pocket-tts</a></td><td>4.0.1</td><td nowrap>github-release</td><td nowrap>-</td><td nowrap>✅ up to date</td></tr>
 <tr><td><a href="https://aur.archlinux.org/pkgbase/python-zensical-ui">python-zensical-ui</a></td><td>0.0.43</td><td nowrap>pypi</td><td nowrap>2026-11-20</td><td nowrap>✅ up to date</td></tr>
 <tr><td><a href="https://aur.archlinux.org/pkgbase/roughenough-bin">roughenough-bin</a></td><td>2.2.0</td><td nowrap>github-release</td><td nowrap>-</td><td nowrap>✅ up to date</td></tr>
