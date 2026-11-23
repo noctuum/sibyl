@@ -3,5 +3,5 @@ strategy: git-latest
 upstream:
   type: github
   project: OpenKermit/ckermit
-last_updated: "2026-11-16"
-current: r795.99174cf
+last_updated: "2026-11-23"
+current: r807.77ebfe4

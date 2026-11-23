@@ -107,7 +107,7 @@
 <tr><td><a href="https://aur.archlinux.org/pkgbase/openapi">openapi</a></td><td>1.28.0</td><td nowrap>github-release</td><td nowrap>2026-11-18</td><td nowrap>✅ up to date</td></tr>
 <tr><td><a href="https://aur.archlinux.org/pkgbase/opencrabs-bin">opencrabs-bin</a></td><td>0.6.0</td><td nowrap>github-release</td><td nowrap>2026-11-14</td><td nowrap>✅ up to date</td></tr>
 <tr><td><a href="https://aur.archlinux.org/pkgbase/opencrabs">opencrabs</a></td><td>0.6.0</td><td nowrap>github-release</td><td nowrap>2026-11-14</td><td nowrap>✅ up to date</td></tr>
-<tr><td><a href="https://aur.archlinux.org/pkgbase/openkermit-git">openkermit-git</a></td><td>r795.99174cf</td><td nowrap>git-latest</td><td nowrap>2026-11-16</td><td nowrap>💤 next update 2026-11-23</td></tr>
+<tr><td><a href="https://aur.archlinux.org/pkgbase/openkermit-git">openkermit-git</a></td><td>r807.77ebfe4</td><td nowrap>git-latest</td><td nowrap>2026-11-23</td><td nowrap>📦 updated to r807.77ebfe4</td></tr>
 <tr><td><a href="https://aur.archlinux.org/pkgbase/openkermit">openkermit</a></td><td>11.1.520</td><td nowrap>github-release</td><td nowrap>2026-11-22</td><td nowrap>✅ up to date</td></tr>
 <tr><td><a href="https://aur.archlinux.org/pkgbase/paranoia-bin">paranoia-bin</a></td><td>0.9.0</td><td nowrap>github-release</td><td nowrap>2026-11-16</td><td nowrap>✅ up to date</td></tr>
 <tr><td><a href="https://aur.archlinux.org/pkgbase/pg-schema-diff">pg-schema-diff</a></td><td>1.0.9</td><td nowrap>github-release</td><td nowrap>-</td><td nowrap>✅ up to date</td></tr>
@@ -118,7 +118,7 @@
 <tr><td><a href="https://aur.archlinux.org/pkgbase/pgtui">pgtui</a></td><td>0.3.0</td><td nowrap>github-release</td><td nowrap>-</td><td nowrap>✅ up to date</td></tr>
 <tr><td><a href="https://aur.archlinux.org/pkgbase/phpantom_lsp-bin">phpantom_lsp-bin</a></td><td>0.11.1</td><td nowrap>github-release</td><td nowrap>-</td><td nowrap>✅ up to date</td></tr>
 <tr><td><a href="https://aur.archlinux.org/pkgbase/pixtuoid">pixtuoid</a></td><td>0.23.0</td><td nowrap>github-release</td><td nowrap>2026-11-13</td><td nowrap>✅ up to date</td></tr>
-<tr><td><a href="https://aur.archlinux.org/pkgbase/plasma-drop">plasma-drop</a></td><td>1.18.2</td><td nowrap>github-release</td><td nowrap>2026-11-22</td><td nowrap>📦 updated to 1.18.2</td></tr>
+<tr><td><a href="https://aur.archlinux.org/pkgbase/plasma-drop">plasma-drop</a></td><td>1.18.2</td><td nowrap>github-release</td><td nowrap>2026-11-22</td><td nowrap>✅ up to date</td></tr>
 <tr><td><a href="https://aur.archlinux.org/pkgbase/pocket-tts-bin">pocket-tts-bin</a></td><td>4.0.1</td><td nowrap>github-release</td><td nowrap>-</td><td nowrap>✅ up to date</td></tr>
 <tr><td><a href="https://aur.archlinux.org/pkgbase/pocket-tts-git">pocket-tts-git</a></td><td>r226.a4a6054</td><td nowrap>git-latest</td><td nowrap>2026-11-19</td><td nowrap>✅ up to date</td></tr>
 <tr><td><a href="https://aur.archlinux.org/pkgbase/pocket-tts">pocket-tts</a></td><td>4.0.1</td><td nowrap>github-release</td><td nowrap>-</td><td nowrap>✅ up to date</td></tr>
