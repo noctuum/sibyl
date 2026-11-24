@@ -1,0 +1,5 @@
+name: safe-chain-git
+strategy: git-latest
+upstream:
+  type: github
+  project: AikidoSec/safe-chain

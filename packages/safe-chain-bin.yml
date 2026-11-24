@@ -1,0 +1,4 @@
+name: safe-chain-bin
+strategy: github-release
+upstream:
+  project: AikidoSec/safe-chain
