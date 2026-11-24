@@ -2,3 +2,5 @@ name: mediafire_rs-bin
 strategy: github-release
 upstream:
   project: NicKoehler/mediafire_rs
+last_updated: "2026-11-24"
+current: 0.2.3
