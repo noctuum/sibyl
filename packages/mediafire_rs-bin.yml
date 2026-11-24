@@ -1,0 +1,4 @@
+name: mediafire_rs-bin
+strategy: github-release
+upstream:
+  project: NicKoehler/mediafire_rs
