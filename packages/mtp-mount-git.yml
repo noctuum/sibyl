@@ -1,0 +1,5 @@
+name: mtp-mount-git
+strategy: git-latest
+upstream:
+  type: github
+  project: vdavid/mtp-mount

@@ -1,0 +1,4 @@
+name: mtp-mount
+strategy: github-tag
+upstream:
+  project: vdavid/mtp-mount
