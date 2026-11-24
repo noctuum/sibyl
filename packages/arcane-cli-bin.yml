@@ -1,0 +1,4 @@
+name: arcane-cli-bin
+strategy: github-release
+upstream:
+  project: getarcaneapp/arcane
