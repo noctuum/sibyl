@@ -2,5 +2,5 @@ name: phpantom_lsp-bin
 strategy: github-release
 upstream:
   project: PHPantom-dev/phpantom_lsp
-current: 1.0.0
-last_updated: "2026-11-23"
+current: 1.1.0
+last_updated: "2026-11-24"

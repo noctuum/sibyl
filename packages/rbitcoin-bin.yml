@@ -2,3 +2,5 @@ name: rbitcoin-bin
 strategy: github-release
 upstream:
   project: rbitcoin-org/rbitcoin
+last_updated: "2026-11-24"
+current: 0.9.2

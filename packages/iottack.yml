@@ -2,3 +2,5 @@ name: iottack
 strategy: github-release
 upstream:
   project: inradii/iottack
+last_updated: "2026-11-24"
+current: 0.4.0

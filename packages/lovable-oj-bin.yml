@@ -2,3 +2,5 @@ name: lovable-oj-bin
 strategy: github-release
 upstream:
   project: lovablelabs/oj
+last_updated: "2026-11-24"
+current: 0.4.21
