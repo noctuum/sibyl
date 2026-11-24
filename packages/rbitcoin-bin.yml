@@ -1,0 +1,4 @@
+name: rbitcoin-bin
+strategy: github-release
+upstream:
+  project: rbitcoin-org/rbitcoin
