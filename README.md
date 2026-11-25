@@ -22,7 +22,7 @@
 <tr><td><a href="https://aur.archlinux.org/pkgbase/all-smi">all-smi</a></td><td>0.29.1</td><td nowrap>github-release</td><td nowrap>2026-11-23</td><td nowrap>✅ up to date</td></tr>
 <tr><td><a href="https://aur.archlinux.org/pkgbase/arcane-cli-bin">arcane-cli-bin</a></td><td>3.1.1</td><td nowrap>github-release</td><td nowrap>2026-11-24</td><td nowrap>✅ up to date</td></tr>
 <tr><td><a href="https://aur.archlinux.org/pkgbase/arcane-cli">arcane-cli</a></td><td>3.1.1</td><td nowrap>github-release</td><td nowrap>2026-11-24</td><td nowrap>✅ up to date</td></tr>
-<tr><td><a href="https://aur.archlinux.org/pkgbase/bashcov">bashcov</a></td><td>4.0.3</td><td nowrap>github-release</td><td nowrap>2026-11-24</td><td nowrap>✅ up to date</td></tr>
+<tr><td><a href="https://aur.archlinux.org/pkgbase/bashcov">bashcov</a></td><td>4.0.3</td><td nowrap>rubygems</td><td nowrap>2026-11-24</td><td nowrap>✅ up to date</td></tr>
 <tr><td><a href="https://aur.archlinux.org/pkgbase/batman-alfred">batman-alfred</a></td><td>2026.4</td><td nowrap>github-tag</td><td nowrap>2026-11-22</td><td nowrap>✅ up to date</td></tr>
 <tr><td><a href="https://aur.archlinux.org/pkgbase/c2patool-bin">c2patool-bin</a></td><td>0.29.0</td><td nowrap>github-release</td><td nowrap>2026-11-13</td><td nowrap>✅ up to date</td></tr>
 <tr><td><a href="https://aur.archlinux.org/pkgbase/c2patool">c2patool</a></td><td>0.29.0</td><td nowrap>github-release</td><td nowrap>2026-11-13</td><td nowrap>✅ up to date</td></tr>
@@ -31,7 +31,7 @@
 <tr><td><a href="https://aur.archlinux.org/pkgbase/centrifugo">centrifugo</a></td><td>6.10.3</td><td nowrap>github-release</td><td nowrap>2026-11-08</td><td nowrap>✅ up to date</td></tr>
 <tr><td><a href="https://aur.archlinux.org/pkgbase/chainloop-cli-bin">chainloop-cli-bin</a></td><td>1.138.0</td><td nowrap>github-release</td><td nowrap>2026-11-24</td><td nowrap>✅ up to date</td></tr>
 <tr><td><a href="https://aur.archlinux.org/pkgbase/chainloop-cli">chainloop-cli</a></td><td>1.138.0</td><td nowrap>github-release</td><td nowrap>2026-11-24</td><td nowrap>✅ up to date</td></tr>
-<tr><td><a href="https://aur.archlinux.org/pkgbase/database-lab-git">database-lab-git</a></td><td>r1957.5511f3f</td><td nowrap>git-latest</td><td nowrap>2026-11-16</td><td nowrap>✅ up to date</td></tr>
+<tr><td><a href="https://aur.archlinux.org/pkgbase/database-lab-git">database-lab-git</a></td><td>r1961.6ee274b</td><td nowrap>git-latest</td><td nowrap>2026-11-25</td><td nowrap>📦 updated to r1961.6ee274b</td></tr>
 <tr><td><a href="https://aur.archlinux.org/pkgbase/database-lab">database-lab</a></td><td>4.2.2</td><td nowrap>gitlab-tag</td><td nowrap>2026-11-16</td><td nowrap>✅ up to date</td></tr>
 <tr><td><a href="https://aur.archlinux.org/pkgbase/dbhub-mcp-server">dbhub-mcp-server</a></td><td>2.1.0</td><td nowrap>npm</td><td nowrap>2026-11-21</td><td nowrap>✅ up to date</td></tr>
 <tr><td><a href="https://aur.archlinux.org/pkgbase/deja-vu-bin">deja-vu-bin</a></td><td>0.25.1</td><td nowrap>github-release</td><td nowrap>2026-11-24</td><td nowrap>✅ up to date</td></tr>
@@ -39,8 +39,8 @@
 <tr><td><a href="https://aur.archlinux.org/pkgbase/disc-image-studio-bin">disc-image-studio-bin</a></td><td>1.6.0</td><td nowrap>github-release</td><td nowrap>2026-11-15</td><td nowrap>✅ up to date</td></tr>
 <tr><td><a href="https://aur.archlinux.org/pkgbase/disc-image-studio-git">disc-image-studio-git</a></td><td>r141.cf1d263</td><td nowrap>git-latest</td><td nowrap>2026-11-20</td><td nowrap>💤 next update 2026-11-27</td></tr>
 <tr><td><a href="https://aur.archlinux.org/pkgbase/disc-image-studio">disc-image-studio</a></td><td>1.6.0</td><td nowrap>github-release</td><td nowrap>2026-11-15</td><td nowrap>✅ up to date</td></tr>
-<tr><td><a href="https://aur.archlinux.org/pkgbase/doltlite-bin">doltlite-bin</a></td><td>0.51.15</td><td nowrap>github-release</td><td nowrap>2026-11-21</td><td nowrap>✅ up to date</td></tr>
-<tr><td><a href="https://aur.archlinux.org/pkgbase/doltlite">doltlite</a></td><td>0.51.15</td><td nowrap>github-release</td><td nowrap>2026-11-21</td><td nowrap>✅ up to date</td></tr>
+<tr><td><a href="https://aur.archlinux.org/pkgbase/doltlite-bin">doltlite-bin</a></td><td>0.51.16</td><td nowrap>github-release</td><td nowrap>2026-11-25</td><td nowrap>📦 updated to 0.51.16</td></tr>
+<tr><td><a href="https://aur.archlinux.org/pkgbase/doltlite">doltlite</a></td><td>0.51.16</td><td nowrap>github-release</td><td nowrap>2026-11-25</td><td nowrap>📦 updated to 0.51.16</td></tr>
 <tr><td><a href="https://aur.archlinux.org/pkgbase/elp-bin">elp-bin</a></td><td>2026.11.20</td><td nowrap>github-release</td><td nowrap>2026-11-20</td><td nowrap>✅ up to date</td></tr>
 <tr><td><a href="https://aur.archlinux.org/pkgbase/evernote2md-bin">evernote2md-bin</a></td><td>0.23.0</td><td nowrap>github-release</td><td nowrap>-</td><td nowrap>✅ up to date</td></tr>
 <tr><td><a href="https://aur.archlinux.org/pkgbase/evernote2md">evernote2md</a></td><td>0.23.0</td><td nowrap>github-release</td><td nowrap>-</td><td nowrap>✅ up to date</td></tr>
@@ -77,11 +77,11 @@
 <tr><td><a href="https://aur.archlinux.org/pkgbase/kubernetes-mcp-server">kubernetes-mcp-server</a></td><td>0.1.3</td><td nowrap>github-release</td><td nowrap>2026-11-13</td><td nowrap>✅ up to date</td></tr>
 <tr><td><a href="https://aur.archlinux.org/pkgbase/lakekeeper-bin">lakekeeper-bin</a></td><td>0.15.1</td><td nowrap>github-release</td><td nowrap>2026-11-15</td><td nowrap>✅ up to date</td></tr>
 <tr><td><a href="https://aur.archlinux.org/pkgbase/lakekeeper">lakekeeper</a></td><td>0.15.1</td><td nowrap>github-release</td><td nowrap>2026-11-15</td><td nowrap>✅ up to date</td></tr>
-<tr><td><a href="https://aur.archlinux.org/pkgbase/liblinear">liblinear</a></td><td>2.50</td><td nowrap>webpage-scrape</td><td nowrap>-</td><td nowrap>❌ failed</td></tr>
+<tr><td><a href="https://aur.archlinux.org/pkgbase/liblinear">liblinear</a></td><td>2.50</td><td nowrap>webpage-scrape</td><td nowrap>-</td><td nowrap>✅ up to date</td></tr>
 <tr><td><a href="https://aur.archlinux.org/pkgbase/linux-exploit-suggester">linux-exploit-suggester</a></td><td>1.2</td><td nowrap>github-tag</td><td nowrap>-</td><td nowrap>✅ up to date</td></tr>
 <tr><td><a href="https://aur.archlinux.org/pkgbase/liquidsoap-bin">liquidsoap-bin</a></td><td>2.5.0rc2</td><td nowrap>github-tag</td><td nowrap>2026-11-15</td><td nowrap>✅ up to date</td></tr>
 <tr><td><a href="https://aur.archlinux.org/pkgbase/liquidsoap">liquidsoap</a></td><td>2.5.0rc2</td><td nowrap>github-tag</td><td nowrap>2026-11-22</td><td nowrap>✅ up to date</td></tr>
-<tr><td><a href="https://aur.archlinux.org/pkgbase/lovable-oj-bin">lovable-oj-bin</a></td><td>0.4.22</td><td nowrap>github-release</td><td nowrap>2026-11-25</td><td nowrap>✅ up to date</td></tr>
+<tr><td><a href="https://aur.archlinux.org/pkgbase/lovable-oj-bin">lovable-oj-bin</a></td><td>0.4.24</td><td nowrap>github-release</td><td nowrap>2026-11-25</td><td nowrap>📦 updated to 0.4.24</td></tr>
 <tr><td><a href="https://aur.archlinux.org/pkgbase/lttng-tools">lttng-tools</a></td><td>2.16.0</td><td nowrap>github-tag</td><td nowrap>-</td><td nowrap>✅ up to date</td></tr>
 <tr><td><a href="https://aur.archlinux.org/pkgbase/maddy">maddy</a></td><td>0.9.8</td><td nowrap>github-release</td><td nowrap>2026-11-19</td><td nowrap>✅ up to date</td></tr>
 <tr><td><a href="https://aur.archlinux.org/pkgbase/marp-cli-bin">marp-cli-bin</a></td><td>4.5.1</td><td nowrap>github-release</td><td nowrap>2026-09-06</td><td nowrap>✅ up to date</td></tr>
@@ -108,10 +108,10 @@
 <tr><td><a href="https://aur.archlinux.org/pkgbase/mtp-mount">mtp-mount</a></td><td>0.6.0</td><td nowrap>github-tag</td><td nowrap>2026-11-24</td><td nowrap>✅ up to date</td></tr>
 <tr><td><a href="https://aur.archlinux.org/pkgbase/neo4j-mcp-bin">neo4j-mcp-bin</a></td><td>2.1.2</td><td nowrap>github-release</td><td nowrap>2026-11-23</td><td nowrap>✅ up to date</td></tr>
 <tr><td><a href="https://aur.archlinux.org/pkgbase/neo4j-mcp">neo4j-mcp</a></td><td>2.1.2</td><td nowrap>github-release</td><td nowrap>2026-11-23</td><td nowrap>✅ up to date</td></tr>
-<tr><td><a href="https://aur.archlinux.org/pkgbase/neovim-nightly-bin">neovim-nightly-bin</a></td><td>0.13.0+dev+2190+gf8eaa151f6</td><td nowrap>github-nightly</td><td nowrap>2026-11-25</td><td nowrap>📦 updated to 0.13.0+dev+2190+gf8eaa151f6</td></tr>
-<tr><td><a href="https://aur.archlinux.org/pkgbase/npq">npq</a></td><td>3.27.4</td><td nowrap>github-release</td><td nowrap>2026-11-16</td><td nowrap>✅ up to date</td></tr>
-<tr><td><a href="https://aur.archlinux.org/pkgbase/oasdiff-bin">oasdiff-bin</a></td><td>1.40.0</td><td nowrap>github-release</td><td nowrap>2026-11-25</td><td nowrap>📦 updated to 1.40.0</td></tr>
-<tr><td><a href="https://aur.archlinux.org/pkgbase/oasdiff">oasdiff</a></td><td>1.40.0</td><td nowrap>github-release</td><td nowrap>2026-11-25</td><td nowrap>📦 updated to 1.40.0</td></tr>
+<tr><td><a href="https://aur.archlinux.org/pkgbase/neovim-nightly-bin">neovim-nightly-bin</a></td><td>0.13.0+dev+2190+gf8eaa151f6</td><td nowrap>github-nightly</td><td nowrap>2026-11-25</td><td nowrap>✅ up to date</td></tr>
+<tr><td><a href="https://aur.archlinux.org/pkgbase/npq">npq</a></td><td>3.27.5</td><td nowrap>github-release</td><td nowrap>2026-11-25</td><td nowrap>📦 updated to 3.27.5</td></tr>
+<tr><td><a href="https://aur.archlinux.org/pkgbase/oasdiff-bin">oasdiff-bin</a></td><td>1.41.0</td><td nowrap>github-release</td><td nowrap>2026-11-25</td><td nowrap>📦 updated to 1.41.0</td></tr>
+<tr><td><a href="https://aur.archlinux.org/pkgbase/oasdiff">oasdiff</a></td><td>1.41.0</td><td nowrap>github-release</td><td nowrap>2026-11-25</td><td nowrap>📦 updated to 1.41.0</td></tr>
 <tr><td><a href="https://aur.archlinux.org/pkgbase/openapi-bin">openapi-bin</a></td><td>1.28.0</td><td nowrap>github-release</td><td nowrap>2026-11-18</td><td nowrap>✅ up to date</td></tr>
 <tr><td><a href="https://aur.archlinux.org/pkgbase/openapi">openapi</a></td><td>1.28.0</td><td nowrap>github-release</td><td nowrap>2026-11-18</td><td nowrap>✅ up to date</td></tr>
 <tr><td><a href="https://aur.archlinux.org/pkgbase/opencrabs-bin">opencrabs-bin</a></td><td>0.6.0</td><td nowrap>github-release</td><td nowrap>2026-11-14</td><td nowrap>✅ up to date</td></tr>
@@ -138,19 +138,19 @@
 <tr><td><a href="https://aur.archlinux.org/pkgbase/roughenough">roughenough</a></td><td>2.2.0</td><td nowrap>github-release</td><td nowrap>-</td><td nowrap>✅ up to date</td></tr>
 <tr><td><a href="https://aur.archlinux.org/pkgbase/rsql-bin">rsql-bin</a></td><td>0.21.0</td><td nowrap>github-release</td><td nowrap>-</td><td nowrap>✅ up to date</td></tr>
 <tr><td><a href="https://aur.archlinux.org/pkgbase/rsql">rsql</a></td><td>0.21.0</td><td nowrap>github-release</td><td nowrap>-</td><td nowrap>✅ up to date</td></tr>
-<tr><td><a href="https://aur.archlinux.org/pkgbase/ruby-simplecov-cobertura">ruby-simplecov-cobertura</a></td><td>4.0.0</td><td nowrap>github-release</td><td nowrap>2026-11-24</td><td nowrap>✅ up to date</td></tr>
+<tr><td><a href="https://aur.archlinux.org/pkgbase/ruby-simplecov-cobertura">ruby-simplecov-cobertura</a></td><td>4.0.0</td><td nowrap>rubygems</td><td nowrap>2026-11-24</td><td nowrap>✅ up to date</td></tr>
 <tr><td><a href="https://aur.archlinux.org/pkgbase/rutorrent-theme-dracula">rutorrent-theme-dracula</a></td><td>0.3.4</td><td nowrap>github-release</td><td nowrap>2026-11-18</td><td nowrap>✅ up to date</td></tr>
 <tr><td><a href="https://aur.archlinux.org/pkgbase/ryl-bin">ryl-bin</a></td><td>0.30.0</td><td nowrap>github-release</td><td nowrap>2026-11-17</td><td nowrap>✅ up to date</td></tr>
 <tr><td><a href="https://aur.archlinux.org/pkgbase/ryl">ryl</a></td><td>0.30.0</td><td nowrap>github-release</td><td nowrap>2026-11-17</td><td nowrap>✅ up to date</td></tr>
 <tr><td><a href="https://aur.archlinux.org/pkgbase/safe-chain-bin">safe-chain-bin</a></td><td>1.5.29</td><td nowrap>github-release</td><td nowrap>2026-11-24</td><td nowrap>✅ up to date</td></tr>
-<tr><td><a href="https://aur.archlinux.org/pkgbase/safe-chain-git">safe-chain-git</a></td><td>r1613.bcd0336</td><td nowrap>git-latest</td><td nowrap>2026-11-24</td><td nowrap>✅ up to date</td></tr>
+<tr><td><a href="https://aur.archlinux.org/pkgbase/safe-chain-git">safe-chain-git</a></td><td>r1613.bcd0336</td><td nowrap>git-latest</td><td nowrap>2026-11-24</td><td nowrap>💤 next update 2026-12-01</td></tr>
 <tr><td><a href="https://aur.archlinux.org/pkgbase/safe-chain">safe-chain</a></td><td>1.5.29</td><td nowrap>github-release</td><td nowrap>2026-11-24</td><td nowrap>✅ up to date</td></tr>
 <tr><td><a href="https://aur.archlinux.org/pkgbase/scorecard">scorecard</a></td><td>5.7.0</td><td nowrap>github-release</td><td nowrap>2026-11-19</td><td nowrap>✅ up to date</td></tr>
 <tr><td><a href="https://aur.archlinux.org/pkgbase/sherpa-onnx-bin">sherpa-onnx-bin</a></td><td>2.0.3</td><td nowrap>github-release</td><td nowrap>2026-11-22</td><td nowrap>✅ up to date</td></tr>
 <tr><td><a href="https://aur.archlinux.org/pkgbase/sherpa-onnx-piper-voice-ru-denis">sherpa-onnx-piper-voice-ru-denis</a></td><td>20251202</td><td nowrap>github-asset</td><td nowrap>-</td><td nowrap>✅ up to date</td></tr>
 <tr><td><a href="https://aur.archlinux.org/pkgbase/sherpa-onnx-piper-voice-ru-dmitri">sherpa-onnx-piper-voice-ru-dmitri</a></td><td>20251202</td><td nowrap>github-asset</td><td nowrap>-</td><td nowrap>✅ up to date</td></tr>
 <tr><td><a href="https://aur.archlinux.org/pkgbase/sherpa-onnx-piper-voice-ru-ruslan">sherpa-onnx-piper-voice-ru-ruslan</a></td><td>20251202</td><td nowrap>github-asset</td><td nowrap>-</td><td nowrap>✅ up to date</td></tr>
-<tr><td><a href="https://aur.archlinux.org/pkgbase/sngrep-bin">sngrep-bin</a></td><td>1.10.0</td><td nowrap>webpage-scrape</td><td nowrap>2026-11-25</td><td nowrap>📦 updated to 1.10.0</td></tr>
+<tr><td><a href="https://aur.archlinux.org/pkgbase/sngrep-bin">sngrep-bin</a></td><td>1.10.0</td><td nowrap>webpage-scrape</td><td nowrap>2026-11-25</td><td nowrap>✅ up to date</td></tr>
 <tr><td><a href="https://aur.archlinux.org/pkgbase/terratag-bin">terratag-bin</a></td><td>0.8.3</td><td nowrap>github-release</td><td nowrap>-</td><td nowrap>✅ up to date</td></tr>
 <tr><td><a href="https://aur.archlinux.org/pkgbase/terratag">terratag</a></td><td>0.8.3</td><td nowrap>github-release</td><td nowrap>-</td><td nowrap>✅ up to date</td></tr>
 <tr><td><a href="https://aur.archlinux.org/pkgbase/tinyice-bin">tinyice-bin</a></td><td>2.12.3</td><td nowrap>github-release</td><td nowrap>-</td><td nowrap>✅ up to date</td></tr>
@@ -161,7 +161,7 @@
 <tr><td><a href="https://aur.archlinux.org/pkgbase/wakapi-bin">wakapi-bin</a></td><td>2.18.2</td><td nowrap>github-release</td><td nowrap>-</td><td nowrap>✅ up to date</td></tr>
 <tr><td><a href="https://aur.archlinux.org/pkgbase/wal2json">wal2json</a></td><td>2.7</td><td nowrap>github-release</td><td nowrap>-</td><td nowrap>✅ up to date</td></tr>
 <tr><td><a href="https://aur.archlinux.org/pkgbase/webdav-bin">webdav-bin</a></td><td>5.17.3</td><td nowrap>github-release</td><td nowrap>2026-10-30</td><td nowrap>✅ up to date</td></tr>
-<tr><td><a href="https://aur.archlinux.org/pkgbase/webdav-git">webdav-git</a></td><td>r328.5c68941</td><td nowrap>git-latest</td><td nowrap>2026-11-25</td><td nowrap>📦 updated to r328.5c68941</td></tr>
+<tr><td><a href="https://aur.archlinux.org/pkgbase/webdav-git">webdav-git</a></td><td>r328.5c68941</td><td nowrap>git-latest</td><td nowrap>2026-11-25</td><td nowrap>✅ up to date</td></tr>
 <tr><td><a href="https://aur.archlinux.org/pkgbase/webdav">webdav</a></td><td>5.17.3</td><td nowrap>github-release</td><td nowrap>2026-10-30</td><td nowrap>✅ up to date</td></tr>
 <tr><td><a href="https://aur.archlinux.org/pkgbase/webtorrent-mpv-hook">webtorrent-mpv-hook</a></td><td>1.4.7</td><td nowrap>npm</td><td nowrap>-</td><td nowrap>✅ up to date</td></tr>
 <tr><td><a href="https://aur.archlinux.org/pkgbase/whodb-bin">whodb-bin</a></td><td>0.139.0</td><td nowrap>github-release</td><td nowrap>2026-11-17</td><td nowrap>✅ up to date</td></tr>
@@ -172,5 +172,5 @@
 <tr><td><a href="https://aur.archlinux.org/pkgbase/zero">zero</a></td><td>0.14.0</td><td nowrap>github-release</td><td nowrap>2026-11-17</td><td nowrap>✅ up to date</td></tr>
 </table>
 
-aurtomator 0.14.0
+aurtomator 0.15.0
 <!-- PACKAGES:END -->

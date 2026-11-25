@@ -4,5 +4,5 @@ upstream:
   type: gitlab
   host: gitlab.com
   project: postgres-ai/database-lab
-last_updated: "2026-11-16"
-current: r1957.5511f3f
+last_updated: "2026-11-25"
+current: r1961.6ee274b

@@ -2,5 +2,5 @@ name: npq
 strategy: github-release
 upstream:
   project: lirantal/npq
-last_updated: "2026-11-16"
-current: 3.27.4
+last_updated: "2026-11-25"
+current: 3.27.5

@@ -3,4 +3,4 @@ strategy: github-release
 upstream:
   project: lovablelabs/oj
 last_updated: "2026-11-25"
-current: 0.4.22
+current: 0.4.24
