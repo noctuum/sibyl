@@ -443,3 +443,8 @@ time,package,event,version,previous,run
 2026-11-24T17:57:07Z,ruby-simplecov-cobertura,up_to_date,4.0.0,,45452044978
 2026-11-25T02:38:41Z,lovable-oj-bin,updated,0.4.22,0.4.21,45533343718
 2026-11-25T02:38:41Z,mp4ff-git,updated,r1359.05e82ff,r1350.5446070,45533343718
+2026-11-25T13:05:33Z,neovim-nightly-bin,updated,0.13.0+dev+2190+gf8eaa151f6,0.13.0+dev+2182+g6501a7547d,45618489499
+2026-11-25T13:05:33Z,oasdiff,updated,1.40.0,1.39.0,45618489499
+2026-11-25T13:05:33Z,oasdiff-bin,updated,1.40.0,1.39.0,45618489499
+2026-11-25T13:05:33Z,sngrep-bin,updated,1.10.0,1.9.0,45618489499
+2026-11-25T13:05:33Z,webdav-git,updated,r328.5c68941,r317.b6c41e4,45618489499
