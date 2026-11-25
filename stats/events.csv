@@ -441,3 +441,5 @@ time,package,event,version,previous,run
 2026-11-24T17:57:07Z,rbitcoin-bin,up_to_date,0.9.2,,45452044978
 2026-11-24T17:57:07Z,ruby-simplecov-cobertura,added,,,45452044978
 2026-11-24T17:57:07Z,ruby-simplecov-cobertura,up_to_date,4.0.0,,45452044978
+2026-11-25T02:38:41Z,lovable-oj-bin,updated,0.4.22,0.4.21,45533343718
+2026-11-25T02:38:41Z,mp4ff-git,updated,r1359.05e82ff,r1350.5446070,45533343718
