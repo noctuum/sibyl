@@ -2,5 +2,7 @@ name: bashcov
 strategy: github-release
 upstream:
   project: infertux/bashcov
+ruby:
+  gem: bashcov
 last_updated: "2026-11-24"
 current: 4.0.3

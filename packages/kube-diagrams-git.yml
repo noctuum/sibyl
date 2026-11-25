@@ -3,5 +3,8 @@ strategy: git-latest
 upstream:
   type: github
   project: philippemerle/KubeDiagrams
+python:
+  pypi: KubeDiagrams
+  release: newest
 last_updated: "2026-11-16"
 current: r675.70e1dda

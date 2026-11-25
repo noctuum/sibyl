@@ -3,4 +3,6 @@ strategy: webpage-scrape
 upstream:
   url: https://www.csie.ntu.edu.tw/~cjlin/liblinear/
   pattern: 'liblinear-([0-9]+\.[0-9]+)\.tar\.gz'
+python:
+  pypi: liblinear-official
 current: "2.50"
