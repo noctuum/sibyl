@@ -1,8 +1,11 @@
 name: bashcov
-strategy: github-release
+strategy: rubygems
 upstream:
-  project: infertux/bashcov
-ruby:
-  gem: bashcov
+  registry: bashcov
+alerts:
+  - requires: changed
+    hold: true
+  - requires: unmet
+    hold: true
 last_updated: "2026-11-24"
 current: 4.0.3
