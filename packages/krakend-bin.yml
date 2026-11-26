@@ -2,5 +2,5 @@ name: krakend-bin
 strategy: github-release
 upstream:
   project: krakend/krakend-ce
-current: 3.0.5
-last_updated: "2026-11-19"
+current: 3.0.6
+last_updated: "2026-11-26"

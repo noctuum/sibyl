@@ -2,5 +2,5 @@ name: fallow-bin
 strategy: github-release
 upstream:
   project: fallow-rs/fallow
-current: 3.48.0
-last_updated: "2026-11-24"
+current: 3.49.0
+last_updated: "2026-11-26"
