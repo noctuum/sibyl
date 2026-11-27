@@ -2,5 +2,5 @@ name: arcane-cli-bin
 strategy: github-release
 upstream:
   project: getarcaneapp/arcane
-last_updated: "2026-11-24"
-current: 3.1.1
+last_updated: "2026-11-27"
+current: 3.2.0
