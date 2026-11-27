@@ -480,3 +480,6 @@ time,package,event,version,previous,run
 2026-11-27T09:48:35Z,npq,updated,3.27.7,3.27.5,45975690736
 2026-11-27T09:48:35Z,openapi,updated,1.28.1,1.28.0,45975690736
 2026-11-27T09:48:35Z,openapi-bin,updated,1.28.1,1.28.0,45975690736
+2026-11-27T19:34:02Z,fallow,updated,3.50.0,3.49.0,46056908353
+2026-11-27T19:34:02Z,fallow-bin,updated,3.50.0,3.49.0,46056908353
+2026-11-27T19:34:02Z,python-zensical-ui,updated,0.0.44,0.0.43,46056908353
