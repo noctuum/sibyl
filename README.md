@@ -37,7 +37,7 @@
 <tr><td><a href="https://aur.archlinux.org/pkgbase/deja-vu-bin">deja-vu-bin</a></td><td>0.25.1</td><td nowrap>github-release</td><td nowrap>2026-11-24</td><td nowrap>✅ up to date</td></tr>
 <tr><td><a href="https://aur.archlinux.org/pkgbase/deja-vu">deja-vu</a></td><td>0.25.1</td><td nowrap>github-release</td><td nowrap>2026-11-24</td><td nowrap>✅ up to date</td></tr>
 <tr><td><a href="https://aur.archlinux.org/pkgbase/disc-image-studio-bin">disc-image-studio-bin</a></td><td>1.7.0</td><td nowrap>github-release</td><td nowrap>2026-11-26</td><td nowrap>✅ up to date</td></tr>
-<tr><td><a href="https://aur.archlinux.org/pkgbase/disc-image-studio-git">disc-image-studio-git</a></td><td>r141.cf1d263</td><td nowrap>git-latest</td><td nowrap>2026-11-20</td><td nowrap>💤 next update 2026-11-27</td></tr>
+<tr><td><a href="https://aur.archlinux.org/pkgbase/disc-image-studio-git">disc-image-studio-git</a></td><td>r160.411a0d9</td><td nowrap>git-latest</td><td nowrap>2026-11-27</td><td nowrap>📦 updated to r160.411a0d9</td></tr>
 <tr><td><a href="https://aur.archlinux.org/pkgbase/disc-image-studio">disc-image-studio</a></td><td>1.7.0</td><td nowrap>github-release</td><td nowrap>2026-11-26</td><td nowrap>✅ up to date</td></tr>
 <tr><td><a href="https://aur.archlinux.org/pkgbase/doltlite-bin">doltlite-bin</a></td><td>0.51.16</td><td nowrap>github-release</td><td nowrap>2026-11-25</td><td nowrap>✅ up to date</td></tr>
 <tr><td><a href="https://aur.archlinux.org/pkgbase/doltlite">doltlite</a></td><td>0.51.16</td><td nowrap>github-release</td><td nowrap>2026-11-25</td><td nowrap>✅ up to date</td></tr>
@@ -52,7 +52,7 @@
 <tr><td><a href="https://aur.archlinux.org/pkgbase/ghostunnel">ghostunnel</a></td><td>1.11.5</td><td nowrap>github-release</td><td nowrap>-</td><td nowrap>✅ up to date</td></tr>
 <tr><td><a href="https://aur.archlinux.org/pkgbase/graphviz2drawio">graphviz2drawio</a></td><td>1.2.0</td><td nowrap>pypi</td><td nowrap>2026-11-16</td><td nowrap>✅ up to date</td></tr>
 <tr><td><a href="https://aur.archlinux.org/pkgbase/greenmask-bin">greenmask-bin</a></td><td>0.2.27</td><td nowrap>github-release</td><td nowrap>2026-11-12</td><td nowrap>✅ up to date</td></tr>
-<tr><td><a href="https://aur.archlinux.org/pkgbase/greenmask-git">greenmask-git</a></td><td>r634.6d609ec</td><td nowrap>git-latest</td><td nowrap>2026-11-20</td><td nowrap>💤 next update 2026-11-27</td></tr>
+<tr><td><a href="https://aur.archlinux.org/pkgbase/greenmask-git">greenmask-git</a></td><td>r641.4a4e8ea</td><td nowrap>git-latest</td><td nowrap>2026-11-27</td><td nowrap>📦 updated to r641.4a4e8ea</td></tr>
 <tr><td><a href="https://aur.archlinux.org/pkgbase/greenmask">greenmask</a></td><td>0.2.27</td><td nowrap>github-release</td><td nowrap>2026-11-12</td><td nowrap>✅ up to date</td></tr>
 <tr><td><a href="https://aur.archlinux.org/pkgbase/helix-db-bin">helix-db-bin</a></td><td>3.7.0</td><td nowrap>github-release</td><td nowrap>-</td><td nowrap>✅ up to date</td></tr>
 <tr><td><a href="https://aur.archlinux.org/pkgbase/helix-db">helix-db</a></td><td>3.7.0</td><td nowrap>github-release</td><td nowrap>-</td><td nowrap>✅ up to date</td></tr>
@@ -61,7 +61,7 @@
 <tr><td><a href="https://aur.archlinux.org/pkgbase/jdk-temurin-ea-bin">jdk-temurin-ea-bin</a></td><td>28+25</td><td nowrap>webpage-scrape</td><td nowrap>2026-11-20</td><td nowrap>✅ up to date</td></tr>
 <tr><td><a href="https://aur.archlinux.org/pkgbase/keep-sorted-bin">keep-sorted-bin</a></td><td>0.11.0</td><td nowrap>github-release</td><td nowrap>2026-11-14</td><td nowrap>✅ up to date</td></tr>
 <tr><td><a href="https://aur.archlinux.org/pkgbase/keep-sorted">keep-sorted</a></td><td>0.11.0</td><td nowrap>github-release</td><td nowrap>2026-11-14</td><td nowrap>✅ up to date</td></tr>
-<tr><td><a href="https://aur.archlinux.org/pkgbase/kio-s3-git">kio-s3-git</a></td><td>r531.c123416</td><td nowrap>git-latest</td><td nowrap>2026-11-20</td><td nowrap>💤 next update 2026-11-27</td></tr>
+<tr><td><a href="https://aur.archlinux.org/pkgbase/kio-s3-git">kio-s3-git</a></td><td>r534.fa05891</td><td nowrap>git-latest</td><td nowrap>2026-11-27</td><td nowrap>📦 updated to r534.fa05891</td></tr>
 <tr><td><a href="https://aur.archlinux.org/pkgbase/kio-s3">kio-s3</a></td><td>1.0.2</td><td nowrap>kde-tarball</td><td nowrap>2026-04-24</td><td nowrap>✅ up to date</td></tr>
 <tr><td><a href="https://aur.archlinux.org/pkgbase/kiota-bin">kiota-bin</a></td><td>1.39.0</td><td nowrap>github-release</td><td nowrap>2026-11-20</td><td nowrap>✅ up to date</td></tr>
 <tr><td><a href="https://aur.archlinux.org/pkgbase/kiota">kiota</a></td><td>1.39.0</td><td nowrap>github-release</td><td nowrap>2026-11-20</td><td nowrap>✅ up to date</td></tr>
@@ -88,9 +88,9 @@
 <tr><td><a href="https://aur.archlinux.org/pkgbase/mcp-grafana-bin">mcp-grafana-bin</a></td><td>2.4.0</td><td nowrap>github-release</td><td nowrap>2026-11-24</td><td nowrap>✅ up to date</td></tr>
 <tr><td><a href="https://aur.archlinux.org/pkgbase/mcp-grafana">mcp-grafana</a></td><td>2.4.0</td><td nowrap>github-release</td><td nowrap>2026-11-24</td><td nowrap>✅ up to date</td></tr>
 <tr><td><a href="https://aur.archlinux.org/pkgbase/mcp-toolbox-bin">mcp-toolbox-bin</a></td><td>1.18.0</td><td nowrap>github-release</td><td nowrap>2026-11-21</td><td nowrap>✅ up to date</td></tr>
-<tr><td><a href="https://aur.archlinux.org/pkgbase/mcp-toolbox-git">mcp-toolbox-git</a></td><td>r2446.a5dc5d4</td><td nowrap>git-latest</td><td nowrap>2026-11-20</td><td nowrap>💤 next update 2026-11-27</td></tr>
+<tr><td><a href="https://aur.archlinux.org/pkgbase/mcp-toolbox-git">mcp-toolbox-git</a></td><td>r2466.69537a9</td><td nowrap>git-latest</td><td nowrap>2026-11-27</td><td nowrap>📦 updated to r2466.69537a9</td></tr>
 <tr><td><a href="https://aur.archlinux.org/pkgbase/mcp-toolbox">mcp-toolbox</a></td><td>1.18.0</td><td nowrap>github-release</td><td nowrap>2026-11-21</td><td nowrap>✅ up to date</td></tr>
-<tr><td><a href="https://aur.archlinux.org/pkgbase/mdbook-git">mdbook-git</a></td><td>0.5.4.r164.g7f307f5</td><td nowrap>git-latest</td><td nowrap>2026-11-20</td><td nowrap>💤 next update 2026-11-27</td></tr>
+<tr><td><a href="https://aur.archlinux.org/pkgbase/mdbook-git">mdbook-git</a></td><td>0.5.4.r170.g656301c</td><td nowrap>git-latest</td><td nowrap>2026-11-27</td><td nowrap>📦 updated to 0.5.4.r170.g656301c</td></tr>
 <tr><td><a href="https://aur.archlinux.org/pkgbase/mdbook-toc">mdbook-toc</a></td><td>0.15.4</td><td nowrap>crates</td><td nowrap>-</td><td nowrap>✅ up to date</td></tr>
 <tr><td><a href="https://aur.archlinux.org/pkgbase/mediafire_rs-bin">mediafire_rs-bin</a></td><td>0.2.3</td><td nowrap>github-release</td><td nowrap>2026-11-24</td><td nowrap>✅ up to date</td></tr>
 <tr><td><a href="https://aur.archlinux.org/pkgbase/mediafire_rs">mediafire_rs</a></td><td>0.2.3</td><td nowrap>github-release</td><td nowrap>2026-11-24</td><td nowrap>✅ up to date</td></tr>

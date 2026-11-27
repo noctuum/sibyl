@@ -3,5 +3,5 @@ strategy: git-latest
 upstream:
   type: github
   project: googleapis/mcp-toolbox
-current: r2446.a5dc5d4
-last_updated: "2026-11-20"
+current: r2466.69537a9
+last_updated: "2026-11-27"

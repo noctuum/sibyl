@@ -468,3 +468,8 @@ time,package,event,version,previous,run
 2026-11-26T22:07:16Z,disc-image-studio,updated,1.7.0,1.6.0,45901983607
 2026-11-26T22:07:16Z,disc-image-studio-bin,updated,1.7.0,1.6.0,45901983607
 2026-11-26T22:07:16Z,jdk-openjdk-ea,updated,28+26,28+25,45901983607
+2026-11-27T00:42:28Z,disc-image-studio-git,updated,r160.411a0d9,r141.cf1d263,45917581812
+2026-11-27T00:42:28Z,greenmask-git,updated,r641.4a4e8ea,r634.6d609ec,45917581812
+2026-11-27T00:42:28Z,kio-s3-git,updated,r534.fa05891,r531.c123416,45917581812
+2026-11-27T00:42:28Z,mcp-toolbox-git,updated,r2466.69537a9,r2446.a5dc5d4,45917581812
+2026-11-27T00:42:28Z,mdbook-git,updated,0.5.4.r170.g656301c,0.5.4.r164.g7f307f5,45917581812
