@@ -44,8 +44,8 @@
 <tr><td><a href="https://aur.archlinux.org/pkgbase/elp-bin">elp-bin</a></td><td>2026.11.20</td><td nowrap>github-release</td><td nowrap>2026-11-20</td><td nowrap>✅ up to date</td></tr>
 <tr><td><a href="https://aur.archlinux.org/pkgbase/evernote2md-bin">evernote2md-bin</a></td><td>0.23.0</td><td nowrap>github-release</td><td nowrap>-</td><td nowrap>✅ up to date</td></tr>
 <tr><td><a href="https://aur.archlinux.org/pkgbase/evernote2md">evernote2md</a></td><td>0.23.0</td><td nowrap>github-release</td><td nowrap>-</td><td nowrap>✅ up to date</td></tr>
-<tr><td><a href="https://aur.archlinux.org/pkgbase/fallow-bin">fallow-bin</a></td><td>3.50.0</td><td nowrap>github-release</td><td nowrap>2026-11-27</td><td nowrap>📦 updated to 3.50.0</td></tr>
-<tr><td><a href="https://aur.archlinux.org/pkgbase/fallow">fallow</a></td><td>3.50.0</td><td nowrap>github-release</td><td nowrap>2026-11-27</td><td nowrap>📦 updated to 3.50.0</td></tr>
+<tr><td><a href="https://aur.archlinux.org/pkgbase/fallow-bin">fallow-bin</a></td><td>3.50.0</td><td nowrap>github-release</td><td nowrap>2026-11-27</td><td nowrap>✅ up to date</td></tr>
+<tr><td><a href="https://aur.archlinux.org/pkgbase/fallow">fallow</a></td><td>3.50.0</td><td nowrap>github-release</td><td nowrap>2026-11-27</td><td nowrap>✅ up to date</td></tr>
 <tr><td><a href="https://aur.archlinux.org/pkgbase/gator-bin">gator-bin</a></td><td>3.23.1</td><td nowrap>github-release</td><td nowrap>-</td><td nowrap>✅ up to date</td></tr>
 <tr><td><a href="https://aur.archlinux.org/pkgbase/gator">gator</a></td><td>3.23.1</td><td nowrap>github-release</td><td nowrap>-</td><td nowrap>✅ up to date</td></tr>
 <tr><td><a href="https://aur.archlinux.org/pkgbase/ghostunnel-bin">ghostunnel-bin</a></td><td>1.11.5</td><td nowrap>github-release</td><td nowrap>-</td><td nowrap>✅ up to date</td></tr>
@@ -95,7 +95,7 @@
 <tr><td><a href="https://aur.archlinux.org/pkgbase/mediafire_rs-bin">mediafire_rs-bin</a></td><td>0.2.3</td><td nowrap>github-release</td><td nowrap>2026-11-24</td><td nowrap>✅ up to date</td></tr>
 <tr><td><a href="https://aur.archlinux.org/pkgbase/mediafire_rs">mediafire_rs</a></td><td>0.2.3</td><td nowrap>github-release</td><td nowrap>2026-11-24</td><td nowrap>✅ up to date</td></tr>
 <tr><td><a href="https://aur.archlinux.org/pkgbase/memos-bin">memos-bin</a></td><td>26.11.2</td><td nowrap>github-release</td><td nowrap>2026-11-22</td><td nowrap>✅ up to date</td></tr>
-<tr><td><a href="https://aur.archlinux.org/pkgbase/memos-git">memos-git</a></td><td>r4981.7e4cbb7</td><td nowrap>git-latest</td><td nowrap>2026-11-21</td><td nowrap>💤 next update 2026-11-28</td></tr>
+<tr><td><a href="https://aur.archlinux.org/pkgbase/memos-git">memos-git</a></td><td>r5022.78a8dc8</td><td nowrap>git-latest</td><td nowrap>2026-11-28</td><td nowrap>📦 updated to r5022.78a8dc8</td></tr>
 <tr><td><a href="https://aur.archlinux.org/pkgbase/memos">memos</a></td><td>26.11.2</td><td nowrap>github-release</td><td nowrap>2026-11-22</td><td nowrap>✅ up to date</td></tr>
 <tr><td><a href="https://aur.archlinux.org/pkgbase/merman-bin">merman-bin</a></td><td>0.11.0</td><td nowrap>github-release</td><td nowrap>2026-11-21</td><td nowrap>✅ up to date</td></tr>
 <tr><td><a href="https://aur.archlinux.org/pkgbase/merman">merman</a></td><td>0.11.0</td><td nowrap>github-release</td><td nowrap>2026-11-21</td><td nowrap>✅ up to date</td></tr>
@@ -116,7 +116,7 @@
 <tr><td><a href="https://aur.archlinux.org/pkgbase/openapi">openapi</a></td><td>1.28.1</td><td nowrap>github-release</td><td nowrap>2026-11-27</td><td nowrap>✅ up to date</td></tr>
 <tr><td><a href="https://aur.archlinux.org/pkgbase/opencrabs-bin">opencrabs-bin</a></td><td>0.6.0</td><td nowrap>github-release</td><td nowrap>2026-11-14</td><td nowrap>✅ up to date</td></tr>
 <tr><td><a href="https://aur.archlinux.org/pkgbase/opencrabs">opencrabs</a></td><td>0.6.0</td><td nowrap>github-release</td><td nowrap>2026-11-14</td><td nowrap>✅ up to date</td></tr>
-<tr><td><a href="https://aur.archlinux.org/pkgbase/openkermit-git">openkermit-git</a></td><td>r807.77ebfe4</td><td nowrap>git-latest</td><td nowrap>2026-11-23</td><td nowrap>✅ up to date</td></tr>
+<tr><td><a href="https://aur.archlinux.org/pkgbase/openkermit-git">openkermit-git</a></td><td>r807.77ebfe4</td><td nowrap>git-latest</td><td nowrap>2026-11-23</td><td nowrap>💤 next update 2026-11-30</td></tr>
 <tr><td><a href="https://aur.archlinux.org/pkgbase/openkermit">openkermit</a></td><td>11.1.520</td><td nowrap>github-release</td><td nowrap>2026-11-22</td><td nowrap>✅ up to date</td></tr>
 <tr><td><a href="https://aur.archlinux.org/pkgbase/paranoia-bin">paranoia-bin</a></td><td>0.9.0</td><td nowrap>github-release</td><td nowrap>2026-11-16</td><td nowrap>✅ up to date</td></tr>
 <tr><td><a href="https://aur.archlinux.org/pkgbase/pg-schema-diff">pg-schema-diff</a></td><td>1.0.9</td><td nowrap>github-release</td><td nowrap>-</td><td nowrap>✅ up to date</td></tr>
@@ -131,7 +131,7 @@
 <tr><td><a href="https://aur.archlinux.org/pkgbase/pocket-tts-bin">pocket-tts-bin</a></td><td>4.0.1</td><td nowrap>github-release</td><td nowrap>-</td><td nowrap>✅ up to date</td></tr>
 <tr><td><a href="https://aur.archlinux.org/pkgbase/pocket-tts-git">pocket-tts-git</a></td><td>r227.bc4d640</td><td nowrap>git-latest</td><td nowrap>2026-11-26</td><td nowrap>💤 next update 2026-12-03</td></tr>
 <tr><td><a href="https://aur.archlinux.org/pkgbase/pocket-tts">pocket-tts</a></td><td>4.0.1</td><td nowrap>github-release</td><td nowrap>-</td><td nowrap>✅ up to date</td></tr>
-<tr><td><a href="https://aur.archlinux.org/pkgbase/python-zensical-ui">python-zensical-ui</a></td><td>0.0.44</td><td nowrap>pypi</td><td nowrap>2026-11-27</td><td nowrap>📦 updated to 0.0.44</td></tr>
+<tr><td><a href="https://aur.archlinux.org/pkgbase/python-zensical-ui">python-zensical-ui</a></td><td>0.0.44</td><td nowrap>pypi</td><td nowrap>2026-11-27</td><td nowrap>✅ up to date</td></tr>
 <tr><td><a href="https://aur.archlinux.org/pkgbase/rbitcoin-bin">rbitcoin-bin</a></td><td>0.9.2</td><td nowrap>github-release</td><td nowrap>2026-11-24</td><td nowrap>✅ up to date</td></tr>
 <tr><td><a href="https://aur.archlinux.org/pkgbase/rbitcoin">rbitcoin</a></td><td>0.9.2</td><td nowrap>github-release</td><td nowrap>2026-11-24</td><td nowrap>✅ up to date</td></tr>
 <tr><td><a href="https://aur.archlinux.org/pkgbase/roughenough-bin">roughenough-bin</a></td><td>2.2.0</td><td nowrap>github-release</td><td nowrap>-</td><td nowrap>✅ up to date</td></tr>
@@ -172,5 +172,5 @@
 <tr><td><a href="https://aur.archlinux.org/pkgbase/zero">zero</a></td><td>0.14.0</td><td nowrap>github-release</td><td nowrap>2026-11-17</td><td nowrap>✅ up to date</td></tr>
 </table>
 
-aurtomator 0.16.0
+aurtomator 0.16.0 ([0.17.0 available](https://github.com/staticwire/aurtomator/releases/tag/v0.17.0))
 <!-- PACKAGES:END -->
