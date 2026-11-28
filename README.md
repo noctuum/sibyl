@@ -94,9 +94,9 @@
 <tr><td><a href="https://aur.archlinux.org/pkgbase/mdbook-toc">mdbook-toc</a></td><td>0.15.4</td><td nowrap>crates</td><td nowrap>-</td><td nowrap>✅ up to date</td></tr>
 <tr><td><a href="https://aur.archlinux.org/pkgbase/mediafire_rs-bin">mediafire_rs-bin</a></td><td>0.2.3</td><td nowrap>github-release</td><td nowrap>2026-11-24</td><td nowrap>✅ up to date</td></tr>
 <tr><td><a href="https://aur.archlinux.org/pkgbase/mediafire_rs">mediafire_rs</a></td><td>0.2.3</td><td nowrap>github-release</td><td nowrap>2026-11-24</td><td nowrap>✅ up to date</td></tr>
-<tr><td><a href="https://aur.archlinux.org/pkgbase/memos-bin">memos-bin</a></td><td>26.11.2</td><td nowrap>github-release</td><td nowrap>2026-11-22</td><td nowrap>✅ up to date</td></tr>
-<tr><td><a href="https://aur.archlinux.org/pkgbase/memos-git">memos-git</a></td><td>r5022.78a8dc8</td><td nowrap>git-latest</td><td nowrap>2026-11-28</td><td nowrap>📦 updated to r5022.78a8dc8</td></tr>
-<tr><td><a href="https://aur.archlinux.org/pkgbase/memos">memos</a></td><td>26.11.2</td><td nowrap>github-release</td><td nowrap>2026-11-22</td><td nowrap>✅ up to date</td></tr>
+<tr><td><a href="https://aur.archlinux.org/pkgbase/memos-bin">memos-bin</a></td><td>26.11.3</td><td nowrap>github-release</td><td nowrap>2026-11-28</td><td nowrap>📦 updated to 26.11.3</td></tr>
+<tr><td><a href="https://aur.archlinux.org/pkgbase/memos-git">memos-git</a></td><td>r5022.78a8dc8</td><td nowrap>git-latest</td><td nowrap>2026-11-28</td><td nowrap>💤 next update 2026-12-05</td></tr>
+<tr><td><a href="https://aur.archlinux.org/pkgbase/memos">memos</a></td><td>26.11.3</td><td nowrap>github-release</td><td nowrap>2026-11-28</td><td nowrap>📦 updated to 26.11.3</td></tr>
 <tr><td><a href="https://aur.archlinux.org/pkgbase/merman-bin">merman-bin</a></td><td>0.11.0</td><td nowrap>github-release</td><td nowrap>2026-11-21</td><td nowrap>✅ up to date</td></tr>
 <tr><td><a href="https://aur.archlinux.org/pkgbase/merman">merman</a></td><td>0.11.0</td><td nowrap>github-release</td><td nowrap>2026-11-21</td><td nowrap>✅ up to date</td></tr>
 <tr><td><a href="https://aur.archlinux.org/pkgbase/mesheryctl-bin">mesheryctl-bin</a></td><td>1.0.83</td><td nowrap>github-release</td><td nowrap>2026-11-22</td><td nowrap>✅ up to date</td></tr>
@@ -108,7 +108,7 @@
 <tr><td><a href="https://aur.archlinux.org/pkgbase/mtp-mount">mtp-mount</a></td><td>0.6.0</td><td nowrap>github-tag</td><td nowrap>2026-11-24</td><td nowrap>✅ up to date</td></tr>
 <tr><td><a href="https://aur.archlinux.org/pkgbase/neo4j-mcp-bin">neo4j-mcp-bin</a></td><td>2.1.2</td><td nowrap>github-release</td><td nowrap>2026-11-23</td><td nowrap>✅ up to date</td></tr>
 <tr><td><a href="https://aur.archlinux.org/pkgbase/neo4j-mcp">neo4j-mcp</a></td><td>2.1.2</td><td nowrap>github-release</td><td nowrap>2026-11-23</td><td nowrap>✅ up to date</td></tr>
-<tr><td><a href="https://aur.archlinux.org/pkgbase/neovim-nightly-bin">neovim-nightly-bin</a></td><td>0.13.0+dev+2211+g8cf55994e9</td><td nowrap>github-nightly</td><td nowrap>2026-11-27</td><td nowrap>✅ up to date</td></tr>
+<tr><td><a href="https://aur.archlinux.org/pkgbase/neovim-nightly-bin">neovim-nightly-bin</a></td><td>0.13.0+dev+2217+gcb48904c49</td><td nowrap>github-nightly</td><td nowrap>2026-11-28</td><td nowrap>📦 updated to 0.13.0+dev+2217+gcb48904c49</td></tr>
 <tr><td><a href="https://aur.archlinux.org/pkgbase/npq">npq</a></td><td>3.27.7</td><td nowrap>github-release</td><td nowrap>2026-11-27</td><td nowrap>✅ up to date</td></tr>
 <tr><td><a href="https://aur.archlinux.org/pkgbase/oasdiff-bin">oasdiff-bin</a></td><td>1.41.0</td><td nowrap>github-release</td><td nowrap>2026-11-25</td><td nowrap>✅ up to date</td></tr>
 <tr><td><a href="https://aur.archlinux.org/pkgbase/oasdiff">oasdiff</a></td><td>1.41.0</td><td nowrap>github-release</td><td nowrap>2026-11-25</td><td nowrap>✅ up to date</td></tr>
@@ -139,7 +139,7 @@
 <tr><td><a href="https://aur.archlinux.org/pkgbase/rsql-bin">rsql-bin</a></td><td>0.21.0</td><td nowrap>github-release</td><td nowrap>-</td><td nowrap>✅ up to date</td></tr>
 <tr><td><a href="https://aur.archlinux.org/pkgbase/rsql">rsql</a></td><td>0.21.0</td><td nowrap>github-release</td><td nowrap>-</td><td nowrap>✅ up to date</td></tr>
 <tr><td><a href="https://aur.archlinux.org/pkgbase/ruby-simplecov-cobertura">ruby-simplecov-cobertura</a></td><td>4.0.0</td><td nowrap>rubygems</td><td nowrap>2026-11-24</td><td nowrap>✅ up to date</td></tr>
-<tr><td><a href="https://aur.archlinux.org/pkgbase/rutorrent-theme-dracula">rutorrent-theme-dracula</a></td><td>0.3.4</td><td nowrap>github-release</td><td nowrap>2026-11-18</td><td nowrap>✅ up to date</td></tr>
+<tr><td><a href="https://aur.archlinux.org/pkgbase/rutorrent-theme-dracula">rutorrent-theme-dracula</a></td><td>0.4.1</td><td nowrap>github-release</td><td nowrap>2026-11-28</td><td nowrap>📦 updated to 0.4.1</td></tr>
 <tr><td><a href="https://aur.archlinux.org/pkgbase/ryl-bin">ryl-bin</a></td><td>0.30.0</td><td nowrap>github-release</td><td nowrap>2026-11-17</td><td nowrap>✅ up to date</td></tr>
 <tr><td><a href="https://aur.archlinux.org/pkgbase/ryl">ryl</a></td><td>0.30.0</td><td nowrap>github-release</td><td nowrap>2026-11-17</td><td nowrap>✅ up to date</td></tr>
 <tr><td><a href="https://aur.archlinux.org/pkgbase/safe-chain-bin">safe-chain-bin</a></td><td>1.5.30</td><td nowrap>github-release</td><td nowrap>2026-11-26</td><td nowrap>✅ up to date</td></tr>
